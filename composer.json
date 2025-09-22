@@ -26,8 +26,12 @@
 	"license": "GPL-3.0+",
 	"name": "joanrodas/suggerence-gutenberg",
 	"require": {
-		"eftec/bladeone": "4.18",
-		"php": "\u003e=7.4"
+		"joanrodas/plubo-routes": "^0.7.8",
+		"php": "\u003e=7.4",
+		"berlindb/core": "^2.0",
+		"illuminate/http": "^12.28",
+		"illuminate/container": "^12.28",
+		"illuminate/support": "^12.28"
 	},
 	"type": "wordpress-plugin"
 }

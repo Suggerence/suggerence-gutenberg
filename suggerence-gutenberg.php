@@ -2,10 +2,10 @@
 
 /**
  * @wordpress-plugin
- * Plugin Name:       SuggerenceGutenberg
+ * Plugin Name:       Suggerence - Gutenberg
  * Plugin URI:        https://sirvelia.com/
- * Description:       A WordPress plugin made with PLUBO.
- * Version:           1.0.0
+ * Description:       An AI Assistant for the Gutenberg editor.
+ * Version:           0.1.0
  * Author:            Sirvelia
  * Author URI:        https://sirvelia.com/
  * License:           GPL-3.0+
@@ -22,12 +22,13 @@ if (!defined('WPINC')) {
 
 // PLUGIN CONSTANTS
 define('SUGGERENCEGUTENBERG_NAME', 'suggerence-gutenberg');
-define('SUGGERENCEGUTENBERG_VERSION', '1.0.0');
+define('SUGGERENCEGUTENBERG_VERSION', '0.1.0');
 define('SUGGERENCEGUTENBERG_PATH', plugin_dir_path(__FILE__));
 define('SUGGERENCEGUTENBERG_BASENAME', plugin_basename(__FILE__));
 define('SUGGERENCEGUTENBERG_URL', plugin_dir_url(__FILE__));
 define('SUGGERENCEGUTENBERG_ASSETS_PATH', SUGGERENCEGUTENBERG_PATH . 'dist/' );
 define('SUGGERENCEGUTENBERG_ASSETS_URL', SUGGERENCEGUTENBERG_URL . 'dist/' );
+define('SUGGERENCEGUTENBERG_SCHEMAS_PATH', plugin_dir_path(__FILE__) . 'Schemas/');
 
 // AUTOLOAD
 if (file_exists(SUGGERENCEGUTENBERG_PATH . 'vendor/autoload.php')) {

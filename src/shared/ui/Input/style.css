@@ -1,0 +1,5 @@
+@reference "tailwindcss";
+
+.components-text-control__input {
+    @apply !text-base !py-4 !h-auto;
+}

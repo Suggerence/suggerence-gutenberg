@@ -1,4 +1,4 @@
-import { useAI } from '@/apps/ai-chat/hooks/use-ai';
+import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { useSelect } from '@wordpress/data';
 import { useGutenbergMCP } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-mcp';
 

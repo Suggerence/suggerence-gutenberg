@@ -1,6 +1,6 @@
 import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { useSelect } from '@wordpress/data';
-import { useGutenbergMCP } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-mcp';
+import { BlockSpecificMCPServerFactory } from '@/shared/mcps/servers/BlockSpecificMCPServerFactory';
 
 export interface UseGutenbergAITools {
     executeCommand: (command: string) => Promise<boolean>;
@@ -9,15 +9,14 @@ export interface UseGutenbergAITools {
 
 export const useGutenbergAI = (): UseGutenbergAITools => {
     const { callAI } = useAI();
-    const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
 
-    // Get current Gutenberg context
+    // Get current Gutenberg context with block type information
     const {
         selectedBlock,
         selectedBlockClientId,
         blocks,
         postTitle,
-        postContent
+        selectedBlockType
     } = useSelect((select: any) => {
         const {
             getSelectedBlock,
@@ -29,32 +28,45 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
             getEditedPostAttribute,
         } = select('core/editor');
 
+        const {
+            getBlockType
+        } = select('core/blocks');
+
+        const selectedBlock = getSelectedBlock();
+        const selectedBlockType = selectedBlock ? getBlockType(selectedBlock.name) : null;
+
         return {
-            selectedBlock: getSelectedBlock(),
+            selectedBlock,
             selectedBlockClientId: getSelectedBlockClientId(),
             blocks: getBlocks(),
             postTitle: getEditedPostAttribute('title'),
-            postContent: getEditedPostAttribute('content'),
+            selectedBlockType
         };
     }, []);
 
     const executeCommand = async (command: string): Promise<boolean> => {
         try {
-            // Wait for Gutenberg server to be ready
-            if (!isGutenbergServerReady) {
-                throw new Error('Gutenberg MCP server not ready');
+            // Check if we have a selected block
+            if (!selectedBlock) {
+                console.error('No block selected for toolbar action');
+                return false;
             }
 
-            // Get only Gutenberg-specific tools (separate from main chat MCP tools)
-            const gutenbergTools = await getGutenbergTools();
+            // Get block-specific MCP server
+            const blockSpecificServer = BlockSpecificMCPServerFactory.getServerForBlock(selectedBlock.name);
 
-            // Use only Gutenberg tools to avoid conflicts with main chat
-            const allTools = gutenbergTools;
+            if (!blockSpecificServer) {
+                console.error(`No specific tools available for block type: ${selectedBlock.name}`);
+                return false;
+            }
 
-            // Debug: Log Gutenberg tools being sent to AI
-            console.log('Suggerence Debug: Gutenberg tools being sent to AI:', allTools.length);
-            allTools.forEach((tool, index) => {
-                console.log(`Suggerence Debug: Tool ${index}:`, tool.name, tool.inputSchema);
+            // Get block-specific tools
+            const blockTools = blockSpecificServer.client.listTools().tools;
+
+            // Debug: Log block-specific tools being sent to AI
+            console.log('Block-specific tools being sent to AI:', blockTools.length);
+            blockTools.forEach((tool: any, index: number) => {
+                console.log(`Block Tool ${index}:`, tool.name, tool.inputSchema);
             });
 
             // Create comprehensive post content context for the AI
@@ -71,32 +83,60 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
                 })) || []
             }));
 
-            // Prepare selected block info for context
+            // Prepare detailed selected block info with type information
             const selectedBlockInfo = selectedBlock ? {
                 id: selectedBlockClientId,
                 name: selectedBlock.name,
                 attributes: selectedBlock.attributes,
-                content: selectedBlock.attributes?.content || ''
+                content: selectedBlock.attributes?.content || '',
+                typeDefinition: selectedBlockType ? {
+                    title: selectedBlockType.title,
+                    category: selectedBlockType.category,
+                    attributes: selectedBlockType.attributes || {},
+                    supports: selectedBlockType.supports || {}
+                } : null
             } : null;
 
-            // Create message for AI with Gutenberg-specific system prompt
+            // Generate dynamic context based on selected block
+            let selectedBlockContext = '';
+            if (selectedBlockInfo) {
+                selectedBlockContext = `
+
+Selected Block Details:
+- Type: ${selectedBlockInfo.name} (${selectedBlockInfo.typeDefinition?.title || 'Unknown'})
+- Category: ${selectedBlockInfo.typeDefinition?.category || 'unknown'}
+- ID: ${selectedBlockInfo.id}
+- Current Attributes: ${JSON.stringify(selectedBlockInfo.attributes, null, 2)}
+
+Available Attributes for ${selectedBlockInfo.name}:
+${selectedBlockInfo.typeDefinition ? Object.entries(selectedBlockInfo.typeDefinition.attributes).map(([attrName, attrDef]: [string, any]) =>
+    `- ${attrName}: ${attrDef.type || 'string'}${attrDef.default !== undefined ? ` (default: ${JSON.stringify(attrDef.default)})` : ''}${attrDef.description ? ` - ${attrDef.description}` : ''}`
+).join('\n') : 'No attribute schema available'}
+
+Block Capabilities:
+${selectedBlockInfo.typeDefinition?.supports ? Object.entries(selectedBlockInfo.typeDefinition.supports).map(([feature, supported]) =>
+    `- ${feature}: ${supported}`
+).join('\n') : 'No capability information available'}`;
+            }
+
+            // Create message for AI with comprehensive block-aware context
             const messages: MCPClientMessage[] = [
                 {
                     role: 'user',
                     content: `Current Post Context:
 - Post Title: ${postTitle || 'Untitled'}
 - Total Blocks: ${blocks.length}
-- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}
+- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
 
 All Blocks in Post (with IDs for reference):
 ${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
 
-Available Gutenberg Tools:
-${gutenbergTools.map(tool => `- ${tool.name}: ${tool.description}`).join('\n')}
+Available Tools for ${selectedBlockInfo?.name}:
+${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n')}
 
 User Command: ${command}
 
-Instructions: You have access to all block IDs in the post context above. When the user refers to specific blocks (by content, position, or description), use the block IDs provided to target them precisely. Use the appropriate Gutenberg tools to execute this command, focusing on block manipulation and editor actions.`,
+Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`,
                     date: new Date().toISOString()
                 }
             ];
@@ -111,17 +151,17 @@ Instructions: You have access to all block IDs in the post context above. When t
                 capabilities: ['text-generation', 'tool-calling']
             };
 
-            // Call AI with tools
-            const response = await callAI(messages, defaultModel, allTools);
+            // Call AI with block-specific tools
+            const response = await callAI(messages, defaultModel, blockTools);
 
-            // If AI wants to use a tool, execute it
+            // If AI wants to use a tool, execute it on the block-specific server
             if (response.toolName && response.toolArgs) {
-                let toolResult;
+                const toolResult = await blockSpecificServer.client.callTool({
+                    name: response.toolName,
+                    arguments: response.toolArgs
+                });
 
-                // All tools are Gutenberg tools now
-                toolResult = await callGutenbergTool(response.toolName, response.toolArgs);
-
-                console.log('Tool execution result:', toolResult);
+                console.log('Block-specific tool execution result:', toolResult);
                 return true;
             }
 
@@ -140,6 +180,6 @@ Instructions: You have access to all block IDs in the post context above. When t
 
     return {
         executeCommand,
-        isLoading: !isGutenbergServerReady
+        isLoading: false // We don't need to wait for the general Gutenberg server
     };
 };

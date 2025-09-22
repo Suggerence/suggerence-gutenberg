@@ -2,6 +2,7 @@ import { SuggerenceMCPServerConnection } from '../types';
 import { TextBlockMCPServer } from './TextBlockMCPServer';
 import { ImageBlockMCPServer } from './ImageBlockMCPServer';
 import { ButtonBlockMCPServer } from './ButtonBlockMCPServer';
+import { LayoutBlockMCPServer } from './LayoutBlockMCPServer';
 
 export class BlockSpecificMCPServerFactory {
     private static servers: Map<string, any> = new Map();
@@ -27,6 +28,7 @@ export class BlockSpecificMCPServerFactory {
         this.servers.set('text', TextBlockMCPServer);
         this.servers.set('image', ImageBlockMCPServer);
         this.servers.set('button', ButtonBlockMCPServer);
+        this.servers.set('layout', LayoutBlockMCPServer);
     }
 
     private static getServerKeyForBlockType(blockType: string): string | null {
@@ -50,6 +52,14 @@ export class BlockSpecificMCPServerFactory {
             'core/button': 'button',
             'core/buttons': 'button',
 
+            // Layout blocks
+            'core/group': 'layout',
+            'core/columns': 'layout',
+            'core/column': 'layout',
+            'core/cover': 'layout',
+            'core/spacer': 'layout',
+            'core/separator': 'layout',
+
             // Add more mappings as needed
         };
 
@@ -69,7 +79,13 @@ export class BlockSpecificMCPServerFactory {
             'core/gallery',
             'core/media-text',
             'core/button',
-            'core/buttons'
+            'core/buttons',
+            'core/group',
+            'core/columns',
+            'core/column',
+            'core/cover',
+            'core/spacer',
+            'core/separator'
         ];
     }
 
@@ -78,6 +94,6 @@ export class BlockSpecificMCPServerFactory {
     }
 
     static getAvailableCategories(): string[] {
-        return ['text', 'image', 'button'];
+        return ['text', 'image', 'button', 'layout'];
     }
 }

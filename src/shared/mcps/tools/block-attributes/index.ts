@@ -122,6 +122,27 @@ export const setImageSizeTool: SuggerenceMCPResponseTool = {
     }
 };
 
+export const modifyCurrentBlockTool: SuggerenceMCPResponseTool = {
+    name: 'modify_current_block',
+    description: 'Modify the entire current block with complete flexibility - can change any attributes, styling, content, or properties',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            attributes: {
+                type: 'object',
+                description: 'Complete new attributes object for the block. This will replace/merge with existing attributes.',
+                additionalProperties: true
+            },
+            partialUpdate: {
+                type: 'boolean',
+                description: 'If true, merges with existing attributes. If false, replaces entire attributes object.',
+                default: true
+            }
+        },
+        required: ['attributes']
+    }
+};
+
 // Implementation functions
 export function setBlockAttribute(
     blockId: string | undefined,
@@ -290,6 +311,88 @@ export function setImageSize(
             content: [{
                 type: 'text',
                 text: `Error setting image size: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }]
+        };
+    }
+}
+
+export function modifyCurrentBlock(
+    attributes: Record<string, any>,
+    partialUpdate: boolean = true
+): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
+        const { updateBlockAttributes } = dispatch('core/block-editor') as any;
+
+        const targetBlockId = getSelectedBlockClientId();
+
+        if (!targetBlockId) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: 'No block selected'
+                }]
+            };
+        }
+
+        const currentBlock = getBlock(targetBlockId);
+        if (!currentBlock) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Block with ID ${targetBlockId} not found`
+                }]
+            };
+        }
+
+        if (partialUpdate) {
+            // Merge with existing attributes (deep merge for complex objects like style)
+            const mergedAttributes = { ...currentBlock.attributes };
+
+            // Special handling for style attribute to do deep merge
+            if (attributes.style && currentBlock.attributes.style) {
+                mergedAttributes.style = {
+                    ...currentBlock.attributes.style,
+                    ...attributes.style
+                };
+
+                // Deep merge for nested style properties
+                Object.keys(attributes.style).forEach(key => {
+                    if (typeof attributes.style[key] === 'object' &&
+                        currentBlock.attributes.style[key] &&
+                        typeof currentBlock.attributes.style[key] === 'object') {
+                        mergedAttributes.style[key] = {
+                            ...currentBlock.attributes.style[key],
+                            ...attributes.style[key]
+                        };
+                    }
+                });
+            }
+
+            // Merge other attributes
+            Object.keys(attributes).forEach(key => {
+                if (key !== 'style') {
+                    mergedAttributes[key] = attributes[key];
+                }
+            });
+
+            updateBlockAttributes(targetBlockId, mergedAttributes);
+        } else {
+            // Complete replacement
+            updateBlockAttributes(targetBlockId, attributes);
+        }
+
+        return {
+            content: [{
+                type: 'text',
+                text: `Successfully modified block ${currentBlock.name} (ID: ${targetBlockId}) with ${partialUpdate ? 'partial' : 'complete'} update`
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: `Error modifying block: ${error instanceof Error ? error.message : 'Unknown error'}`
             }]
         };
     }

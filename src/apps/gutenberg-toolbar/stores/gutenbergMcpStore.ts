@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GutenbergMCPServer } from '../mcps/GutenbergMCPServer';
+import { GutenbergMCPServer } from '@/shared/mcps/servers/GutenbergMCPServer';
 
 interface GutenbergMCPStore {
     serverConnections: SuggerenceMCPServerConnection[];

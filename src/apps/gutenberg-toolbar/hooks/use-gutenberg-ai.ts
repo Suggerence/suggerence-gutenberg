@@ -103,12 +103,12 @@ Instructions: You have access to all block IDs in the post context above. When t
 
             // Get AI model (we'll use a default one for now)
             const defaultModel: AIModel = {
-                id: 'claude-3-haiku-20240307',
-                provider: 'anthropic',
-                providerName: 'Anthropic',
-                name: 'Claude 3 Haiku',
+                id: 'gemini-2.0-flash',
+                provider: 'gemini',
+                providerName: 'Gemini',
+                name: 'Gemini 2.0 Flash',
                 date: new Date().toISOString(),
-                capabilities: ['text']
+                capabilities: ['text-generation', 'tool-calling']
             };
 
             // Call AI with tools

@@ -5,6 +5,7 @@ import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInt
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
 import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
+import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 
 export const InputArea = () => {
 
@@ -131,7 +132,7 @@ export const InputArea = () => {
 
     return (
         <VStack spacing={0} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderTop: '1px solid #ddd' }}>
-
+            <BlockBadge />
             <TextareaControl
                 value={inputValue}
                 onChange={setInputValue}

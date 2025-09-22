@@ -1,6 +1,6 @@
 <?php
 
-namespace PluginPlaceholder\Includes;
+namespace SuggerenceGutenberg\Includes;
 
 use eftec\bladeone\BladeOne;
 
@@ -12,8 +12,8 @@ class BladeLoader
     private function __construct()
     {
         $this->blade = new BladeOne(
-            PLUGIN_PLACEHOLDER_PATH . 'resources/views',
-            PLUGIN_PLACEHOLDER_PATH . 'resources/cache'
+            SUGGERENCEGUTENBERG_PATH . 'resources/views',
+            SUGGERENCEGUTENBERG_PATH . 'resources/cache'
         );
     }
 

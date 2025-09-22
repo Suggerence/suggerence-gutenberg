@@ -1,33 +1,33 @@
 {
-	"name": "joanrodas/plubo",
-	"type": "template",
-	"description": "A Simple and fast WP Plugin Boilerplate.",
+	"authors": [
+		{
+			"email": "joan@sirvelia.com",
+			"homepage": "https://sirvelia.com",
+			"name": "Joan Rodas Cusidó",
+			"role": "Developer"
+		}
+	],
+	"autoload": {
+		"files": [
+			"Utils/plubo.php"
+		],
+		"psr-4": {
+			"SuggerenceGutenberg\\": ""
+		}
+	},
+	"description": "An amazing plugin made with PLUBO",
+	"homepage": "https://github.com/joanrodas/plubo",
 	"keywords": [
 		"plugin",
 		"wordpress",
 		"boilerplate",
 		"wp"
 	],
-	"homepage": "https://github.com/joanrodas/plubo",
 	"license": "GPL-3.0+",
-	"authors": [
-		{
-			"name": "Joan Rodas Cusidó",
-			"email": "joan@sirvelia.com",
-			"homepage": "https://sirvelia.com",
-			"role": "Developer"
-		}
-	],
-	"autoload": {
-		"psr-4": {
-			"PluginPlaceholder\\": ""
-		},
-		"files": [
-			"Utils/plubo.php"
-		]
-	},
+	"name": "joanrodas/suggerence-gutenberg",
 	"require": {
-		"php": ">=7.4",
-		"eftec/bladeone": "4.18"
-	}
+		"eftec/bladeone": "4.18",
+		"php": "\u003e=7.4"
+	},
+	"type": "wordpress-plugin"
 }

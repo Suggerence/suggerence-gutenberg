@@ -1,6 +1,6 @@
 <?php
 
-namespace PluginPlaceholder\Includes;
+namespace SuggerenceGutenberg\Includes;
 
 class Loader
 {
@@ -14,11 +14,11 @@ class Loader
     private function loadDependencies()
     {
         //FUNCTIONALITY CLASSES
-        foreach (glob(PLUGIN_PLACEHOLDER_PATH . 'Functionality/*.php') as $filename) {
-            $class_name = '\\PluginPlaceholder\Functionality\\' . basename($filename, '.php');
+        foreach (glob(SUGGERENCEGUTENBERG_PATH . 'Functionality/*.php') as $filename) {
+            $class_name = '\\SuggerenceGutenberg\Functionality\\' . basename($filename, '.php');
             if (class_exists($class_name)) {
                 try {
-                    new $class_name(PLUGIN_PLACEHOLDER_NAME, PLUGIN_PLACEHOLDER_VERSION);
+                    new $class_name(SUGGERENCEGUTENBERG_NAME, SUGGERENCEGUTENBERG_VERSION);
                 } catch (\Throwable $e) {
                     pb_log($e);
                     continue;
@@ -28,11 +28,11 @@ class Loader
 
         //ADMIN FUNCTIONALITY
         if( is_admin() ) {
-            foreach (glob(PLUGIN_PLACEHOLDER_PATH . 'Functionality/Admin/*.php') as $filename) {
-                $class_name = '\\PluginPlaceholder\Functionality\Admin\\' . basename($filename, '.php');
+            foreach (glob(SUGGERENCEGUTENBERG_PATH . 'Functionality/Admin/*.php') as $filename) {
+                $class_name = '\\SuggerenceGutenberg\Functionality\Admin\\' . basename($filename, '.php');
                 if (class_exists($class_name)) {
                     try {
-                        new $class_name(PLUGIN_PLACEHOLDER_NAME, PLUGIN_PLACEHOLDER_VERSION);
+                        new $class_name(SUGGERENCEGUTENBERG_NAME, SUGGERENCEGUTENBERG_VERSION);
                     } catch (\Throwable $e) {
                         pb_log($e);
                         continue;
@@ -44,6 +44,6 @@ class Loader
 
     public function loadPluginTextdomain()
     {
-        load_plugin_textdomain('plugin-placeholder', false, dirname(PLUGIN_PLACEHOLDER_BASENAME) . '/languages/');
+        load_plugin_textdomain('suggerence-gutenberg', false, dirname(SUGGERENCEGUTENBERG_BASENAME) . '/languages/');
     }
 }

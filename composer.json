@@ -1,0 +1,33 @@
+{
+	"name": "joanrodas/plubo",
+	"type": "template",
+	"description": "A Simple and fast WP Plugin Boilerplate.",
+	"keywords": [
+		"plugin",
+		"wordpress",
+		"boilerplate",
+		"wp"
+	],
+	"homepage": "https://github.com/joanrodas/plubo",
+	"license": "GPL-3.0+",
+	"authors": [
+		{
+			"name": "Joan Rodas Cusidó",
+			"email": "joan@sirvelia.com",
+			"homepage": "https://sirvelia.com",
+			"role": "Developer"
+		}
+	],
+	"autoload": {
+		"psr-4": {
+			"PluginPlaceholder\\": ""
+		},
+		"files": [
+			"Utils/plubo.php"
+		]
+	},
+	"require": {
+		"php": ">=7.4",
+		"eftec/bladeone": "4.18"
+	}
+}

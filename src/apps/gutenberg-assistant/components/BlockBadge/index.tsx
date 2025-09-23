@@ -65,7 +65,7 @@ export const BlockBadge = () => {
     }
 
     return (
-        <div style={{ marginBottom: '8px' }}>
+        <div>
             <span
                 className="block-badge"
                 style={{

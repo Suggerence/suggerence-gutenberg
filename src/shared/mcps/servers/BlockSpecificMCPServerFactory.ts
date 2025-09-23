@@ -1,8 +1,8 @@
-import { SuggerenceMCPServerConnection } from '../types';
 import { TextBlockMCPServer } from './TextBlockMCPServer';
 import { ImageBlockMCPServer } from './ImageBlockMCPServer';
 import { ButtonBlockMCPServer } from './ButtonBlockMCPServer';
 import { LayoutBlockMCPServer } from './LayoutBlockMCPServer';
+import { GenericBlockMCPServer } from './GenericBlockMCPServer';
 
 export class BlockSpecificMCPServerFactory {
     private static servers: Map<string, any> = new Map();
@@ -25,13 +25,15 @@ export class BlockSpecificMCPServerFactory {
     }
 
     private static initializeServers() {
-        this.servers.set('text', TextBlockMCPServer);
-        this.servers.set('image', ImageBlockMCPServer);
-        this.servers.set('button', ButtonBlockMCPServer);
-        this.servers.set('layout', LayoutBlockMCPServer);
+        // this.servers.set('text', TextBlockMCPServer);
+        // this.servers.set('image', GenericBlockMCPServer);
+        // this.servers.set('button', ButtonBlockMCPServer);
+        // this.servers.set('layout', LayoutBlockMCPServer);
+        this.servers.set('generic', GenericBlockMCPServer);
     }
 
     private static getServerKeyForBlockType(blockType: string): string | null {
+        return 'generic';
         // Map block types to server categories
         const blockTypeMapping: Record<string, string> = {
             // Text blocks
@@ -47,6 +49,7 @@ export class BlockSpecificMCPServerFactory {
             'core/image': 'image',
             'core/gallery': 'image',
             'core/media-text': 'image',
+            'core/query': 'image',
 
             // Button blocks
             'core/button': 'button',
@@ -90,6 +93,7 @@ export class BlockSpecificMCPServerFactory {
     }
 
     static isBlockSupported(blockType: string): boolean {
+        return true;
         return this.getSupportedBlockTypes().includes(blockType);
     }
 

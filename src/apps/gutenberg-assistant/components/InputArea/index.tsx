@@ -6,6 +6,7 @@ import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/s
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
 import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
+import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
 
 export const InputArea = () => {
 
@@ -130,9 +131,18 @@ export const InputArea = () => {
         }
     }, [messages]);
 
+    const handleContextSelect = (context: any) => {
+        console.log('Context selected:', context);
+        // TODO: Implement context handling logic
+        // Context structure: { id, type, label, data? }
+    };
+
     return (
         <VStack spacing={0} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderTop: '1px solid #ddd' }}>
-            <BlockBadge />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <ContextMenuBadge onContextSelect={handleContextSelect} />
+                <BlockBadge />
+            </div>
             <TextareaControl
                 value={inputValue}
                 onChange={setInputValue}

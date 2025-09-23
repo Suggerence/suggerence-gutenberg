@@ -1,14 +1,16 @@
 import { useEffect } from '@wordpress/element';
 import { ToolbarButton, ToolbarGroup, KeyboardShortcuts } from '@wordpress/components';
+// @ts-ignore - WordPress types not available
 import { BlockControls } from '@wordpress/block-editor';
 import { createHigherOrderComponent } from '@wordpress/compose';
 import { addFilter } from '@wordpress/hooks';
-import { comment } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
+// @ts-ignore - WordPress types not available
 import { store as blockEditorStore } from '@wordpress/block-editor';
+import { SuggerenceIcon } from '@/components/SuggerenceIcon';
 
-import { useCommandStore } from '../../stores/commandStore';
+import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 
 // Add toolbar button to all blocks
 const withToolbarButton = createHigherOrderComponent((BlockEdit) => {
@@ -31,9 +33,10 @@ const withToolbarButton = createHigherOrderComponent((BlockEdit) => {
                 <BlockControls>
                     <ToolbarGroup>
                         <ToolbarButton
-                            icon={comment}
+                            icon={<SuggerenceIcon />}
                             label={__('AI Command', 'suggerence')}
                             onClick={handleClick}
+                            style={{ color: '#d22178' }}
                             shortcut={{
                                 display: '⌘⇧K',
                                 ariaLabel: 'AI Command'

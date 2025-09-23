@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { Button, TextareaControl, Card, CardBody, Notice, Flex, FlexItem, KeyboardShortcuts, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowUp } from '@wordpress/icons';
+import { useSelect } from '@wordpress/data';
+// @ts-ignore - WordPress types not available
+import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-ai';
@@ -22,6 +25,14 @@ export const CommandBox = () => {
     const { executeCommand, isLoading: mcpLoading } = useGutenbergAI();
     const [inputValue, setInputValue] = useState('');
     const boxRef = useRef<HTMLDivElement>(null);
+
+    // Get selected block information
+    const selectedBlock = useSelect((select) => {
+        // @ts-ignore - WordPress types not available
+        const { getSelectedBlock } = select('core/block-editor');
+        // @ts-ignore - WordPress types not available
+        return getSelectedBlock?.();
+    }, []);
 
     // Focus textarea when command box opens
     useEffect(() => {
@@ -132,23 +143,32 @@ export const CommandBox = () => {
                         value={inputValue}
                         onChange={(value: string) => setInputValue(value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={__('"Add a paragraph with lorem ipsum"', 'suggerence')}
+                        placeholder={__('"Ask me to modify the content of the block"', 'suggerence')}
                         disabled={isLoading}
-                        rows={4}
+                        rows={2}
                     />
 
                     {!isLoading ? (
                             <Flex gap={2} align="center" justify="space-between">
                                 <FlexItem>
-                                    <SelectControl
-                                        value="claude-3-haiku"
-                                        options={[
-                                            { label: 'Claude 3 Haiku', value: 'claude-3-haiku' }
-                                        ]}
-                                        onChange={() => {}} // Will be implemented later
-                                        size="small"
-                                        __nextHasNoMarginBottom
-                                    />
+                                    {selectedBlock && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <BlockIcon
+                                                // @ts-ignore - WordPress types not available
+                                                icon={selectedBlock.name ? (window as any).wp?.blocks?.getBlockType?.(selectedBlock.name)?.icon : undefined}
+                                                showColors={true}
+                                                style={{
+                                                    width: '14px',
+                                                    height: '14px',
+                                                    flexShrink: 0
+                                                }}
+                                            />
+                                            <BlockTitle
+                                                clientId={selectedBlock.clientId}
+                                                context="list-view"
+                                            />
+                                        </div>
+                                    )}
                                 </FlexItem>
                                 <FlexItem>
                                     <Button
@@ -157,9 +177,10 @@ export const CommandBox = () => {
                                         onClick={handleSubmit}
                                         disabled={!inputValue.trim() || isLoading}
                                         isBusy={isLoading}
-                                        icon={arrowUp}
                                         aria-label={__('Send command', 'suggerence')}
-                                    />
+                                    >
+                                        {__('Send', 'suggerence')}
+                                    </Button>
                                 </FlexItem>
                             </Flex>
                         ) : (

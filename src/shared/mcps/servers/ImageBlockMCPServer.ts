@@ -350,7 +350,7 @@ export class ImageBlockMCPServer {
                     return setBlockAttribute(undefined, args.attributeName, args.attributeValue);
 
                 case 'modify_current_block':
-                    return modifyCurrentBlock(args.attributes, args.partialUpdate);
+                    return modifyCurrentBlock(args);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

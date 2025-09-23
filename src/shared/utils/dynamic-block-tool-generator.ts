@@ -90,7 +90,7 @@ export function generateDynamicBlockTool(blockName: string): SuggerenceMCPRespon
     if (Object.keys(attributeProperties).length > 0) {
         toolSchema.properties.attributes = {
             type: 'object',
-            description: `Block-specific attributes from ${blockName} schema`,
+            description: `Block-specific attributes from ${blockName} schema (content, URLs, etc.) - NOT for styling`,
             properties: attributeProperties,
             additionalProperties: false
         };
@@ -276,7 +276,7 @@ export function generateDynamicBlockTool(blockName: string): SuggerenceMCPRespon
     if (Object.keys(styleProperties).length > 0) {
         toolSchema.properties.style = {
             type: 'object',
-            description: 'WordPress style object based on block supports',
+            description: 'WordPress style object for visual styling (colors, typography, spacing, borders) - SEPARATE from attributes',
             properties: styleProperties
         };
     }
@@ -347,7 +347,7 @@ export function generateDynamicBlockTool(blockName: string): SuggerenceMCPRespon
         description += `. Supports: ${capabilities.join('; ')}`;
     }
 
-    description += `. Uses WordPress block.json schema and supports for ${blockName}.`;
+    description += `. Uses WordPress block.json schema and supports for ${blockName}. IMPORTANT: Use 'attributes' for content/URLs/IDs, use 'style' for visual styling (colors, borders, typography).`;
 
     // Create the final tool
     return {

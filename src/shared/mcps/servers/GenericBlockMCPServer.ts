@@ -262,17 +262,26 @@ export class GenericBlockMCPServer {
         // Build attributes object to update
         const updateAttributes: Record<string, any> = {};
 
-        // Add regular attributes
+        // Add regular attributes (but extract any style that was mistakenly put here)
         if (args.attributes) {
-            Object.assign(updateAttributes, args.attributes);
+            const { style: attributeStyle, ...otherAttributes } = args.attributes;
+            Object.assign(updateAttributes, otherAttributes);
+
+            // If style was mistakenly put in attributes, merge it with the proper style
+            if (attributeStyle) {
+                console.warn('Style found in attributes - moving to proper style object');
+                const currentStyle = currentBlock.attributes.style || {};
+                const combinedStyle = this.deepMergeStyles(currentStyle, attributeStyle);
+                updateAttributes.style = args.style ?
+                    this.deepMergeStyles(combinedStyle, args.style) :
+                    combinedStyle;
+            }
         }
 
-        // Handle style object (WordPress way)
-        if (args.style) {
-            updateAttributes.style = {
-                ...currentBlock.attributes.style,
-                ...args.style
-            };
+        // Handle style object (WordPress way) - deep merge to preserve existing styles
+        if (args.style && !updateAttributes.style) {
+            const currentStyle = currentBlock.attributes.style || {};
+            updateAttributes.style = this.deepMergeStyles(currentStyle, args.style);
         }
 
         // Apply updates using WordPress API
@@ -381,6 +390,25 @@ export class GenericBlockMCPServer {
             blockId: args.blockId,
             ...args
         });
+    }
+
+    private deepMergeStyles(currentStyle: any, newStyle: any): any {
+        const merged = { ...currentStyle };
+
+        Object.keys(newStyle).forEach(key => {
+            if (newStyle[key] && typeof newStyle[key] === 'object' && !Array.isArray(newStyle[key])) {
+                // Deep merge for nested objects like color, typography, spacing, border
+                merged[key] = {
+                    ...merged[key],
+                    ...newStyle[key]
+                };
+            } else {
+                // Direct assignment for primitive values and arrays
+                merged[key] = newStyle[key];
+            }
+        });
+
+        return merged;
     }
 
     private applyDuotoneFilter(blockId: string | undefined, colors: string[]): { content: Array<{ type: string, text: string }> } {

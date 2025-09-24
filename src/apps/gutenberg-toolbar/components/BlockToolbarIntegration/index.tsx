@@ -1,5 +1,5 @@
 import { useEffect } from '@wordpress/element';
-import { ToolbarButton, ToolbarGroup, KeyboardShortcuts } from '@wordpress/components';
+import { ToolbarDropdownMenu, ToolbarGroup } from '@wordpress/components';
 // @ts-ignore - WordPress types not available
 import { BlockControls } from '@wordpress/block-editor';
 import { createHigherOrderComponent } from '@wordpress/compose';
@@ -9,53 +9,46 @@ import { useSelect } from '@wordpress/data';
 // @ts-ignore - WordPress types not available
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { SuggerenceIcon } from '@/components/SuggerenceIcon';
-
-import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
+import { CommandBox } from '@/apps/gutenberg-toolbar/components/CommandBox';
 
 // Add toolbar button to all blocks
 const withToolbarButton = createHigherOrderComponent((BlockEdit) => {
     return (props: any) => {
-        const { openCommandBox } = useCommandStore();
-
-        const handleClick = (event: React.MouseEvent) => {
-            // Get click position for positioning the command box
-            const rect = (event.target as HTMLElement).getBoundingClientRect();
-            const position = {
-                top: rect.bottom + 10,
-                left: rect.left
-            };
-            openCommandBox(position);
-        };
+        // Check if current block is selected
+        const isBlockSelected = useSelect((select) => {
+            const selectedBlockId = select(blockEditorStore).getSelectedBlockClientId();
+            return selectedBlockId === props.clientId;
+        }, [props.clientId]);
 
         return (
             <>
                 <BlockEdit {...props} />
-                <BlockControls>
-                    <ToolbarGroup>
-                        <ToolbarButton
-                            icon={<SuggerenceIcon />}
-                            label={__('AI Command', 'suggerence')}
-                            onClick={handleClick}
-                            style={{ color: '#d22178' }}
-                            shortcut={{
-                                display: '⌘⇧K',
-                                ariaLabel: 'AI Command'
-                            }}
-                        />
-                    </ToolbarGroup>
-                </BlockControls>
+                {isBlockSelected && (
+                    <BlockControls>
+                        <ToolbarGroup>
+                            <ToolbarDropdownMenu
+                                icon={<div style={{ color: '#d22178' }}><SuggerenceIcon /></div>}
+                                label={__('AI Command', 'suggerence')}
+                                popoverProps={{
+                                    placement: 'bottom-start',
+                                    offset: 8,
+                                }}
+                            >
+                                {({ onClose }) => (
+                                    <div style={{ padding: 0 }}>
+                                        <CommandBox onClose={onClose} />
+                                    </div>
+                                )}
+                            </ToolbarDropdownMenu>
+                        </ToolbarGroup>
+                    </BlockControls>
+                )}
             </>
         );
     };
 }, 'withToolbarButton');
 
 export const BlockToolbarIntegration = () => {
-    const { openCommandBox } = useCommandStore();
-
-    const selectedBlockClientId = useSelect((select) => {
-        return select(blockEditorStore).getSelectedBlockClientId();
-    }, []);
-
     useEffect(() => {
         // Add the toolbar button to all blocks
         addFilter(
@@ -72,38 +65,5 @@ export const BlockToolbarIntegration = () => {
         };
     }, []);
 
-    const handleGlobalShortcut = () => {
-        let position;
-
-        if (selectedBlockClientId) {
-            // Get the DOM element for the selected block
-            const blockElement = document.querySelector(`[data-block="${selectedBlockClientId}"]`);
-
-            if (blockElement) {
-                const blockRect = blockElement.getBoundingClientRect();
-                position = {
-                    top: blockRect.top + 10,
-                    left: Math.max(10, blockRect.left)
-                };
-            }
-        }
-
-        // Fallback to center if no block is selected or found
-        if (!position) {
-            position = {
-                top: window.innerHeight / 2,
-                left: window.innerWidth / 2 - 210 // Center horizontally (assuming 420px width)
-            };
-        }
-
-        openCommandBox(position);
-    };
-
-    return (
-        <KeyboardShortcuts
-            shortcuts={{
-                'mod+shift+k': handleGlobalShortcut,
-            }}
-        />
-    );
+    return null;
 };

@@ -9,7 +9,7 @@ export const addGeneratedImageTool: SuggerenceMCPResponseTool = {
         properties: {
             prompt: {
                 type: 'string',
-                description: 'The text prompt describing the image to generate'
+                description: 'The text prompt describing the image to generate, or a base64 encoded image'
             },
             position: {
                 type: 'string',

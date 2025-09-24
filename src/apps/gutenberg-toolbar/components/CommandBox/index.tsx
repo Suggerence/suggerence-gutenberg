@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { Button, TextareaControl, Card, CardBody, Notice, Flex, FlexItem, KeyboardShortcuts, SelectControl } from '@wordpress/components';
+import { Button, TextareaControl, Notice, Flex, FlexItem, KeyboardShortcuts } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { arrowUp } from '@wordpress/icons';
 import { useSelect } from '@wordpress/data';
 // @ts-ignore - WordPress types not available
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
@@ -9,22 +8,22 @@ import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-ai';
 
-export const CommandBox = () => {
+interface CommandBoxProps {
+    onClose?: () => void;
+}
+
+export const CommandBox = ({ onClose }: CommandBoxProps) => {
     const {
-        isCommandBoxOpen,
         isExecuting,
         error,
-        position,
-        closeCommandBox,
         setExecuting,
         setResult,
-        setError,
-        clearResult
+        setError
     } = useCommandStore();
 
     const { executeCommand, isLoading: mcpLoading } = useGutenbergAI();
     const [inputValue, setInputValue] = useState('');
-    const boxRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Get selected block information
     const selectedBlock = useSelect((select) => {
@@ -34,41 +33,15 @@ export const CommandBox = () => {
         return getSelectedBlock?.();
     }, []);
 
-    // Focus textarea when command box opens
+    // Focus textarea when component mounts
     useEffect(() => {
-        if (isCommandBoxOpen) {
-            // WordPress TextareaControl doesn't expose ref directly,
-            // but we can focus using a timeout and querySelector
-            setTimeout(() => {
-                const textarea = document.querySelector('.suggerence-command-box textarea');
-                if (textarea instanceof HTMLTextAreaElement) {
-                    textarea.focus();
-                }
-            }, 100);
-        }
-    }, [isCommandBoxOpen]);
-
-    // Reset input and clear results when command box closes
-    useEffect(() => {
-        if (!isCommandBoxOpen) {
-            setInputValue('');
-            clearResult();
-        }
-    }, [isCommandBoxOpen, clearResult]);
-
-    // Handle clicks outside to close
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (boxRef.current && !boxRef.current.contains(event.target as Node)) {
-                closeCommandBox();
+        // Use timeout to ensure the textarea is rendered
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
             }
-        };
-
-        if (isCommandBoxOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [isCommandBoxOpen, closeCommandBox]);
+        }, 100);
+    }, []);
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -84,7 +57,8 @@ export const CommandBox = () => {
             if (success) {
                 setResult(__('Command executed successfully!', 'suggerence'));
                 setInputValue('');
-                closeCommandBox();
+                // Close the dropdown after successful execution
+                onClose?.();
             } else {
                 setError(__('Command execution failed. Please try again.', 'suggerence'));
             }
@@ -100,33 +74,24 @@ export const CommandBox = () => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSubmit();
-        } else if (e.key === 'Escape') {
-            closeCommandBox();
         }
+        // Escape will close the dropdown automatically
     };
 
     const isLoading = isExecuting || mcpLoading;
 
-    if (!isCommandBoxOpen || !position) return null;
 
     return (
         <div
-            ref={boxRef}
             className="suggerence-command-box"
             style={{
-                position: 'fixed',
-                top: position.top,
-                left: position.left,
-                zIndex: 9999999,
-                width: '420px',
-                maxWidth: '90vw',
-                pointerEvents: 'auto',
+                width: '320px',
+                padding: '4px',
             }}
         >
             <KeyboardShortcuts
                 shortcuts={{
                     'mod+enter': () => handleSubmit(),
-                    'escape': () => closeCommandBox(),
                 }}
             />
 
@@ -135,8 +100,7 @@ export const CommandBox = () => {
                 <Notice status="error">{error}</Notice>
             )}
 
-            <Card size="small" elevation={3} style={{ position: 'relative', zIndex: 1 }}>
-                <CardBody>
+            <div>
                     <TextareaControl
                         label={__('AI Command', 'suggerence')}
                         hideLabelFromVision
@@ -146,6 +110,7 @@ export const CommandBox = () => {
                         placeholder={__('"Ask me to modify the content of the block"', 'suggerence')}
                         disabled={isLoading}
                         rows={2}
+                        ref={textareaRef}
                     />
 
                     {!isLoading ? (
@@ -191,8 +156,7 @@ export const CommandBox = () => {
                                 }
                             </div>
                         )}
-                </CardBody>
-            </Card>
+            </div>
         </div>
     );
 };

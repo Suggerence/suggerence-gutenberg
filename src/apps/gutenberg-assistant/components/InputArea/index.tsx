@@ -1,26 +1,127 @@
-import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack } from '@wordpress/components';
+import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack, ToolbarButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useState, useRef, useEffect } from '@wordpress/element';
+import { useState, useRef, useEffect, useCallback } from '@wordpress/element';
+import { useSelect } from '@wordpress/data';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
+import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
 import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
+import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas';
+import { getContextUsageColor, getContextUsageWarning } from '@/shared/utils/contextCalculator';
+import { edit } from '@wordpress/icons';
 
 export const InputArea = () => {
 
     const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
     const { callAI, parseAIResponse } = useAI();
     const [inputValue, setInputValue] = useState('');
+    const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const { isLoading, setIsLoading } = useChatInterfaceStore();
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
+    const { addContext, contextUsage, updateContextUsage, selectedContexts } = useContextStore();
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    // Get current Gutenberg state using useSelect to listen for changes
+    const gutenbergState = useSelect((select: any) => {
+        const {
+            getBlocks,
+            getEditedPostAttribute,
+        } = select('core/block-editor');
+
+        const {
+            getEditedPostAttribute: getEditorPostAttribute,
+        } = select('core/editor');
+
+        const blocks = getBlocks();
+        const postTitle = getEditorPostAttribute?.('title') || getEditedPostAttribute?.('title') || '';
+
+        return {
+            blocks,
+            postTitle,
+            lastUpdated: Date.now() // Force updates when blocks change
+        };
+    }, []);
 
     useEffect(() => {
         inputRef.current?.focus();
     }, [isLoading]);
+
+    // Comprehensive context calculation function
+    const calculateContextUsage = useCallback(() => {
+        try {
+            // Build comprehensive gutenberg context
+            const gutenbergContext = {
+                post: {
+                    title: gutenbergState.postTitle,
+                    totalBlocks: gutenbergState.blocks.length
+                },
+                blocks: gutenbergState.blocks.map((block: any, index: number) => ({
+                    position: index,
+                    id: block.clientId,
+                    name: block.name,
+                    content: block.attributes?.content || '',
+                    attributes: block.attributes
+                })),
+                lastUpdated: new Date().toISOString()
+            };
+
+            // Build system prompt with current context
+            const systemPrompt = `You are a Gutenberg Block Editor AI Assistant. Your job is to execute user requests immediately using the available tools.
+
+## CRITICAL BEHAVIOR RULES:
+1. **ONE TOOL PER RESPONSE**: Execute exactly ONE tool per response, never claim to do multiple actions at once
+2. **ACT IMMEDIATELY**: Execute tools right away without asking for confirmation or permission
+3. **NO PLANNING RESPONSES**: Don't explain what you're going to do - just do it
+
+## Block Context Awareness:
+- Use the specific block IDs provided below for precise targeting
+- Consider block positions and content when making decisions
+- Understand parent-child relationships in nested blocks
+
+## Current Editor State:
+${JSON.stringify(gutenbergContext, null, 2)}
+
+## Additional Context Selected by User:
+${selectedContexts.map(ctx => {
+                if (ctx.type === 'drawing') {
+                    return `${ctx.type}: ${ctx.label} - The user has provided a hand-drawn diagram or sketch (base64 image data available)`;
+                }
+                return `${ctx.type}: ${ctx.label}`;
+            }).join(', ') || 'None'}
+
+Remember: Use the specific block IDs from the context above for precise block targeting.`;
+
+            // Include current input as if it were part of messages
+            const messagesWithCurrentInput = [...messages];
+            if (inputValue.trim()) {
+                messagesWithCurrentInput.push({
+                    role: 'user',
+                    content: inputValue,
+                    date: new Date().toISOString()
+                });
+            }
+
+            console.log('Calculating context usage with:', {
+                messagesCount: messagesWithCurrentInput.length,
+                selectedContextsCount: selectedContexts.length,
+                blocksCount: gutenbergState.blocks.length,
+                inputLength: inputValue.length,
+                systemPromptLength: systemPrompt.length
+            });
+
+            updateContextUsage({
+                messages: messagesWithCurrentInput,
+                systemPrompt,
+                gutenbergContext
+            });
+        } catch (error) {
+            console.warn('Could not calculate context usage:', error);
+        }
+    }, [gutenbergState, selectedContexts, messages, inputValue, updateContextUsage]);
 
     const handleSendMessage = async () => {
         if (!inputValue.trim() || isLoading) return;
@@ -131,10 +232,37 @@ export const InputArea = () => {
         }
     }, [messages]);
 
+    // Update context usage when anything changes
+    useEffect(() => {
+        calculateContextUsage();
+    }, [calculateContextUsage]);
+
+    // Debounced input change handler for real-time updates
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            calculateContextUsage();
+        }, 300); // 300ms debounce for input changes
+
+        return () => clearTimeout(debounceTimer);
+    }, [inputValue, calculateContextUsage]);
+
     const handleContextSelect = (context: any) => {
         console.log('Context selected:', context);
-        // TODO: Implement context handling logic
-        // Context structure: { id, type, label, data? }
+        addContext(context);
+        // The useEffect will automatically recalculate context usage due to selectedContexts dependency
+    };
+
+    const handleCanvasSave = (imageData: string, description?: string) => {
+        const drawingContext = {
+            id: `drawing-${Date.now()}`,
+            type: 'drawing',
+            label: description || 'Hand-drawn diagram',
+            data: imageData,
+            timestamp: new Date().toISOString()
+        };
+
+        addContext(drawingContext);
+        setIsCanvasOpen(false);
     };
 
     return (
@@ -142,6 +270,30 @@ export const InputArea = () => {
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
                 <ContextMenuBadge onContextSelect={handleContextSelect} />
                 <BlockBadge />
+
+                {/* Context Usage Indicator */}
+                {contextUsage && (
+                    <div
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            backgroundColor: '#f8fafc',
+                            color: getContextUsageColor(contextUsage.percentage),
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                            lineHeight: '16px',
+                            marginLeft: 'auto' // Push to the right
+                        }}
+                        title={getContextUsageWarning(contextUsage.percentage) || `Context usage: ${contextUsage.totalTokens} tokens`}
+                    >
+                        {contextUsage.percentage}%
+                    </div>
+                )}
             </div>
             <TextareaControl
                 value={inputValue}
@@ -154,7 +306,17 @@ export const InputArea = () => {
                 ref={inputRef}
             />
 
-            <HStack justify="end">
+            <HStack justify="end" spacing={2}>
+                <Button
+                    onClick={() => setIsCanvasOpen(true)}
+                    disabled={isLoading}
+                    icon={edit}
+                    variant="tertiary"
+                    size="compact"
+                    aria-label={__("Draw diagram", "suggerence")}
+                    title={__("Draw a diagram or sketch to add as context", "suggerence")}
+                />
+
                 <Button
                     onClick={handleSendMessage}
                     disabled={!inputValue.trim() || isLoading}
@@ -170,6 +332,12 @@ export const InputArea = () => {
                     )}
                 </Button>
             </HStack>
+
+            <DrawingCanvas
+                isOpen={isCanvasOpen}
+                onClose={() => setIsCanvasOpen(false)}
+                onSave={handleCanvasSave}
+            />
         </VStack>
     );
 };

@@ -31,6 +31,18 @@ export interface BlockSupports {
         style?: boolean;
         width?: boolean;
     };
+    __experimentalBorder?: {
+        color?: boolean;
+        radius?: boolean;
+        style?: boolean;
+        width?: boolean;
+        __experimentalSkipSerialization?: boolean;
+        __experimentalDefaultControls?: {
+            color?: boolean;
+            radius?: boolean;
+            width?: boolean;
+        };
+    };
     dimensions?: {
         minHeight?: boolean;
         aspectRatio?: boolean;
@@ -211,29 +223,30 @@ export function generateDynamicBlockTool(blockName: string): SuggerenceMCPRespon
         }
     }
 
-    // Border support
-    if (supports.border) {
+    // Border support (both regular and experimental)
+    const borderSupport = supports.border || supports.__experimentalBorder;
+    if (borderSupport) {
         styleProperties.border = {
             type: 'object',
             description: 'Border styles',
             properties: {}
         };
 
-        if (supports.border.width !== false) {
+        if (borderSupport.width !== false) {
             styleProperties.border.properties.width = {
                 type: 'string',
                 description: 'Border width (px, em, etc.)'
             };
         }
 
-        if (supports.border.color !== false) {
+        if (borderSupport.color !== false) {
             styleProperties.border.properties.color = {
                 type: 'string',
                 description: 'Border color'
             };
         }
 
-        if (supports.border.style !== false) {
+        if (borderSupport.style !== false) {
             styleProperties.border.properties.style = {
                 type: 'string',
                 description: 'Border style (solid, dashed, dotted, etc.)',
@@ -241,10 +254,10 @@ export function generateDynamicBlockTool(blockName: string): SuggerenceMCPRespon
             };
         }
 
-        if (supports.border.radius !== false) {
+        if (borderSupport.radius !== false) {
             styleProperties.border.properties.radius = {
                 type: 'string',
-                description: 'Border radius (px, %, etc.)'
+                description: 'Border radius - Use "50%" for round/circular, "10px" for rounded corners, "0" for square edges'
             };
         }
     }
@@ -339,8 +352,8 @@ export function generateDynamicBlockTool(blockName: string): SuggerenceMCPRespon
         capabilities.push('Spacing: padding, margins');
     }
 
-    if (supports.border) {
-        capabilities.push('Borders: width, color, style, radius');
+    if (supports.border || supports.__experimentalBorder) {
+        capabilities.push('Borders: width, color, style, radius (use 50% radius to make images round/circular)');
     }
 
     if (capabilities.length > 0) {
@@ -434,8 +447,9 @@ export function generateBlockCapabilityDescription(blockName: string): string {
         }
     }
 
-    if (supports.border) {
-        supportFeatures.push('**Border**: width, color, style, radius');
+    const borderSupport = supports.border || supports.__experimentalBorder;
+    if (borderSupport) {
+        supportFeatures.push('**Border**: width, color, style, radius (50% radius = round/circular images)');
     }
 
     if (supports.dimensions) {
@@ -460,7 +474,7 @@ export function generateBlockCapabilityDescription(blockName: string): string {
  */
 function getBlockPurposeDescription(blockName: string): string {
     const purposes: Record<string, string> = {
-        'core/image': 'Display images with captions, alt text, and advanced styling. Supports duotone filters, borders, and responsive sizing.',
+        'core/image': 'Display images with captions, alt text, and advanced styling. Supports duotone filters, borders (including rounded/circular with border radius), and responsive sizing.',
         'core/paragraph': 'Basic text content with rich formatting. Supports typography, colors, and drop caps.',
         'core/heading': 'Create headings (H1-H6) with custom typography and styling for content hierarchy.',
         'core/button': 'Interactive buttons with links, custom colors, and styling. Can be used for calls-to-action.',

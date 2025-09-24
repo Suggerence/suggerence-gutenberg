@@ -5,6 +5,7 @@ import { page, post, blockDefault, edit, chevronLeft, close } from '@wordpress/i
 import { PostSelector } from '@/shared/components/PostSelector';
 import { BlockSelector } from '@/shared/components/BlockSelector';
 import { BlockTitle } from '@wordpress/block-editor';
+import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import type { WPContent, ContentType } from '@/shared/components/PostSelector/types';
 import type { BlockInstance } from '@wordpress/blocks';
 
@@ -50,7 +51,7 @@ interface ContextMenuBadgeProps {
 }
 
 export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => {
-    const [selectedContexts, setSelectedContexts] = useState<SelectedContext[]>([]);
+    const { selectedContexts, addContext, removeContext } = useContextStore();
     const [currentView, setCurrentView] = useState<'menu' | 'content-selector' | 'block-selector'>('menu');
     const [selectedContentId, setSelectedContentId] = useState<number>();
     const [selectedBlockId, setSelectedBlockId] = useState<string>();
@@ -76,7 +77,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
             label: contextOptions.find(opt => opt.id === contextId)?.label || contextId,
         };
 
-        setSelectedContexts([...selectedContexts, context]);
+        addContext(context);
         onContextSelect?.(context);
     };
 
@@ -88,9 +89,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
             data: content
         };
 
-        // Remove existing contexts of the same type and add new one
-        const newContexts = selectedContexts.filter(ctx => ctx.type !== contentType);
-        setSelectedContexts([...newContexts, context]);
+        addContext(context);
         setSelectedContentId(content.id);
         onContextSelect?.(context);
         setCurrentView('menu');
@@ -138,17 +137,13 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
             data: block
         };
 
-        // Remove existing block contexts and add new one
-        const newContexts = selectedContexts.filter(ctx => ctx.type !== 'block');
-        setSelectedContexts([...newContexts, context]);
+        addContext(context);
         setSelectedBlockId(block.clientId);
         onContextSelect?.(context);
         setCurrentView('menu');
     };
 
     const handleRemoveContext = (contextId: string) => {
-        setSelectedContexts(selectedContexts.filter(ctx => ctx.id !== contextId));
-
         // Reset selections if removing contexts
         const removedContext = selectedContexts.find(ctx => ctx.id === contextId);
         if (removedContext?.type === 'post' || removedContext?.type === 'page') {
@@ -158,6 +153,8 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
             setSelectedBlockId(undefined);
         }
         setHoveredContextId(undefined);
+
+        removeContext(contextId);
     };
 
     const handleBackToMenu = () => {

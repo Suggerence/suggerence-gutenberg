@@ -1,5 +1,6 @@
 import apiFetch from "@wordpress/api-fetch";
 import { select } from '@wordpress/data';
+import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 
 export interface UseAITools {
     callAI: (messages: MCPClientMessage[], model: AIModel | null, tools: SuggerenceMCPResponseTool[]) => Promise<MCPClientMessage>;
@@ -8,6 +9,8 @@ export interface UseAITools {
 
 export const useAI = (): UseAITools =>
 {
+    const { selectedContexts } = useContextStore();
+
     /**
      * Get comprehensive site context including Gutenberg blocks information
      */
@@ -69,7 +72,8 @@ export const useAI = (): UseAITools =>
                     blocks: blocksInfo,
                     selectedBlock: selectedBlockInfo,
                     lastUpdated: new Date().toISOString()
-                }
+                },
+                selectedContexts: selectedContexts || []
             };
         } catch (gutenbergError) {
             console.warn('Suggerence: Could not retrieve Gutenberg context', gutenbergError);
@@ -78,7 +82,8 @@ export const useAI = (): UseAITools =>
                 gutenberg: {
                     error: 'Could not access Gutenberg data',
                     lastUpdated: new Date().toISOString()
-                }
+                },
+                selectedContexts: selectedContexts || []
             };
         }
     };
@@ -98,6 +103,21 @@ export const useAI = (): UseAITools =>
 5. **TRUTHFUL RESPONSES**: Only report what you actually did with the tool you just executed
 6. **LET SYSTEM CONTINUE**: After executing one tool, the system will automatically call you again for the next step
 7. **NO QUESTIONS**: Don't ask clarifying questions - use context to infer intent
+
+## DRAWING CONTEXT HANDLING:
+When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS to help you understand what the user wants.
+
+**CRITICAL**: If the user says ANYTHING about generating/creating images "based on" their drawing, sketch, or diagram, you MUST:
+
+8. **RECOGNIZE IMAGE GENERATION REQUESTS**: Keywords like "generate image based on my drawing", "create image from sketch", "make an image like my drawing" = IMAGE GENERATION REQUEST
+9. **ANALYZE THE DRAWING**: Carefully examine the provided drawing/sketch image that was sent with the message
+10. **CREATE DETAILED PROMPT**: Describe what you see in the drawing in detail for image generation
+11. **USE add_generated_image TOOL**: Always use add_generated_image tool when user wants images based on their drawings
+
+**EXAMPLES**:
+- User: "generate an image based on my drawing" → ANALYZE drawing + USE add_generated_image
+- User: "create an image from my sketch" → ANALYZE drawing + USE add_generated_image
+- User: "make this drawing into a real image" → ANALYZE drawing + USE add_generated_image
 
 ## Block Context Awareness:
 - Use the specific block IDs provided below for precise targeting
@@ -133,6 +153,56 @@ ${site_context.gutenberg.blocks?.map((block: any) => {
 }).join('\n') || 'No blocks available'}
 ` : 'Gutenberg context not available'}
 
+${site_context.selectedContexts && site_context.selectedContexts.length > 0 ? `
+## Additional Context Selected by User:
+${site_context.selectedContexts.map((context: any) => {
+    let contextInfo = `- **${context.type.toUpperCase()}**: ${context.label} (ID: ${context.id})`;
+
+    if (context.data) {
+        if (context.type === 'post' || context.type === 'page') {
+            // Add relevant post/page data
+            const data = context.data;
+            contextInfo += `\n  - URL: ${data.link || 'N/A'}`;
+            contextInfo += `\n  - Status: ${data.status || 'N/A'}`;
+            contextInfo += `\n  - Date: ${data.date ? new Date(data.date).toLocaleDateString() : 'N/A'}`;
+            if (data.excerpt?.rendered) {
+                const excerpt = data.excerpt.rendered.replace(/<[^>]*>/g, '').trim();
+                if (excerpt) {
+                    contextInfo += `\n  - Excerpt: "${excerpt.substring(0, 150)}${excerpt.length > 150 ? '...' : ''}"`;
+                }
+            }
+        } else if (context.type === 'block') {
+            // Add relevant block data
+            const block = context.data;
+            contextInfo += `\n  - Block Type: ${block.name}`;
+            contextInfo += `\n  - Client ID: ${block.clientId}`;
+            if (block.attributes && Object.keys(block.attributes).length > 0) {
+                contextInfo += `\n  - Attributes: ${JSON.stringify(block.attributes)}`;
+            }
+        } else if (context.type === 'drawing') {
+            // Special handling for drawings - MAKE THIS VERY PROMINENT
+            contextInfo += `\n\n  🎨 **DRAWING ANALYSIS REQUIRED** 🎨`;
+            contextInfo += `\n  - **VISUAL CONTEXT**: This is a hand-drawn sketch/diagram provided by the user`;
+            contextInfo += `\n  - **IMAGE ATTACHED**: The user has provided an actual drawing image that you can see`;
+            contextInfo += `\n  - **PURPOSE**: If user asks for image generation "based on drawing", analyze what you see`;
+            contextInfo += `\n  - **MANDATORY**: Use add_generated_image tool with detailed description of the drawing`;
+            contextInfo += `\n  - **KEYWORDS TO WATCH**: "based on drawing", "from sketch", "like my drawing", etc.`;
+        }
+    }
+
+    return contextInfo;
+}).join('\n')}
+
+**IMPORTANT**:
+- When the user mentions content from these selected contexts, use the specific IDs and data provided above to understand what they're referring to.
+
+**🚨 CRITICAL DRAWING INSTRUCTION 🚨**:
+- **IF YOU SEE A DRAWING CONTEXT ABOVE**: The user has attached an actual image/drawing to their message
+- **IF USER ASKS TO GENERATE IMAGE FROM/BASED ON THEIR DRAWING**: This is an IMAGE GENERATION REQUEST, NOT a block request
+- **MANDATORY ACTION**: Use add_generated_image tool with a detailed prompt describing what you see in their drawing
+- **DO NOT**: Ask for clarification or mention blocks when user wants images from drawings
+` : ''}
+
 ## Response Format:
 - **ALWAYS**: Execute exactly one tool per response
 - **NEVER**: Claim to have done multiple actions when you only executed one tool
@@ -147,17 +217,95 @@ CRITICAL: Do NOT say "Deleted and moved" when you only executed the delete tool!
 
 Remember: Use the specific block IDs from the context above for precise block targeting.`;
         
+        // Convert messages for API call - check if we have drawing contexts for the current conversation
+        const drawingContexts = site_context.selectedContexts?.filter((ctx: any) => ctx.type === 'drawing') || [];
+
+        let convertedMessages;
+        if (drawingContexts.length > 0) {
+            // Find the latest user message to attach images to
+            let latestUserMessageIndex = -1;
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].role === 'user') {
+                    latestUserMessageIndex = i;
+                    break;
+                }
+            }
+
+            convertedMessages = messages.map((message, index) => {
+                if (index === latestUserMessageIndex) {
+                    // Convert the latest user message to include images
+                    const imageAttachments = drawingContexts.map((ctx: any) => ({
+                        type: 'image',
+                        source: {
+                            type: 'base64',
+                            media_type: 'image/png',
+                            data: ctx.data.split(',')[1] // Remove data:image/png;base64, prefix
+                        }
+                    }));
+
+                    return {
+                        role: message.role,
+                        content: [
+                            {
+                                type: 'text',
+                                text: message.content
+                            },
+                            ...imageAttachments
+                        ]
+                    };
+                }
+
+                return { role: message.role, content: message.content };
+            });
+        } else {
+            // No drawings, just convert normally
+            convertedMessages = messages.map((message) => ({
+                role: message.role,
+                content: message.content
+            }));
+        }
+
+        // Debug: Log what we're sending to AI
+        console.log('🔍 DEBUG: System prompt contains:', systemPrompt.includes('DRAWING') ? 'DRAWING CONTEXT' : 'NO DRAWING CONTEXT');
+        console.log('🔍 DEBUG: Selected contexts:', site_context.selectedContexts?.map(ctx => ctx.type) || 'none');
+        console.log('🔍 DEBUG: Drawing contexts found:', drawingContexts.length);
+        console.log('🔍 DEBUG: Converted messages:', convertedMessages.map(m => ({
+            role: m.role,
+            contentType: typeof m.content,
+            isArray: Array.isArray(m.content),
+            hasImages: Array.isArray(m.content) ? m.content.some((item: any) => item.type === 'image') : false
+        })));
+
         const requestBody: any = {
             model: model?.id,
             provider: model?.provider,
             system: systemPrompt,
-            messages: messages.map((message) => ({ role: message.role, content: message.content }))
+            messages: convertedMessages
         };
         
         // Only add tools if they exist
         if (tools) {
             requestBody.tools = tools;
         }
+
+        // Debug: Log the actual request being sent
+        console.log('🔍 DEBUG: Full request body:', {
+            model: requestBody.model,
+            provider: requestBody.provider,
+            systemPromptLength: requestBody.system.length,
+            messagesCount: requestBody.messages.length,
+            hasTools: !!requestBody.tools,
+            toolsCount: requestBody.tools?.length || 0
+        });
+
+        // Debug: Log the actual message contents (first 200 chars)
+        requestBody.messages.forEach((msg: any, i: number) => {
+            console.log(`🔍 DEBUG: Message ${i} (${msg.role}):`,
+                Array.isArray(msg.content)
+                    ? `Array with ${msg.content.length} items: ${msg.content.map((item: any) => item.type).join(', ')}`
+                    : `String: "${msg.content.substring(0, 100)}..."`
+            );
+        });
 
         // @ts-ignore
         const response = await apiFetch({

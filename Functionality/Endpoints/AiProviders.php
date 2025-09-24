@@ -171,11 +171,40 @@ class AiProviders extends BaseApiEndpoints
         }
 
         $text->withMessages(
-            array_map(fn($message) => $message['role'] === 'assistant'
-                ? new AssistantMessage($message['content'])
-                : new UserMessage($message['content']),
-                $messages
-            )
+            array_map(function($message) {
+                if ($message['role'] === 'assistant') {
+                    return new AssistantMessage($message['content']);
+                }
+
+                // Handle user messages - check if content is multi-modal (array) or simple text
+                $content = $message['content'];
+
+                if (is_array($content)) {
+                    // Multi-modal message with text and images
+                    $textContent = '';
+                    $additionalContent = [];
+
+                    foreach ($content as $item) {
+                        if ($item['type'] === 'text') {
+                            $textContent .= $item['text'];
+                        } elseif ($item['type'] === 'image') {
+                            // Create Image from base64 data
+                            $imageBase64 = $item['source']['data'];
+                            $mimeType = $item['source']['media_type'];
+
+                            $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromBase64(
+                                $imageBase64,
+                                $mimeType
+                            );
+                        }
+                    }
+
+                    return new UserMessage($textContent, $additionalContent);
+                } else {
+                    // Simple text message
+                    return new UserMessage($content);
+                }
+            }, $messages)
         );
 
         if ($tools) {

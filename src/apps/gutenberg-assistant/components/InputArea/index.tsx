@@ -1,4 +1,4 @@
-import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack, ToolbarButton } from '@wordpress/components';
+import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useState, useRef, useEffect, useCallback } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';

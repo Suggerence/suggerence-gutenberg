@@ -1,16 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-interface GutenbergAssistantMessagesStore {
-    postId: number;
-    setPostId: (postId: number) => void;
-    messages: MCPClientMessage[];
-    setMessages: (messages: MCPClientMessage[]) => void;
-    setLastMessage: (message: MCPClientMessage) => void;
-    addMessage: (message: MCPClientMessage) => void;
-    clearMessages: () => void;
-}
-
 const initialMessages = [
     {
         role: 'assistant',

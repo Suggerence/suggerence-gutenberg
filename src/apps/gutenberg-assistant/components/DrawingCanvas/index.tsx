@@ -8,17 +8,11 @@ import {
     ToolbarGroup,
     ToolbarButton,
     DropdownMenu,
-    CircularOptionPicker,
+    ColorPalette,
     RangeControl
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { edit, brush, download, trash, color, settings } from '@wordpress/icons';
-
-interface DrawingCanvasProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (imageData: string, description?: string) => void;
-}
 
 export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -28,17 +22,16 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
     const [eraserSize, setEraserSize] = useState(10);
     const [penColor, setPenColor] = useState('#000000');
 
-    // Generate color options with current selection
-    const getColorOptions = useCallback(() => [
-        { name: 'Black', style: { backgroundColor: '#000000' }, isSelected: penColor === '#000000', value: '#000000' },
-        { name: 'Red', style: { backgroundColor: '#ff0000' }, isSelected: penColor === '#ff0000', value: '#ff0000' },
-        { name: 'Blue', style: { backgroundColor: '#0000ff' }, isSelected: penColor === '#0000ff', value: '#0000ff' },
-        { name: 'Green', style: { backgroundColor: '#00ff00' }, isSelected: penColor === '#00ff00', value: '#00ff00' },
-        { name: 'Yellow', style: { backgroundColor: '#ffff00' }, isSelected: penColor === '#ffff00', value: '#ffff00' },
-        { name: 'Orange', style: { backgroundColor: '#ffa500' }, isSelected: penColor === '#ffa500', value: '#ffa500' },
-        { name: 'Purple', style: { backgroundColor: '#800080' }, isSelected: penColor === '#800080', value: '#800080' },
-        { name: 'White', style: { backgroundColor: '#ffffff', border: '1px solid #ddd' }, isSelected: penColor === '#ffffff', value: '#ffffff' }
-    ], [penColor]);
+    const colorOptions = [
+        { name: 'Black', color: '#000000' },
+        { name: 'Red', color: '#ff0000' },
+        { name: 'Blue', color: '#0000ff' },
+        { name: 'Green', color: '#00ff00' },
+        { name: 'Yellow', color: '#ffff00' },
+        { name: 'Orange', color: '#ffa500' },
+        { name: 'Purple', color: '#800080' },
+        { name: 'White', color: '#ffffff' }
+    ];
 
     const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
@@ -169,10 +162,10 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
                             >
                                 {() => (
                                     <div style={{ padding: '16px', minWidth: '200px' }}>
-                                        <CircularOptionPicker
-                                            options={getColorOptions()}
+                                        <ColorPalette
+                                            colors={colorOptions}
                                             value={penColor}
-                                            onChangeValue={(newColor: string) => setPenColor(newColor)}
+                                            onChange={(newColor: string) => setPenColor(newColor)}
                                         />
                                     </div>
                                 )}

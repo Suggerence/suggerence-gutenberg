@@ -6,15 +6,7 @@ import { PostSelector } from '@/shared/components/PostSelector';
 import { BlockSelector } from '@/shared/components/BlockSelector';
 import { BlockTitle } from '@wordpress/block-editor';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
-import type { WPContent, ContentType } from '@/shared/components/PostSelector/types';
 import type { BlockInstance } from '@wordpress/blocks';
-
-interface ContextOption {
-    id: string;
-    label: string;
-    icon: any;
-    description?: string;
-}
 
 const contextOptions: ContextOption[] = [
     {
@@ -31,24 +23,8 @@ const contextOptions: ContextOption[] = [
         id: 'block',
         label: __('Block', 'suggerence-gutenberg'),
         icon: blockDefault,
-    },
-    {
-        id: 'document',
-        label: __('Document', 'suggerence-gutenberg'),
-        icon: edit,
     }
 ];
-
-interface SelectedContext {
-    id: string;
-    type: string;
-    label: string;
-    data?: any;
-}
-
-interface ContextMenuBadgeProps {
-    onContextSelect?: (context: SelectedContext) => void;
-}
 
 export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => {
     const { selectedContexts, addContext, removeContext } = useContextStore();

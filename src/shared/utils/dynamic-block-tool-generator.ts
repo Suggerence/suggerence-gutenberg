@@ -1,5 +1,4 @@
 import { getBlockType } from '@wordpress/blocks';
-import { SuggerenceMCPResponseTool } from '../mcps/types';
 
 export interface BlockSupports {
     color?: {

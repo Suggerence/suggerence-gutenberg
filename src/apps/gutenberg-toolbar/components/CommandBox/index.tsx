@@ -4,13 +4,8 @@ import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 // @ts-ignore - WordPress types not available
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
-
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-ai';
-
-interface CommandBoxProps {
-    onClose?: () => void;
-}
 
 export const CommandBox = ({ onClose }: CommandBoxProps) => {
     const {
@@ -75,7 +70,6 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
             e.preventDefault();
             handleSubmit();
         }
-        // Escape will close the dropdown automatically
     };
 
     const isLoading = isExecuting || mcpLoading;

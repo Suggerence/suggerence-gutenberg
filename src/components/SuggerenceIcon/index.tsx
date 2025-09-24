@@ -1,9 +1,5 @@
 import { SVG, Path } from '@wordpress/components';
 
-interface SuggerenceIconProps {
-    size?: number;
-}
-
 export const SuggerenceIcon = ({ size = 20 }: SuggerenceIconProps) => {
     return (
         <SVG

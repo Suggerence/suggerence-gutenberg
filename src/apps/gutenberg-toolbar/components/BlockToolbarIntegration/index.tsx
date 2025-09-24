@@ -1,12 +1,10 @@
 import { useEffect } from '@wordpress/element';
 import { ToolbarDropdownMenu, ToolbarGroup } from '@wordpress/components';
-// @ts-ignore - WordPress types not available
 import { BlockControls } from '@wordpress/block-editor';
 import { createHigherOrderComponent } from '@wordpress/compose';
 import { addFilter } from '@wordpress/hooks';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
-// @ts-ignore - WordPress types not available
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { SuggerenceIcon } from '@/components/SuggerenceIcon';
 import { CommandBox } from '@/apps/gutenberg-toolbar/components/CommandBox';
@@ -57,12 +55,6 @@ export const BlockToolbarIntegration = () => {
             withToolbarButton,
             20
         );
-
-        // Cleanup function to remove filter
-        return () => {
-            // Note: WordPress doesn't provide removeFilter for this hook,
-            // but the component unmount handles this
-        };
     }, []);
 
     return null;

@@ -1,12 +1,6 @@
 import { useState, useEffect } from '@wordpress/element';
 import { useGutenbergMCPStore } from '@/apps/gutenberg-toolbar/stores/gutenbergMcpStore';
 
-export interface UseGutenbergMCPTools {
-    isGutenbergServerReady: boolean;
-    getGutenbergTools: () => Promise<SuggerenceMCPResponseTool[]>;
-    callGutenbergTool: (toolName: string, args: Record<string, any>) => Promise<any>;
-}
-
 export const useGutenbergMCP = (): UseGutenbergMCPTools => {
     const { serverConnections } = useGutenbergMCPStore();
     const [isGutenbergServerReady, setIsGutenbergServerReady] = useState(true);

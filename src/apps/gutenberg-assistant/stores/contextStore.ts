@@ -1,39 +1,6 @@
 import { create } from 'zustand';
 import { calculateContextUsage } from '@/shared/utils/contextCalculator';
 
-interface SelectedContext {
-    id: string;
-    type: string;
-    label: string;
-    data?: any;
-}
-
-interface ContextUsage {
-    totalTokens: number;
-    percentage: number;
-    breakdown: {
-        systemPrompt: number;
-        messages: number;
-        selectedContexts: number;
-        gutenbergContext: number;
-    };
-}
-
-interface ContextState {
-    selectedContexts: SelectedContext[];
-    contextUsage: ContextUsage | null;
-    addContext: (context: SelectedContext) => void;
-    removeContext: (contextId: string) => void;
-    clearContexts: () => void;
-    getContextsByType: (type: string) => SelectedContext[];
-    hasContext: (type: string) => boolean;
-    updateContextUsage: (params: {
-        messages: MCPClientMessage[];
-        systemPrompt: string;
-        gutenbergContext: any;
-    }) => void;
-}
-
 export const useContextStore = create<ContextState>((set, get) => ({
     selectedContexts: [],
     contextUsage: null,

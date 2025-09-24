@@ -2,11 +2,6 @@ import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { useSelect } from '@wordpress/data';
 import { BlockSpecificMCPServerFactory } from '@/shared/mcps/servers/BlockSpecificMCPServerFactory';
 
-export interface UseGutenbergAITools {
-    executeCommand: (command: string) => Promise<boolean>;
-    isLoading: boolean;
-}
-
 export const useGutenbergAI = (): UseGutenbergAITools => {
     const { callAI } = useAI();
 

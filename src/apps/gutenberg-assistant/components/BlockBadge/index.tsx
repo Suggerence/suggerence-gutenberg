@@ -3,12 +3,6 @@ import { Icon } from '@wordpress/components';
 import { post, close } from '@wordpress/icons';
 import { useState } from '@wordpress/element';
 
-interface BlockInfo {
-    name: string;
-    title: string;
-    icon: any;
-}
-
 export const BlockBadge = () => {
     const [isHovered, setIsHovered] = useState(false);
 

@@ -1,4 +1,8 @@
-import { __experimentalVStack as VStack, __experimentalText as Text, __experimentalHStack as HStack } from '@wordpress/components';
+import {
+    __experimentalVStack as VStack,
+    __experimentalText as Text,
+    __experimentalHStack as HStack
+} from '@wordpress/components';
 
 export const AssistantMessage = ({message}: {message: MCPClientMessage}) => {
     const messageDate = new Date(message.date);

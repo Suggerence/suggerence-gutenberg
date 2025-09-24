@@ -1,12 +1,7 @@
 import apiFetch from "@wordpress/api-fetch";
 import { select } from '@wordpress/data';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
-
-export interface UseAITools {
-    callAI: (messages: MCPClientMessage[], model: AIModel | null, tools: SuggerenceMCPResponseTool[]) => Promise<MCPClientMessage>;
-    parseAIResponse: (response: any) => MCPClientAIResponse;
-}
-
+ 
 export const useAI = (): UseAITools =>
 {
     const { selectedContexts } = useContextStore();

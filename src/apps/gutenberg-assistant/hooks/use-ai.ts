@@ -182,6 +182,14 @@ ${site_context.selectedContexts.map((context: any) => {
             contextInfo += `\n  - **PURPOSE**: If user asks for image generation "based on drawing", analyze what you see`;
             contextInfo += `\n  - **MANDATORY**: Use add_generated_image tool with detailed description of the drawing`;
             contextInfo += `\n  - **KEYWORDS TO WATCH**: "based on drawing", "from sketch", "like my drawing", etc.`;
+        } else if (context.type === 'image') {
+            // Special handling for uploaded images
+            contextInfo += `\n\n  🖼️ **IMAGE ANALYSIS REQUIRED** 🖼️`;
+            contextInfo += `\n  - **VISUAL CONTEXT**: This is an image from the user's media library`;
+            contextInfo += `\n  - **IMAGE ATTACHED**: The user has selected an actual image that you can see`;
+            contextInfo += `\n  - **PURPOSE**: If user asks for image generation "based on image", analyze what you see`;
+            contextInfo += `\n  - **MANDATORY**: Use add_generated_image tool with detailed description of the image`;
+            contextInfo += `\n  - **KEYWORDS TO WATCH**: "based on image", "like this image", "similar to image", etc.`;
         }
     }
 
@@ -212,11 +220,13 @@ CRITICAL: Do NOT say "Deleted and moved" when you only executed the delete tool!
 
 Remember: Use the specific block IDs from the context above for precise block targeting.`;
         
-        // Convert messages for API call - check if we have drawing contexts for the current conversation
-        const drawingContexts = site_context.selectedContexts?.filter((ctx: any) => ctx.type === 'drawing') || [];
+        // Convert messages for API call - check if we have visual contexts for the current conversation
+        const visualContexts = site_context.selectedContexts?.filter((ctx: any) =>
+            ctx.type === 'drawing' || ctx.type === 'image'
+        ) || [];
 
         let convertedMessages;
-        if (drawingContexts.length > 0) {
+        if (visualContexts.length > 0) {
             // Find the latest user message to attach images to
             let latestUserMessageIndex = -1;
             for (let i = messages.length - 1; i >= 0; i--) {
@@ -228,26 +238,48 @@ Remember: Use the specific block IDs from the context above for precise block ta
 
             convertedMessages = messages.map((message, index) => {
                 if (index === latestUserMessageIndex) {
-                    // Convert the latest user message to include images
-                    const imageAttachments = drawingContexts.map((ctx: any) => ({
-                        type: 'image',
-                        source: {
-                            type: 'base64',
-                            media_type: 'image/png',
-                            data: ctx.data.split(',')[1] // Remove data:image/png;base64, prefix
-                        }
-                    }));
+                    // Convert the latest user message to include images from all visual contexts
 
-                    return {
-                        role: message.role,
-                        content: [
-                            {
-                                type: 'text',
-                                text: message.content
-                            },
-                            ...imageAttachments
-                        ]
-                    };
+                    const imageAttachments = visualContexts.map((ctx: any) => {
+                        console.log('🔍 Processing visual context:', ctx.type, ctx);
+
+                        if (ctx.type === 'drawing') {
+                            // Handle drawings (base64 data)
+                            return {
+                                type: 'image',
+                                source: {
+                                    type: 'base64',
+                                    media_type: 'image/png',
+                                    data: ctx.data.split(',')[1] // Remove data:image/png;base64, prefix
+                                }
+                            };
+                        } else if (ctx.type === 'image') {
+                            // Handle media library images (URLs)
+                            console.log('🔍 Image context data:', ctx.data);
+                            console.log('🔍 Image URL:', ctx.data.url);
+
+                            return {
+                                type: 'image',
+                                source: {
+                                    type: 'url',
+                                    url: ctx.data.url
+                                }
+                            };
+                        }
+                    }).filter(Boolean);
+
+                    if (imageAttachments.length > 0) {
+                        return {
+                            role: message.role,
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: message.content
+                                },
+                                ...imageAttachments
+                            ]
+                        };
+                    }
                 }
 
                 return { role: message.role, content: message.content };
@@ -263,7 +295,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
         // Debug: Log what we're sending to AI
         console.log('🔍 DEBUG: System prompt contains:', systemPrompt.includes('DRAWING') ? 'DRAWING CONTEXT' : 'NO DRAWING CONTEXT');
         console.log('🔍 DEBUG: Selected contexts:', site_context.selectedContexts?.map(ctx => ctx.type) || 'none');
-        console.log('🔍 DEBUG: Drawing contexts found:', drawingContexts.length);
+        console.log('🔍 DEBUG: Visual contexts found:', visualContexts.length);
         console.log('🔍 DEBUG: Converted messages:', convertedMessages.map(m => ({
             role: m.role,
             contentType: typeof m.content,

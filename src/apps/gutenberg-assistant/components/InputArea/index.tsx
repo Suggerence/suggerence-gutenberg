@@ -10,8 +10,9 @@ import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
 import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas';
+import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelector';
 import { getContextUsageColor, getContextUsageWarning } from '@/shared/utils/contextCalculator';
-import { edit } from '@wordpress/icons';
+import { image, brush } from '@wordpress/icons';
 
 export const InputArea = () => {
 
@@ -19,6 +20,7 @@ export const InputArea = () => {
     const { callAI, parseAIResponse } = useAI();
     const [inputValue, setInputValue] = useState('');
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+    const [isMediaOpen, setIsMediaOpen] = useState(false);
     const { isLoading, setIsLoading } = useChatInterfaceStore();
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { addContext, contextUsage, updateContextUsage, selectedContexts } = useContextStore();
@@ -249,7 +251,6 @@ Remember: Use the specific block IDs from the context above for precise block ta
     const handleContextSelect = (context: any) => {
         console.log('Context selected:', context);
         addContext(context);
-        // The useEffect will automatically recalculate context usage due to selectedContexts dependency
     };
 
     const handleCanvasSave = (imageData: string, description?: string) => {
@@ -263,6 +264,19 @@ Remember: Use the specific block IDs from the context above for precise block ta
 
         addContext(drawingContext);
         setIsCanvasOpen(false);
+    };
+
+    const handleMediaSelect = (imageData: any, description?: string) => {
+        const imageContext = {
+            id: `image-${imageData.id}`,
+            type: 'image',
+            label: description || `Image ${imageData.id}`,
+            data: imageData,
+            timestamp: new Date().toISOString()
+        };
+
+        addContext(imageContext);
+        setIsMediaOpen(false);
     };
 
     return (
@@ -308,10 +322,18 @@ Remember: Use the specific block IDs from the context above for precise block ta
 
             <HStack justify="end" spacing={2}>
                 <Button
+                    onClick={() => setIsMediaOpen(true)}
+                    disabled={isLoading}
+                    icon={image}
+                    size="compact"
+                    aria-label={__("Select image", "suggerence")}
+                    title={__("Select an image to add as context", "suggerence")}
+                />
+
+                <Button
                     onClick={() => setIsCanvasOpen(true)}
                     disabled={isLoading}
-                    icon={edit}
-                    variant="tertiary"
+                    icon={brush}
                     size="compact"
                     aria-label={__("Draw diagram", "suggerence")}
                     title={__("Draw a diagram or sketch to add as context", "suggerence")}
@@ -337,6 +359,12 @@ Remember: Use the specific block IDs from the context above for precise block ta
                 isOpen={isCanvasOpen}
                 onClose={() => setIsCanvasOpen(false)}
                 onSave={handleCanvasSave}
+            />
+
+            <MediaSelector
+                isOpen={isMediaOpen}
+                onClose={() => setIsMediaOpen(false)}
+                onSelect={handleMediaSelect}
             />
         </VStack>
     );

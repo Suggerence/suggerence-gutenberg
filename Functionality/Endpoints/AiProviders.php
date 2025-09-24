@@ -188,14 +188,22 @@ class AiProviders extends BaseApiEndpoints
                         if ($item['type'] === 'text') {
                             $textContent .= $item['text'];
                         } elseif ($item['type'] === 'image') {
-                            // Create Image from base64 data
-                            $imageBase64 = $item['source']['data'];
-                            $mimeType = $item['source']['media_type'];
+                            // Handle both base64 data (drawings) and URLs (media library images)
+                            if (isset($item['source']['data'])) {
+                                // Base64 image (e.g., from canvas drawings)
+                                $imageBase64 = $item['source']['data'];
+                                $mimeType = $item['source']['media_type'];
 
-                            $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromBase64(
-                                $imageBase64,
-                                $mimeType
-                            );
+                                $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromBase64(
+                                    $imageBase64,
+                                    $mimeType
+                                );
+                            } elseif (isset($item['source']['url'])) {
+                                // Image URL (e.g., from media library)
+                                $imageUrl = $item['source']['url'];
+
+                                $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromUrl($imageUrl);
+                            }
                         }
                     }
 

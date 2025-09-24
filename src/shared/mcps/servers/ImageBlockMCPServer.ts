@@ -1,4 +1,3 @@
-import { SuggerenceMCPServerConnection, SuggerenceMCPResponseTool } from '../types';
 import {
     setBlockAttributeTool,
     getBlockAttributesTool,
@@ -10,7 +9,7 @@ import {
     setImageAlt,
     setImageSize,
     modifyCurrentBlock
-} from '../tools/block-attributes';
+} from '@/shared/mcps/tools/block-attributes';
 
 export class ImageBlockMCPServer {
     static initialize(): SuggerenceMCPServerConnection {

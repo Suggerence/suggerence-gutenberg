@@ -54,40 +54,6 @@ export const getSelectedBlock = (): BlockInstance | null => {
     return clientId ? getBlockByClientId(clientId) : null;
 };
 
-/**
- * Debug function to find what selectors exist for blocks
- */
-const debugBlockSelectors = (clientId: string): void => {
-    const possibleSelectors = [
-        `[data-block="${clientId}"]`,
-        `#block-${clientId}`,
-        `.wp-block[data-block="${clientId}"]`,
-        `.block-editor-block-list__block[data-block="${clientId}"]`,
-        `[data-type] [data-block="${clientId}"]`,
-        `.editor-block-list__block[data-block="${clientId}"]`,
-        `.wp-block`,
-        `[data-block]`,
-        `.block-editor-block-list__block`
-    ];
-
-    console.log(`Debug: Looking for block ${clientId}`);
-    possibleSelectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length > 0) {
-            console.log(`Found ${elements.length} elements with selector: ${selector}`);
-        }
-    });
-
-    // Show all blocks with data-block attributes
-    const allBlocks = document.querySelectorAll('[data-block]');
-    console.log(`Total blocks with data-block: ${allBlocks.length}`);
-    allBlocks.forEach((block, index) => {
-        const id = block.getAttribute('data-block');
-        if (index < 5) { // Show first 5 for debugging
-            console.log(`Block ${index}: data-block="${id}"`);
-        }
-    });
-};
 
 /**
  * Highlight/hover a block in the editor (visual feedback)

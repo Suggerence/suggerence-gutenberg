@@ -1,6 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import { fetchContent, fetchContentById } from '../api';
-import type { ContentSearchParams, ContentType } from '../types';
+import { fetchContent, fetchContentById } from '@/shared/components/PostSelector/api';
 
 export const contentQueryKeys = {
     all: ['content'] as const,

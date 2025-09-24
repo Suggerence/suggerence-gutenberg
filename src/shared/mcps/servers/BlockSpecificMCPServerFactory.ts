@@ -1,8 +1,5 @@
-import { TextBlockMCPServer } from './TextBlockMCPServer';
-import { ImageBlockMCPServer } from './ImageBlockMCPServer';
-import { ButtonBlockMCPServer } from './ButtonBlockMCPServer';
-import { LayoutBlockMCPServer } from './LayoutBlockMCPServer';
-import { GenericBlockMCPServer } from './GenericBlockMCPServer';
+import { GenericBlockMCPServer } from '@/shared/mcps/servers/GenericBlockMCPServer';
+import { SuggestionsMCPServer } from '@/shared/mcps/servers/SuggestionsMCPServer';
 
 export class BlockSpecificMCPServerFactory {
     private static servers: Map<string, any> = new Map();
@@ -24,12 +21,23 @@ export class BlockSpecificMCPServerFactory {
         return serverClass ? serverClass.initialize() : null;
     }
 
+    static getSuggestionsServer(aiService?: any): SuggerenceMCPServerConnection | null {
+        // Initialize servers if not already done
+        if (this.servers.size === 0) {
+            this.initializeServers();
+        }
+
+        const serverClass = this.servers.get('suggestions');
+        return serverClass ? serverClass.initialize(aiService) : null;
+    }
+
     private static initializeServers() {
         // this.servers.set('text', TextBlockMCPServer);
         // this.servers.set('image', GenericBlockMCPServer);
         // this.servers.set('button', ButtonBlockMCPServer);
         // this.servers.set('layout', LayoutBlockMCPServer);
         this.servers.set('generic', GenericBlockMCPServer);
+        this.servers.set('suggestions', SuggestionsMCPServer);
     }
 
     private static getServerKeyForBlockType(blockType: string): string | null {

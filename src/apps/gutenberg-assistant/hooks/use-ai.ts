@@ -292,17 +292,6 @@ Remember: Use the specific block IDs from the context above for precise block ta
             }));
         }
 
-        // Debug: Log what we're sending to AI
-        console.log('🔍 DEBUG: System prompt contains:', systemPrompt.includes('DRAWING') ? 'DRAWING CONTEXT' : 'NO DRAWING CONTEXT');
-        console.log('🔍 DEBUG: Selected contexts:', site_context.selectedContexts?.map(ctx => ctx.type) || 'none');
-        console.log('🔍 DEBUG: Visual contexts found:', visualContexts.length);
-        console.log('🔍 DEBUG: Converted messages:', convertedMessages.map(m => ({
-            role: m.role,
-            contentType: typeof m.content,
-            isArray: Array.isArray(m.content),
-            hasImages: Array.isArray(m.content) ? m.content.some((item: any) => item.type === 'image') : false
-        })));
-
         const requestBody: any = {
             model: model?.id,
             provider: model?.provider,
@@ -314,16 +303,6 @@ Remember: Use the specific block IDs from the context above for precise block ta
         if (tools) {
             requestBody.tools = tools;
         }
-
-        // Debug: Log the actual request being sent
-        console.log('🔍 DEBUG: Full request body:', {
-            model: requestBody.model,
-            provider: requestBody.provider,
-            systemPromptLength: requestBody.system.length,
-            messagesCount: requestBody.messages.length,
-            hasTools: !!requestBody.tools,
-            toolsCount: requestBody.tools?.length || 0
-        });
 
         // Debug: Log the actual message contents (first 200 chars)
         requestBody.messages.forEach((msg: any, i: number) => {

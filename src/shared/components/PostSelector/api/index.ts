@@ -1,5 +1,4 @@
 import apiFetch from '@wordpress/api-fetch';
-import type { ContentSearchParams, WPContent, ContentType } from '../types';
 
 const getEndpoint = (contentType: ContentType): string => {
     switch (contentType) {

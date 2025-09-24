@@ -3,7 +3,6 @@ import { SearchControl, Button, Icon } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { check } from '@wordpress/icons';
 import { useSelect } from '@wordpress/data';
-import { store as blockEditorStore } from '@wordpress/block-editor';
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { getBlockType } from '@wordpress/blocks';
 import type { BlockInstance } from '@wordpress/blocks';

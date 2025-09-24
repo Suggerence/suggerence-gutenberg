@@ -1,4 +1,3 @@
-import { SuggerenceMCPServerConnection, SuggerenceMCPResponseTool } from '../types';
 import {
     setBlockAttributeTool,
     getBlockAttributesTool,
@@ -8,7 +7,7 @@ import {
     getBlockAttributes,
     setTextColor,
     setBackgroundColor
-} from '../tools/block-attributes';
+} from '@/shared/mcps/tools/block-attributes';
 
 export class ButtonBlockMCPServer {
     static initialize(): SuggerenceMCPServerConnection {

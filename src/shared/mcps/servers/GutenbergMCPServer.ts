@@ -12,18 +12,17 @@ import {
     selectBlock,
     updateBlockContent,
     insertBlockAfter
-} from '../tools/block-manipulation';
+} from '@/shared/mcps/tools/block-manipulation';
 import {
     getBlocksInfoTool,
     getSelectedBlockInfoTool,
     getBlocksInfo,
     getSelectedBlockInfo
-} from '../tools/block-info';
+} from '@/shared/mcps/tools/block-info';
 import {
     addGeneratedImageTool,
     addGeneratedImage
-} from '../tools/image-generation';
-import { SuggerenceMCPServerConnection, SuggerenceMCPResponseTool } from '../types';
+} from '@/shared/mcps/tools/image-generation';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {

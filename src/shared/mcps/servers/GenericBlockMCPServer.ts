@@ -1,4 +1,3 @@
-import { SuggerenceMCPServerConnection, SuggerenceMCPResponseTool } from '../types';
 import { select, dispatch } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { generateDynamicBlockTool, generateBlockCapabilityDescription } from '@/shared/utils/dynamic-block-tool-generator';

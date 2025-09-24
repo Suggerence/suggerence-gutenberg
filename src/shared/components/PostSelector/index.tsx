@@ -4,7 +4,7 @@ import { __ } from '@wordpress/i18n';
 import { post as postIcon, page as pageIcon, check } from '@wordpress/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { contentListOptions } from './query-options';
+import { contentListOptions } from '@/shared/components/PostSelector/query-options';
 
 export const PostSelector = ({
     onContentSelect,
@@ -205,6 +205,4 @@ export const PostSelector = ({
     );
 };
 
-// Export with backward compatibility alias
-export { PostSelector as ContentSelector };
 export default PostSelector;

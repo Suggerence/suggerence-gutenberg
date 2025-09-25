@@ -12,8 +12,14 @@
         }
     }
 
-    svg.lucide-mic {
+    svg.lucide-mic, svg.lucide-square, svg.lucide-pencil, svg.lucide-pen-tool, svg.lucide-eraser, svg.lucide-brush, svg.lucide-paintbrush, svg.lucide-highlighter, svg.lucide-arrow-right, svg.lucide-type {
         fill: none;
     }
 
+    
+}
+.suggerence-gutenberg-assistant-modal svg {
+    &.lucide-mic, &.lucide-square, &.lucide-pencil, &.lucide-pen-tool, &.lucide-eraser, &.lucide-brush, &.lucide-paintbrush, &.lucide-highlighter, &.lucide-arrow-right, &.lucide-type, &.lucide-pen, &.lucide-circle, &.lucide-minus {
+        fill: none !important;
+    }
 }

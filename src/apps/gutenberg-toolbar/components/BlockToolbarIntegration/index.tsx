@@ -667,5 +667,5 @@ export const BlockToolbarIntegration = () => {
         );
     }, []);
 
-    return <EmptyBlockInserterMic />;
+    return null;//<EmptyBlockInserterMic />;
 };

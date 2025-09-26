@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { Button, TextareaControl, Notice, Flex, FlexItem, KeyboardShortcuts } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
-// @ts-ignore - WordPress types not available
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-ai';
@@ -31,16 +30,17 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
     // Focus textarea when component mounts
     useEffect(() => {
         // Use timeout to ensure the textarea is rendered
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
             if (textareaRef.current) {
                 textareaRef.current.focus();
             }
         }, 100);
+
+        return () => clearTimeout(timeout);
     }, []);
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
-
         if (!inputValue.trim() || isLoading) return;
 
         try {
@@ -52,7 +52,6 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
             if (success) {
                 setResult(__('Command executed successfully!', 'suggerence'));
                 setInputValue('');
-                // Close the dropdown after successful execution
                 onClose?.();
             } else {
                 setError(__('Command execution failed. Please try again.', 'suggerence'));
@@ -88,6 +87,12 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
                     'mod+enter': () => handleSubmit(),
                 }}
             />
+
+            <div aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(1px, 1px, 1px, 1px)' }}>
+				{isLoading
+					? (mcpLoading ? __('Loading…', 'suggerence') : __('Executing…', 'suggerence'))
+					: (error ? __('Error', 'suggerence') : '')}
+			</div>
 
             {/* Status Notice */}
             {error && (

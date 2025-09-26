@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Anthropic;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Gemini;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\OpenAI;
+use SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Suggerence;
 
 class Manager
 {
@@ -33,6 +34,13 @@ class Manager
         }
 
         return strtolower( $name );
+    }
+    
+    protected static function createSuggerenceProvider($config)
+    {
+        return new Suggerence(
+            $config['api_key'] ?? ''
+        );
     }
 
     protected static function createOpenaiProvider($config)

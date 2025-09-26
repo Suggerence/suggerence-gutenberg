@@ -9,25 +9,13 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import {
-    brush,
-    edit,
     download,
     trash,
-    color,
     settings,
-    formatBold,
-    wordpress
+    undo,
+    redo
 } from '@wordpress/icons';
-import {
-    Brush,
-    Highlighter,
-    Minus,
-    Square,
-    Circle,
-    ArrowRight,
-    Type,
-    Eraser
-} from 'lucide-react';
+import { toolRegistry } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/ToolRegistry';
 
 const colorOptions = [
     { name: 'Black', color: '#000000' },
@@ -44,61 +32,33 @@ const colorOptions = [
     { name: 'Cyan', color: '#00ffff' }
 ];
 
-const fontOptions = [
-    { label: 'Arial', value: 'Arial, sans-serif' },
-    { label: 'Times New Roman', value: 'Times New Roman, serif' },
-    { label: 'Courier New', value: 'Courier New, monospace' },
-    { label: 'Georgia', value: 'Georgia, serif' },
-    { label: 'Verdana', value: 'Verdana, sans-serif' },
-    { label: 'Comic Sans MS', value: 'Comic Sans MS, cursive' }
-];
 
 export const CanvasToolbar = ({
     drawingState,
     onToolChange,
     onSettingsChange,
     onClearCanvas,
-    onDownloadCanvas
+    onDownloadCanvas,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo
 }: ToolbarProps) => {
+    const currentTool = toolRegistry.getTool(drawingState.currentTool);
+    const toolGroupsMap = toolRegistry.getToolGroups();
+    const toolGroupsArray = Array.from(toolGroupsMap.entries()).map(([groupName, tools]) => ({
+        label: groupName,
+        tools
+    }));
 
     // Get current tool settings
-    const getCurrentSettings = (): ToolSettings => {
-        switch (drawingState.currentTool) {
-            case 'brush': return drawingState.brushSettings;
-            case 'marker': return drawingState.markerSettings;
-            case 'line': return drawingState.lineSettings;
-            case 'rectangle':
-            case 'circle': return drawingState.shapeSettings;
-            case 'text': return drawingState.textSettings;
-            default: return drawingState.brushSettings;
-        }
+    const getCurrentSettings = () => {
+        const settingsKey = `${drawingState.currentTool}Settings` as keyof DrawingState;
+        return drawingState[settingsKey] || {};
     };
 
-    const getToolIcon = (tool: DrawingTool) => {
-        switch (tool) {
-            case 'brush': return <Brush size={20} />;
-            case 'marker': return <Highlighter size={20} />;
-            case 'eraser': return <Eraser size={20} />;
-            case 'line': return <Minus size={20} />;
-            case 'rectangle': return <Square size={20} />;
-            case 'circle': return <Circle size={20} />;
-            case 'arrow': return <ArrowRight size={20} />;
-            case 'text': return <Type size={20} />;
-            default: return brush;
-        }
-    };
-
-
-    const updateCurrentToolSettings = (newSettings: Partial<ToolSettings>) => {
+    const updateCurrentToolSettings = (newSettings: any) => {
         const tool = drawingState.currentTool;
-
-        if (tool === 'eraser') {
-            if ('size' in newSettings) {
-                onSettingsChange({ eraserSize: newSettings.size! });
-            }
-            return;
-        }
-
         const settingsKey = `${tool}Settings` as keyof DrawingState;
         const currentSettings = getCurrentSettings();
 
@@ -107,44 +67,87 @@ export const CanvasToolbar = ({
         } as Partial<DrawingState>);
     };
 
-    const toolGroups = [
-        {
-            label: __('Drawing Tools', 'suggerence'),
-            tools: [
-                { tool: 'brush' as DrawingTool, label: __('Brush', 'suggerence') },
-                { tool: 'marker' as DrawingTool, label: __('Marker', 'suggerence') },
-                { tool: 'eraser' as DrawingTool, label: __('Eraser', 'suggerence') }
-            ]
-        },
-        {
-            label: __('Shapes & Lines', 'suggerence'),
-            tools: [
-                { tool: 'line' as DrawingTool, label: __('Line', 'suggerence') },
-                { tool: 'rectangle' as DrawingTool, label: __('Rectangle', 'suggerence') },
-                { tool: 'circle' as DrawingTool, label: __('Circle', 'suggerence') },
-                { tool: 'arrow' as DrawingTool, label: __('Arrow', 'suggerence') }
-            ]
-        },
-        {
-            label: __('Text', 'suggerence'),
-            tools: [
-                { tool: 'text' as DrawingTool, label: __('Text', 'suggerence') }
-            ]
+    const renderSettingControl = (control: any, currentSettings: any) => {
+        switch (control.type) {
+            case 'range':
+                const value = control.key === 'opacity' && typeof currentSettings[control.key] === 'number'
+                    ? Math.round(currentSettings[control.key] * 100)
+                    : currentSettings[control.key] || control.defaultValue;
+
+                return (
+                    <RangeControl
+                        key={control.key}
+                        __nextHasNoMarginBottom={true}
+                        __next40pxDefaultSize={true}
+                        label={control.label}
+                        value={value}
+                        onChange={(newValue) => {
+                            const finalValue = control.key === 'opacity'
+                                ? (newValue || 100) / 100
+                                : newValue || control.defaultValue;
+                            updateCurrentToolSettings({ [control.key]: finalValue });
+                        }}
+                        min={control.min}
+                        max={control.max}
+                        step={control.step}
+                        renderTooltipContent={(value) => control.key === 'opacity' ? `${value}%` : `${value}px`}
+                    />
+                );
+
+            case 'color':
+                return (
+                    <ColorPalette
+                        key={control.key}
+                        colors={colorOptions}
+                        value={currentSettings[control.key] || control.defaultValue}
+                        onChange={(newColor) => updateCurrentToolSettings({ [control.key]: newColor || control.defaultValue })}
+                    />
+                );
+
+            case 'select':
+                return (
+                    <SelectControl
+                        key={control.key}
+                        label={control.label}
+                        value={currentSettings[control.key] || control.defaultValue}
+                        options={control.options}
+                        onChange={(value) => updateCurrentToolSettings({ [control.key]: value })}
+                    />
+                );
+
+            case 'toggle':
+                const isActive = currentSettings[control.key] !== 'normal' && currentSettings[control.key] !== control.defaultValue;
+                return (
+                    <ToolbarButton
+                        key={control.key}
+                        label={control.label}
+                        isPressed={isActive}
+                        onClick={() => {
+                            const newValue = isActive ? 'normal' : (control.key === 'fontWeight' ? 'bold' : 'italic');
+                            updateCurrentToolSettings({ [control.key]: newValue });
+                        }}
+                    >
+                        {control.label}
+                    </ToolbarButton>
+                );
+
+            default:
+                return null;
         }
-    ];
+    };
 
     return (
         <Toolbar label={__('Drawing Tools', 'suggerence')}>
             {/* Tool Selection */}
             <ToolbarGroup>
                 <DropdownMenu
-                    icon={getToolIcon(drawingState.currentTool)}
+                    icon={currentTool?.config.icon || settings}
                     label={__('Select Tool', 'suggerence')}
                     popoverProps={{ placement: 'bottom-start' }}
                 >
                     {({ onClose }) => (
                         <div style={{ padding: '8px', minWidth: '200px' }}>
-                            {toolGroups.map((group, groupIndex) => (
+                            {toolGroupsArray.map((group, groupIndex) => (
                                 <div key={groupIndex} style={{ marginBottom: '12px' }}>
                                     <div style={{
                                         fontSize: '12px',
@@ -156,11 +159,11 @@ export const CanvasToolbar = ({
                                         {group.label}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
-                                        {group.tools.map((toolItem) => (
+                                        {group.tools.map((tool) => (
                                             <button
-                                                key={toolItem.tool}
+                                                key={tool.config.id}
                                                 onClick={() => {
-                                                    onToolChange(toolItem.tool);
+                                                    onToolChange(tool.config.id as any);
                                                     onClose();
                                                 }}
                                                 style={{
@@ -168,16 +171,16 @@ export const CanvasToolbar = ({
                                                     flexDirection: 'column',
                                                     alignItems: 'center',
                                                     padding: '8px 4px',
-                                                    border: drawingState.currentTool === toolItem.tool ? '2px solid #0073aa' : '1px solid #ddd',
+                                                    border: drawingState.currentTool === tool.config.id ? '2px solid #0073aa' : '1px solid #ddd',
                                                     borderRadius: '4px',
-                                                    backgroundColor: drawingState.currentTool === toolItem.tool ? '#f0f8ff' : 'white',
+                                                    backgroundColor: drawingState.currentTool === tool.config.id ? '#f0f8ff' : 'white',
                                                     cursor: 'pointer',
                                                     fontSize: '10px',
                                                     gap: '2px'
                                                 }}
                                             >
-                                                {getToolIcon(toolItem.tool)}
-                                                <span>{toolItem.label}</span>
+                                                {tool.config.icon}
+                                                <span>{tool.config.name}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -189,82 +192,42 @@ export const CanvasToolbar = ({
             </ToolbarGroup>
 
             {/* Tool Settings */}
-            {drawingState.currentTool !== 'eraser' && (
-                <ToolbarGroup>
-                    <DropdownMenu
-                        icon={color}
-                        label={__('Color', 'suggerence')}
-                    >
-                        {() => (
-                            <div style={{ padding: '16px', minWidth: '200px' }}>
-                                <ColorPalette
-                                    colors={colorOptions}
-                                    value={getCurrentSettings().color}
-                                    onChange={(newColor?: string) => updateCurrentToolSettings({ color: newColor || '#000000' })}
-                                />
-                            </div>
-                        )}
-                    </DropdownMenu>
+            <ToolbarGroup>
+                <DropdownMenu
+                    icon={settings}
+                    label={__('Tool Settings', 'suggerence')}
+                >
+                    {() => {
+                        const currentSettings = getCurrentSettings();
+                        if (!currentTool) return <div>No tool selected</div>;
 
-                    <DropdownMenu
-                        icon={settings}
-                        label={__('Size & Opacity', 'suggerence')}
-                    >
-                        {() => (
+                        return (
                             <div style={{ padding: '16px', minWidth: '200px' }}>
-                                <RangeControl
-                                    __nextHasNoMarginBottom={true}
-                                    __next40pxDefaultSize={true}
-                                    label={__('Size', 'suggerence')}
-                                    value={getCurrentSettings().size}
-                                    onChange={(value) => updateCurrentToolSettings({ size: value || 1 })}
-                                    min={1}
-                                    max={drawingState.currentTool === 'text' ? 72 : 50}
-                                    step={1}
-                                    renderTooltipContent={(value) => `${value}px`}
-                                />
-                                <RangeControl
-                                    __nextHasNoMarginBottom={true}
-                                    __next40pxDefaultSize={true}
-                                    label={__('Opacity', 'suggerence')}
-                                    value={Math.round(getCurrentSettings().opacity * 100)}
-                                    onChange={(value) => updateCurrentToolSettings({ opacity: (value || 100) / 100 })}
-                                    min={10}
-                                    max={100}
-                                    step={5}
-                                    renderTooltipContent={(value) => `${value}%`}
-                                />
+                                {currentTool.config.settingsControls.map(control =>
+                                    renderSettingControl(control, currentSettings)
+                                )}
                             </div>
-                        )}
-                    </DropdownMenu>
-                </ToolbarGroup>
-            )}
+                        );
+                    }}
+                </DropdownMenu>
+            </ToolbarGroup>
 
-            {/* Eraser Settings */}
-            {drawingState.currentTool === 'eraser' && (
-                <ToolbarGroup>
-                    <DropdownMenu
-                        icon={settings}
-                        label={__('Eraser Size', 'suggerence')}
-                    >
-                        {() => (
-                            <div style={{ padding: '16px', minWidth: '200px' }}>
-                                <RangeControl
-                                    __nextHasNoMarginBottom={true}
-                                    __next40pxDefaultSize={true}
-                                    label={__('Eraser Size', 'suggerence')}
-                                    value={drawingState.eraserSize}
-                                    onChange={(value) => onSettingsChange({ eraserSize: value || 5 })}
-                                    min={5}
-                                    max={100}
-                                    step={1}
-                                    renderTooltipContent={(value) => `${value}px`}
-                                />
-                            </div>
-                        )}
-                    </DropdownMenu>
-                </ToolbarGroup>
-            )}
+
+            {/* Undo/Redo */}
+            <ToolbarGroup>
+                <ToolbarButton
+                    icon={undo}
+                    label={__('Undo', 'suggerence')}
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                />
+                <ToolbarButton
+                    icon={redo}
+                    label={__('Redo', 'suggerence')}
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                />
+            </ToolbarGroup>
 
             {/* Actions */}
             <ToolbarGroup>

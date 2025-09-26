@@ -10,10 +10,12 @@ interface DrawingState {
     currentTool: DrawingTool;
     brushSettings: ToolSettings;
     markerSettings: ToolSettings;
-    eraserSize: number;
+    eraserSettings: ToolSettings;
     lineSettings: ToolSettings;
-    shapeSettings: ToolSettings;
-    textSettings: ToolSettings & { fontSize: number; fontFamily: string; };
+    rectangleSettings: ToolSettings;
+    circleSettings: ToolSettings;
+    arrowSettings: ToolSettings;
+    textSettings: ToolSettings & { fontSize: number; fontFamily: string; fontWeight: string; fontStyle: string; textDecoration: string; };
     isDrawing: boolean;
     startPoint?: { x: number; y: number };
 }
@@ -38,4 +40,8 @@ interface ToolbarProps {
     onSettingsChange: (settings: Partial<DrawingState>) => void;
     onClearCanvas: () => void;
     onDownloadCanvas: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
 }

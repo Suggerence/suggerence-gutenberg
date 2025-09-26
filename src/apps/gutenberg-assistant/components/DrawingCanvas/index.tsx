@@ -10,14 +10,15 @@ import {
     DropdownMenu,
     ColorPalette,
     RangeControl,
-    SelectControl,
-    Color
+    SelectControl
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { textColor, check, formatBold, formatItalic } from '@wordpress/icons';
-import { CanvasToolbar } from './components/CanvasToolbar';
-import { Canvas } from './components/Canvas';
-import { useDrawingCanvasStore } from './stores/drawingCanvasStore';
+import { CanvasToolbar } from '@/apps/gutenberg-assistant/components/DrawingCanvas/components/CanvasToolbar';
+import { Canvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas/components/Canvas';
+import { useDrawingCanvasStore } from '@/apps/gutenberg-assistant/components/DrawingCanvas/stores/drawingCanvasStore';
+import { toolRegistry } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/ToolRegistry';
+import type { DrawingContext } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/base';
 
 // Import the interface from the store file
 interface TextRenderStyle {
@@ -26,6 +27,7 @@ interface TextRenderStyle {
     color: string;
     fontWeight: 'normal' | 'bold';
     fontStyle: 'normal' | 'italic';
+    textDecoration: 'none' | 'underline' | 'line-through' | 'overline';
     textAlign: 'left' | 'center' | 'right';
     lineHeight: number;
     maxWidth: number;
@@ -37,7 +39,11 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
     // Use Zustand store
     const {
         drawingState,
-        canvasHistory,
+        temporaryCanvasState,
+        undoStack,
+        redoStack,
+        canUndo,
+        canRedo,
         textInput,
         showTextInput,
         textPosition,
@@ -45,8 +51,12 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         updateSettings,
         setIsDrawing,
         setStartPoint,
-        saveCanvasHistory,
-        clearCanvasHistory,
+        saveTemporaryState,
+        clearTemporaryState,
+        saveStateToHistory,
+        undo,
+        redo,
+        clearHistory,
         setTextInput,
         setShowTextInput,
         setTextPosition,
@@ -74,44 +84,32 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
             return;
         }
 
-        // Save canvas state before drawing shapes (for live preview)
+        // Save state to undo history before starting any drawing operation
+        saveStateToHistory(canvasRef);
+
+        // Save temporary canvas state for live preview during shape drawing
         if (['line', 'rectangle', 'circle', 'arrow'].includes(drawingState.currentTool)) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            saveCanvasHistory(imageData);
+            saveTemporaryState(imageData);
         }
 
         setIsDrawing(true);
         setStartPoint({ x, y });
 
-        const settings = getToolSettings();
-
-        if (drawingState.currentTool === 'eraser') {
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.lineWidth = drawingState.eraserSize;
-        } else {
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.strokeStyle = settings.color;
-            ctx.lineWidth = settings.size;
-            ctx.globalAlpha = settings.opacity;
+        // Use tool-specific logic
+        const tool = toolRegistry.getTool(drawingState.currentTool);
+        if (tool) {
+            const settings = getToolSettings();
+            const context: DrawingContext = {
+                canvas,
+                ctx,
+                startPoint: { x, y },
+                currentPoint: { x, y },
+                isDrawing: true
+            };
+            tool.onStart(context, settings);
         }
-
-        // Set tool-specific properties
-        switch (drawingState.currentTool) {
-            case 'marker':
-                ctx.lineCap = 'square';
-                ctx.lineJoin = 'miter';
-                break;
-            default:
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-        }
-
-        // Start drawing path for freehand tools
-        if (['brush', 'marker', 'eraser'].includes(drawingState.currentTool)) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-        }
-    }, [drawingState, saveCanvasHistory, setIsDrawing, setStartPoint, getToolSettings]);
+    }, [drawingState, saveStateToHistory, setIsDrawing, setStartPoint, getToolSettings]);
 
     const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!drawingState.isDrawing || !drawingState.startPoint) return;
@@ -126,85 +124,55 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Handle different drawing tools
-        switch (drawingState.currentTool) {
-            case 'brush':
-            case 'marker':
-            case 'eraser':
-                // Freehand drawing
-                ctx.lineTo(x, y);
-                ctx.stroke();
-                break;
+        // Use tool-specific drawing logic
+        const tool = toolRegistry.getTool(drawingState.currentTool);
+        if (tool) {
+            const settings = getToolSettings();
+            const context: DrawingContext = {
+                canvas,
+                ctx,
+                startPoint: drawingState.startPoint,
+                currentPoint: { x, y },
+                isDrawing: drawingState.isDrawing
+            };
 
-            case 'line':
-            case 'rectangle':
-            case 'circle':
-            case 'arrow':
-                // Shape drawing - restore canvas and draw preview
-                if (canvasHistory) {
-                    ctx.putImageData(canvasHistory, 0, 0);
-                }
-                drawShape(ctx, drawingState.startPoint.x, drawingState.startPoint.y, x, y);
-                break;
+            // For shape tools, restore canvas from temporary state before drawing preview
+            if (['line', 'rectangle', 'circle', 'arrow'].includes(drawingState.currentTool) && temporaryCanvasState) {
+                ctx.putImageData(temporaryCanvasState, 0, 0);
+            }
+
+            tool.onMove(context, settings);
         }
-    }, [drawingState, canvasHistory]);
+    }, [drawingState, temporaryCanvasState]);
 
-    const drawShape = (ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number) => {
-        const settings = getToolSettings();
-        ctx.strokeStyle = settings.color;
-        ctx.lineWidth = settings.size;
-        ctx.globalAlpha = settings.opacity;
-        ctx.beginPath();
-
-        switch (drawingState.currentTool) {
-            case 'line':
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                break;
-
-            case 'rectangle':
-                const width = endX - startX;
-                const height = endY - startY;
-                ctx.rect(startX, startY, width, height);
-                break;
-
-            case 'circle':
-                const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-                ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
-                break;
-
-            case 'arrow':
-                // Draw arrow line
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-
-                // Draw arrow head
-                const angle = Math.atan2(endY - startY, endX - startX);
-                const arrowLength = 15;
-                const arrowAngle = Math.PI / 6;
-
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(
-                    endX - arrowLength * Math.cos(angle - arrowAngle),
-                    endY - arrowLength * Math.sin(angle - arrowAngle)
-                );
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(
-                    endX - arrowLength * Math.cos(angle + arrowAngle),
-                    endY - arrowLength * Math.sin(angle + arrowAngle)
-                );
-                break;
-        }
-
-        ctx.stroke();
-    };
 
     const stopDrawing = useCallback(() => {
+        if (drawingState.isDrawing && drawingState.startPoint) {
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    const tool = toolRegistry.getTool(drawingState.currentTool);
+                    if (tool) {
+                        const settings = getToolSettings();
+                        const context: DrawingContext = {
+                            canvas,
+                            ctx,
+                            startPoint: drawingState.startPoint,
+                            currentPoint: drawingState.startPoint, // Use start point as default
+                            isDrawing: false
+                        };
+                        tool.onStop(context, settings);
+                    }
+                }
+            }
+        }
+
         setIsDrawing(false);
         setStartPoint(undefined);
-        // Clear canvas history after shape is finalized
-        clearCanvasHistory();
-    }, [setIsDrawing, setStartPoint, clearCanvasHistory]);
+        // Clear temporary canvas state after shape is finalized
+        clearTemporaryState();
+    }, [drawingState, getToolSettings, setIsDrawing, setStartPoint, clearTemporaryState, canvasRef]);
 
     const clearCanvas = useCallback(() => {
         const canvas = canvasRef.current;
@@ -247,6 +215,14 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         updateSettings(settings);
     }, [updateSettings]);
 
+    const handleUndo = useCallback(() => {
+        undo(canvasRef);
+    }, [undo, canvasRef]);
+
+    const handleRedo = useCallback(() => {
+        redo(canvasRef);
+    }, [redo, canvasRef]);
+
     const handleAddTextToCanvas = useCallback(() => {
         if (!textInput.trim() || !textPosition) return;
 
@@ -255,8 +231,9 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
             fontSize: textSettings.fontSize,
             fontFamily: textSettings.fontFamily,
             color: textSettings.color,
-            fontWeight: 'normal',
-            fontStyle: 'normal',
+            fontWeight: (textSettings.fontWeight as 'normal' | 'bold') || 'normal',
+            fontStyle: (textSettings.fontStyle as 'normal' | 'italic') || 'normal',
+            textDecoration: (textSettings.textDecoration as 'none' | 'underline' | 'line-through' | 'overline') || 'none',
             textAlign: 'left',
             lineHeight: 1.2,
             maxWidth: 300,
@@ -285,6 +262,24 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         }
     }, [isOpen, resetDrawingState]);
 
+    // Keyboard shortcuts for undo/redo
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                handleUndo();
+            } else if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+                e.preventDefault();
+                handleRedo();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, handleUndo, handleRedo]);
+
     if (!isOpen) return null;
 
     return (
@@ -296,17 +291,18 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
             className="suggerence-gutenberg-assistant-modal"
         >
             <VStack spacing={4}>
-                {/* Enhanced Toolbar */}
                 <CanvasToolbar
                     drawingState={drawingState}
                     onToolChange={handleToolChange}
                     onSettingsChange={handleSettingsChange}
                     onClearCanvas={clearCanvas}
                     onDownloadCanvas={downloadCanvas}
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
                 />
 
-
-                {/* Canvas with embedded TextEditor */}
                 <div style={{ position: 'relative' }}>
                     <Canvas
                         canvasRef={canvasRef}
@@ -316,10 +312,8 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
                         onStopDrawing={stopDrawing}
                     />
 
-                    {/* Text Editor positioned relative to Canvas */}
                     {showTextInput && textPosition && (
                         <>
-                            {/* Floating Toolbar - appears above textarea */}
                             <div
                                 style={{
                                     position: 'absolute',
@@ -370,21 +364,64 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
                                     <ToolbarGroup>
                                         <ToolbarButton
                                             icon={formatBold}
-                                            label={__('Font Weight', 'suggerence')}
+                                            label={__('Bold', 'suggerence')}
+                                            isPressed={drawingState.textSettings.fontWeight === 'bold'}
                                             onClick={() => updateSettings({
                                                 textSettings: { ...drawingState.textSettings, fontWeight: drawingState.textSettings.fontWeight === 'normal' ? 'bold' : 'normal' }
                                             })}
-                                        >
-                                        </ToolbarButton>
+                                        />
                                         <ToolbarButton
                                             icon={formatItalic}
-                                            label={__('Font Style', 'suggerence')}
+                                            label={__('Italic', 'suggerence')}
+                                            isPressed={drawingState.textSettings.fontStyle === 'italic'}
                                             onClick={() => updateSettings({
                                                 textSettings: { ...drawingState.textSettings, fontStyle: drawingState.textSettings.fontStyle === 'normal' ? 'italic' : 'normal' }
                                             })}
+                                        />
+                                        <DropdownMenu
+                                            icon={() => (
+                                                <span style={{
+                                                    fontSize: '16px',
+                                                    fontWeight: 'bold',
+                                                    textDecoration: drawingState.textSettings.textDecoration !== 'none' ? drawingState.textSettings.textDecoration : 'none'
+                                                }}>
+                                                    U
+                                                </span>
+                                            )}
+                                            label={__('Text Decoration', 'suggerence')}
                                         >
-                                        </ToolbarButton>
-
+                                            {() => (
+                                                <div style={{ padding: '8px', minWidth: '150px' }}>
+                                                    {[
+                                                        { label: __('None', 'suggerence'), value: 'none' },
+                                                        { label: __('Underline', 'suggerence'), value: 'underline' },
+                                                        { label: __('Line Through', 'suggerence'), value: 'line-through' },
+                                                        { label: __('Overline', 'suggerence'), value: 'overline' }
+                                                    ].map((option) => (
+                                                        <button
+                                                            key={option.value}
+                                                            onClick={() => updateSettings({
+                                                                textSettings: { ...drawingState.textSettings, textDecoration: option.value }
+                                                            })}
+                                                            style={{
+                                                                display: 'block',
+                                                                width: '100%',
+                                                                padding: '8px 12px',
+                                                                border: 'none',
+                                                                backgroundColor: drawingState.textSettings.textDecoration === option.value ? '#0073aa' : 'transparent',
+                                                                color: drawingState.textSettings.textDecoration === option.value ? 'white' : 'inherit',
+                                                                cursor: 'pointer',
+                                                                borderRadius: '3px',
+                                                                textAlign: 'left',
+                                                                textDecoration: option.value !== 'none' ? option.value : 'none'
+                                                            }}
+                                                        >
+                                                            {option.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </DropdownMenu>
                                     </ToolbarGroup>
 
                                     <ToolbarGroup>
@@ -457,7 +494,8 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
                                         color: drawingState.textSettings.color,
                                         backgroundColor: 'transparent',
                                         fontWeight: drawingState.textSettings.fontWeight,
-                                        fontStyle: drawingState.textSettings.fontStyle
+                                        fontStyle: drawingState.textSettings.fontStyle,
+                                        textDecoration: drawingState.textSettings.textDecoration
                                     }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && e.ctrlKey) {

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toolRegistry } from '../tools/ToolRegistry';
 
 // Helper function to wrap text within a given width
 const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
@@ -31,6 +32,7 @@ interface TextRenderStyle {
     color: string;
     fontWeight: 'normal' | 'bold';
     fontStyle: 'normal' | 'italic';
+    textDecoration: 'none' | 'underline' | 'line-through' | 'overline';
     textAlign: 'left' | 'center' | 'right';
     lineHeight: number;
     maxWidth: number;
@@ -39,7 +41,13 @@ interface TextRenderStyle {
 interface DrawingCanvasStore {
     // Drawing state
     drawingState: DrawingState;
-    canvasHistory: ImageData | null;
+    temporaryCanvasState: ImageData | null;
+
+    // Undo/Redo state
+    undoStack: ImageData[];
+    redoStack: ImageData[];
+    canUndo: boolean;
+    canRedo: boolean;
 
     // Text input state
     textInput: string;
@@ -51,8 +59,8 @@ interface DrawingCanvasStore {
     updateSettings: (settings: Partial<DrawingState>) => void;
     setIsDrawing: (isDrawing: boolean) => void;
     setStartPoint: (point: { x: number; y: number } | undefined) => void;
-    saveCanvasHistory: (imageData: ImageData) => void;
-    clearCanvasHistory: () => void;
+    saveTemporaryState: (imageData: ImageData) => void;
+    clearTemporaryState: () => void;
 
     // Text actions
     setTextInput: (text: string) => void;
@@ -60,27 +68,40 @@ interface DrawingCanvasStore {
     setTextPosition: (position: { x: number; y: number } | null) => void;
     addTextToCanvas: (canvasRef: React.RefObject<HTMLCanvasElement>, content: string, style: TextRenderStyle, position: { x: number; y: number }) => void;
 
+    // Undo/Redo actions
+    saveStateToHistory: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
+    undo: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
+    redo: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
+    clearHistory: () => void;
+
     // Utility actions
     resetDrawingState: () => void;
     getToolSettings: () => ToolSettings;
 }
 
-const initialDrawingState: DrawingState = {
-    currentTool: 'brush',
-    brushSettings: { size: 2, color: '#000000', opacity: 1 },
-    markerSettings: { size: 8, color: '#ffff00', opacity: 0.6 },
-    eraserSize: 10,
-    lineSettings: { size: 2, color: '#000000', opacity: 1 },
-    shapeSettings: { size: 2, color: '#000000', opacity: 1 },
-    textSettings: { size: 16, color: '#000000', opacity: 1, fontSize: 16, fontFamily: 'Arial, sans-serif' },
-    isDrawing: false,
-    startPoint: undefined
+const createInitialDrawingState = (): DrawingState => {
+    const defaultSettings = toolRegistry.getDefaultSettings();
+    return {
+        currentTool: 'brush',
+        ...defaultSettings,
+        isDrawing: false,
+        startPoint: undefined
+    } as DrawingState;
 };
+
+const initialDrawingState = createInitialDrawingState();
 
 export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
     // Initial state
     drawingState: initialDrawingState,
-    canvasHistory: null,
+    temporaryCanvasState: null,
+
+    // Undo/Redo state
+    undoStack: [],
+    redoStack: [],
+    canUndo: false,
+    canRedo: false,
+
     textInput: '',
     showTextInput: false,
     textPosition: null,
@@ -106,11 +127,11 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
             drawingState: { ...state.drawingState, startPoint }
         })),
 
-    saveCanvasHistory: (imageData) =>
-        set({ canvasHistory: imageData }),
+    saveTemporaryState: (imageData) =>
+        set({ temporaryCanvasState: imageData }),
 
-    clearCanvasHistory: () =>
-        set({ canvasHistory: null }),
+    clearTemporaryState: () =>
+        set({ temporaryCanvasState: null }),
 
     // Text actions
     setTextInput: (textInput) => set({ textInput }),
@@ -145,26 +166,158 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
         // Draw each line
         lines.forEach((line, index) => {
             let x = startX;
+            const lineWidth = ctx.measureText(line).width;
+
             if (style.textAlign === 'center') {
-                const lineWidth = ctx.measureText(line).width;
                 x = startX + (style.maxWidth - lineWidth) / 2;
             } else if (style.textAlign === 'right') {
-                const lineWidth = ctx.measureText(line).width;
                 x = startX + (style.maxWidth - lineWidth);
             }
 
-            ctx.fillText(line, x, position.y + index * lineHeight);
+            const y = position.y + index * lineHeight;
+
+            // Draw the text
+            ctx.fillText(line, x, y);
+
+            // Draw text decoration if specified
+            if (style.textDecoration && style.textDecoration !== 'none') {
+                const lineThickness = Math.max(1, style.fontSize / 16);
+                ctx.strokeStyle = ctx.fillStyle;
+                ctx.lineWidth = lineThickness;
+
+                ctx.beginPath();
+                switch (style.textDecoration) {
+                    case 'underline':
+                        const underlineY = y + style.fontSize + lineThickness;
+                        ctx.moveTo(x, underlineY);
+                        ctx.lineTo(x + lineWidth, underlineY);
+                        break;
+                    case 'line-through':
+                        const strikeY = y + style.fontSize / 2;
+                        ctx.moveTo(x, strikeY);
+                        ctx.lineTo(x + lineWidth, strikeY);
+                        break;
+                    case 'overline':
+                        const overlineY = y - lineThickness;
+                        ctx.moveTo(x, overlineY);
+                        ctx.lineTo(x + lineWidth, overlineY);
+                        break;
+                }
+                ctx.stroke();
+            }
         });
 
-        // Close text input
+            // Close text input
         set({ showTextInput: false, textPosition: null });
+
+        // Save state after adding text
+        const textCanvas = canvasRef.current;
+        if (textCanvas) {
+            const ctx = textCanvas.getContext('2d');
+            if (ctx) {
+                const imageData = ctx.getImageData(0, 0, textCanvas.width, textCanvas.height);
+                const state = get();
+                set({
+                    undoStack: [...state.undoStack, imageData],
+                    redoStack: [],
+                    canUndo: true,
+                    canRedo: false
+                });
+            }
+        }
     },
 
     // Utility actions
+    // Undo/Redo actions
+    saveStateToHistory: (canvasRef) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const state = get();
+
+        set({
+            undoStack: [...state.undoStack, imageData],
+            redoStack: [], // Clear redo stack when new action is performed
+            canUndo: true,
+            canRedo: false
+        });
+    },
+
+    undo: (canvasRef) => {
+        const state = get();
+        const canvas = canvasRef.current;
+
+        if (!canvas || state.undoStack.length === 0) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Save current state to redo stack
+        const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Get previous state from undo stack
+        const newUndoStack = [...state.undoStack];
+        const previousState = newUndoStack.pop()!;
+
+        // Apply previous state to canvas
+        ctx.putImageData(previousState, 0, 0);
+
+        set({
+            undoStack: newUndoStack,
+            redoStack: [...state.redoStack, currentImageData],
+            canUndo: newUndoStack.length > 0,
+            canRedo: true
+        });
+    },
+
+    redo: (canvasRef) => {
+        const state = get();
+        const canvas = canvasRef.current;
+
+        if (!canvas || state.redoStack.length === 0) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Save current state to undo stack
+        const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Get next state from redo stack
+        const newRedoStack = [...state.redoStack];
+        const nextState = newRedoStack.pop()!;
+
+        // Apply next state to canvas
+        ctx.putImageData(nextState, 0, 0);
+
+        set({
+            undoStack: [...state.undoStack, currentImageData],
+            redoStack: newRedoStack,
+            canUndo: true,
+            canRedo: newRedoStack.length > 0
+        });
+    },
+
+    clearHistory: () => {
+        set({
+            undoStack: [],
+            redoStack: [],
+            canUndo: false,
+            canRedo: false
+        });
+    },
+
     resetDrawingState: () =>
         set({
-            drawingState: { ...initialDrawingState },
-            canvasHistory: null,
+            drawingState: createInitialDrawingState(),
+            temporaryCanvasState: null,
+            undoStack: [],
+            redoStack: [],
+            canUndo: false,
+            canRedo: false,
             textInput: '',
             showTextInput: false,
             textPosition: null
@@ -175,9 +328,11 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
         switch (drawingState.currentTool) {
             case 'brush': return drawingState.brushSettings;
             case 'marker': return drawingState.markerSettings;
+            case 'eraser': return drawingState.eraserSettings;
             case 'line': return drawingState.lineSettings;
-            case 'rectangle':
-            case 'circle': return drawingState.shapeSettings;
+            case 'rectangle': return drawingState.rectangleSettings;
+            case 'circle': return drawingState.circleSettings;
+            case 'arrow': return drawingState.arrowSettings;
             case 'text': return drawingState.textSettings;
             default: return drawingState.brushSettings;
         }

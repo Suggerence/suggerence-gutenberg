@@ -75,7 +75,7 @@ export const Canvas = ({
             clientY: touch.clientY,
             preventDefault: () => e.preventDefault(),
             stopPropagation: () => e.stopPropagation(),
-        } as React.MouseEvent<HTMLCanvasElement>;
+        } as unknown as React.MouseEvent<HTMLCanvasElement>;
 
         onStartDrawing(syntheticEvent);
     }, [onStartDrawing, canvasRef]);
@@ -89,7 +89,7 @@ export const Canvas = ({
             clientY: touch.clientY,
             preventDefault: () => e.preventDefault(),
             stopPropagation: () => e.stopPropagation(),
-        } as React.MouseEvent<HTMLCanvasElement>;
+        } as unknown as React.MouseEvent<HTMLCanvasElement>;
 
         onDraw(syntheticEvent);
     }, [onDraw]);

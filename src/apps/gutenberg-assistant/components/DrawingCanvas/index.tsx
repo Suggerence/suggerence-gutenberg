@@ -18,20 +18,7 @@ import { CanvasToolbar } from '@/apps/gutenberg-assistant/components/DrawingCanv
 import { Canvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas/components/Canvas';
 import { useDrawingCanvasStore } from '@/apps/gutenberg-assistant/components/DrawingCanvas/stores/drawingCanvasStore';
 import { toolRegistry } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/ToolRegistry';
-import type { DrawingContext } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/base';
-
-// Import the interface from the store file
-interface TextRenderStyle {
-    fontSize: number;
-    fontFamily: string;
-    color: string;
-    fontWeight: 'normal' | 'bold';
-    fontStyle: 'normal' | 'italic';
-    textDecoration: 'none' | 'underline' | 'line-through' | 'overline';
-    textAlign: 'left' | 'center' | 'right';
-    lineHeight: number;
-    maxWidth: number;
-}
+import { DrawingContext } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/base';
 
 export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -230,7 +217,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         const style: TextRenderStyle = {
             fontSize: textSettings.fontSize,
             fontFamily: textSettings.fontFamily,
-            color: textSettings.color,
+            color: textSettings.color || '#000000',
             fontWeight: (textSettings.fontWeight as 'normal' | 'bold') || 'normal',
             fontStyle: (textSettings.fontStyle as 'normal' | 'italic') || 'normal',
             textDecoration: (textSettings.textDecoration as 'none' | 'underline' | 'line-through' | 'overline') || 'none',

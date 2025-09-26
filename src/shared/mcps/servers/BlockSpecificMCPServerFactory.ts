@@ -32,10 +32,6 @@ export class BlockSpecificMCPServerFactory {
     }
 
     private static initializeServers() {
-        // this.servers.set('text', TextBlockMCPServer);
-        // this.servers.set('image', GenericBlockMCPServer);
-        // this.servers.set('button', ButtonBlockMCPServer);
-        // this.servers.set('layout', LayoutBlockMCPServer);
         this.servers.set('generic', GenericBlockMCPServer);
         this.servers.set('suggestions', SuggestionsMCPServer);
     }

@@ -1,4 +1,4 @@
-import { ReactNode } from '@wordpress/element';
+import { ReactNode } from 'react';
 
 export interface ToolSettings {
     [key: string]: any;
@@ -34,6 +34,7 @@ export interface DrawingToolConfig {
     showCustomCursor?: boolean;
 }
 
+
 export abstract class DrawingToolBase {
     public readonly config: DrawingToolConfig;
 
@@ -45,7 +46,6 @@ export abstract class DrawingToolBase {
     abstract onMove(context: DrawingContext, settings: ToolSettings): void;
     abstract onStop(context: DrawingContext, settings: ToolSettings): void;
 
-    // Optional methods for custom behavior
     onCanvasSetup?(ctx: CanvasRenderingContext2D, settings: ToolSettings): void;
     getCustomCursorStyle?(settings: ToolSettings): React.CSSProperties;
     validateSettings?(settings: ToolSettings): ToolSettings;

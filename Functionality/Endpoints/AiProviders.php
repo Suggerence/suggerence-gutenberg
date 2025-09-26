@@ -88,16 +88,6 @@ class AiProviders extends BaseApiEndpoints
         $generate_image_endpoint->useMiddleware($corsMiddleware);
         $endpoints[] = $generate_image_endpoint;
 
-        // POST /providers/audio - Convert audio to text using AI providers
-        $generate_audio_endpoint = new PostEndpoint(
-            $this->namespace,
-            'providers/audio',
-            [$this, 'transcribe_audio'],
-            [$this, 'admin_permissions_check']
-        );
-        $generate_audio_endpoint->useMiddleware($corsMiddleware);
-        $endpoints[] = $generate_audio_endpoint;
-
         // POST /providers/{provider_id}/api-key - Set API key for a provider
         $set_api_key_endpoint = new PostEndpoint(
             $this->namespace,
@@ -346,7 +336,7 @@ class AiProviders extends BaseApiEndpoints
 
     /**
      * Generate image using AI providers
-     * 
+     *
      * Body parameters:
      * - prompt (string, required): The text prompt describing the image to generate
      * - provider (string, required): The AI provider to use (gemini, openai, etc.)
@@ -354,18 +344,24 @@ class AiProviders extends BaseApiEndpoints
      * - size (string, optional): Image size (e.g., '1024x1024', '512x512')
      * - quality (string, optional): Image quality (e.g., 'standard', 'hd')
      * - style (string, optional): Image style (e.g., 'vivid', 'natural')
+     * - input_images (array, optional): Array of input images to use as reference
+     * - edit_image_url (string, optional): URL of image to edit (for image editing mode)
+     * - edit_mode (boolean, optional): Set to true to enable image editing mode
      */
     public function generate_image($request)
     {
         try {
             $body = $request->get_json_params();
-            
+
             $prompt = $body['prompt'] ?? '';
             $provider = $body['provider'] ?? '';
             $model = $body['model'] ?? '';
             $size = $body['size'] ?? '1024x1024';
             $quality = $body['quality'] ?? 'standard';
             $style = $body['style'] ?? 'vivid';
+            $input_images = $body['input_images'] ?? [];
+            $edit_image_url = $body['edit_image_url'] ?? '';
+            $edit_mode = $body['edit_mode'] ?? false;
 
             // Validate required parameters
             if (empty($prompt)) {
@@ -382,15 +378,99 @@ class AiProviders extends BaseApiEndpoints
                 ], 400);
             }
 
-            // Use AI library for model-agnostic image generation
-            $images = AI::images()->using($provider, $model)
-                ->withPrompt($prompt)
-                ->withProviderOptions([
-                    'size' => $size,
-                    'quality' => $quality,
-                    'style' => $style
-                ])
-                ->asImages();
+            // Create AI images instance
+            $imageGenerator = AI::images()->using($provider, $model);
+
+            // Handle image editing mode
+            if ($edit_mode && !empty($edit_image_url)) {
+                // Download the image and create a resource for editing
+                $imageContent = wp_remote_get($edit_image_url);
+                if (is_wp_error($imageContent)) {
+                    return new \WP_REST_Response([
+                        'success' => false,
+                        'error' => 'Failed to download image for editing: ' . $imageContent->get_error_message()
+                    ], 400);
+                }
+
+                $imageData = wp_remote_retrieve_body($imageContent);
+                if (empty($imageData)) {
+                    return new \WP_REST_Response([
+                        'success' => false,
+                        'error' => 'Empty image data received for editing'
+                    ], 400);
+                }
+
+                // Create a resource from the image data
+                $imageResource = fopen('php://memory', 'r+');
+                fwrite($imageResource, $imageData);
+                rewind($imageResource);
+
+                // Get the image MIME type from the response headers
+                $mimeType = 'image/png'; // default
+                $headers = wp_remote_retrieve_headers($imageContent);
+                if (isset($headers['content-type'])) {
+                    $mimeType = $headers['content-type'];
+                }
+
+                // Use the specified provider (Gemini works well for image editing)
+                if (empty($provider)) {
+                    $provider = 'gemini';
+                    $model = 'gemini-2.5-flash-image-preview';
+                    $imageGenerator = AI::images()->using($provider, $model);
+                }
+
+                // For image editing, pass the image resource in provider options
+                $images = $imageGenerator
+                    ->withPrompt($prompt)
+                    ->withProviderOptions([
+                        'image' => $imageResource,
+                        'image_mime_type' => $mimeType,
+                        'size' => $size,
+                        'quality' => $quality,
+                        'style' => $style
+                    ])
+                    ->asImages();
+
+                // Close the resource
+                fclose($imageResource);
+            } else {
+                // Handle input images for multimodal generation (reference mode)
+                if (!empty($input_images)) {
+                    $additionalContent = [];
+
+                    foreach ($input_images as $inputImage) {
+                        if (is_string($inputImage)) {
+                            // Simple URL string
+                            $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromUrl($inputImage);
+                        } elseif (is_array($inputImage)) {
+                            if (isset($inputImage['data']) && isset($inputImage['media_type'])) {
+                                // Base64 image object
+                                $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromBase64(
+                                    $inputImage['data'],
+                                    $inputImage['media_type']
+                                );
+                            } elseif (isset($inputImage['url'])) {
+                                // Image URL object
+                                $additionalContent[] = \SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image::fromUrl($inputImage['url']);
+                            }
+                        }
+                    }
+
+                    // Use withPrompt with additional content for multimodal input
+                    $imageGenerator = $imageGenerator->withPrompt($prompt, $additionalContent);
+                } else {
+                    // Simple prompt-only generation
+                    $imageGenerator = $imageGenerator->withPrompt($prompt);
+                }
+
+                $images = $imageGenerator
+                    ->withProviderOptions([
+                        'size' => $size,
+                        'quality' => $quality,
+                        'style' => $style
+                    ])
+                    ->asImages();
+            }
 
             // Convert AI library response to WordPress attachment
             $result = $this->saveImagesAsAttachments($images, $prompt);
@@ -510,209 +590,5 @@ class AiProviders extends BaseApiEndpoints
             'attachment_id' => $attachment_id,
             'image_url' => $image_url
         ];
-    }
-
-    /**
-     * Transcribe audio to text using AI providers
-     * 
-     * Body parameters:
-     * - audio (string, required): Base64 encoded audio data
-     * - provider (string, required): The AI provider to use (gemini, openai, etc.)
-     * - model (string, optional): Specific model to use (defaults to provider default)
-     * - language (string, optional): Language code (e.g., 'en-US', 'es-ES')
-     * - format (string, optional): Audio format (e.g., 'wav', 'mp3', 'webm')
-     */
-    public function transcribe_audio($request)
-    {
-        try {
-            $body = $request->get_json_params();
-            
-            $audio_data = $body['audio'] ?? '';
-            $provider = $body['provider'] ?? 'gemini';
-            $model = $body['model'] ?? '';
-            $language = $body['language'] ?? 'en-US';
-            $format = $body['format'] ?? 'webm';
-
-            // Validate required parameters
-            if (empty($audio_data)) {
-                return new \WP_REST_Response([
-                    'success' => false,
-                    'error' => 'Audio data is required'
-                ], 400);
-            }
-
-            if (empty($provider)) {
-                return new \WP_REST_Response([
-                    'success' => false,
-                    'error' => 'Provider is required'
-                ], 400);
-            }
-
-            // Decode base64 audio data
-            $audio_binary = base64_decode($audio_data);
-            if ($audio_binary === false) {
-                return new \WP_REST_Response([
-                    'success' => false,
-                    'error' => 'Invalid base64 audio data'
-                ], 400);
-            }
-
-            // Use AI library for audio transcription
-            $result = $this->processAudioWithAI($audio_binary, $provider, $model, $language, $format);
-
-            if (!$result['success']) {
-                return new \WP_REST_Response([
-                    'success' => false,
-                    'error' => $result['error']
-                ], 500);
-            }
-
-            return new \WP_REST_Response($result, 200);
-
-        } catch (\Exception $e) {
-            return new \WP_REST_Response([
-                'success' => false,
-                'error' => 'Internal server error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Process audio with AI provider for transcription
-     */
-    private function processAudioWithAI($audio_binary, $provider, $model, $language, $format)
-    {
-        try {
-            // For now, we'll use a simple approach with Gemini
-            // In the future, this could be extended to support other providers
-            
-            if ($provider === 'gemini') {
-                return $this->transcribeWithGemini($audio_binary, $model, $language, $format);
-            } else {
-                return [
-                    'success' => false,
-                    'error' => 'Provider not supported for audio transcription yet'
-                ];
-            }
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => 'Failed to process audio: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Transcribe audio using Gemini
-     */
-    private function transcribeWithGemini($audio_binary, $model, $language, $format)
-    {
-        try {
-            // Use WordPress HTTP API to call Gemini API
-            $gemini_config = get_option('suggerence_gemini_config', []);
-            $api_key = $gemini_config['api_key'] ?? '';
-            if (empty($api_key)) {
-                return [
-                    'success' => false,
-                    'error' => 'Gemini API key not configured'
-                ];
-            }
-
-            // Prepare the request to Gemini API
-            $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
-            
-            // Convert audio to base64 for Gemini
-            $audio_base64 = base64_encode($audio_binary);
-            $mime_type = $this->getMimeTypeFromFormat($format);
-
-            $request_body = [
-                'contents' => [
-                    [
-                        'parts' => [
-                            [
-                                'text' => 'Please transcribe this audio to text. Return only the transcribed text without any additional formatting or explanation.'
-                            ],
-                            [
-                                'inline_data' => [
-                                    'mime_type' => $mime_type,
-                                    'data' => $audio_base64
-                                ]
-                            ]
-                        ]
-                    ]
-                ],
-                'generationConfig' => [
-                    'temperature' => 0.1,
-                    'maxOutputTokens' => 1000
-                ]
-            ];
-
-            $response = wp_remote_post($url . '?key=' . $api_key, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'body' => json_encode($request_body),
-                'timeout' => 30
-            ]);
-
-            if (is_wp_error($response)) {
-                return [
-                    'success' => false,
-                    'error' => 'Failed to connect to Gemini API: ' . $response->get_error_message()
-                ];
-            }
-
-            $response_code = wp_remote_retrieve_response_code($response);
-            $response_body = wp_remote_retrieve_body($response);
-
-            if ($response_code !== 200) {
-                return [
-                    'success' => false,
-                    'error' => 'Gemini API error: ' . $response_code . ' - ' . $response_body
-                ];
-            }
-
-            $data = json_decode($response_body, true);
-            
-            if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                $transcript = trim($data['candidates'][0]['content']['parts'][0]['text']);
-                
-                return [
-                    'success' => true,
-                    'transcript' => $transcript,
-                    'language' => $language,
-                    'provider' => 'gemini',
-                    'model' => $model ?: 'gemini-2.0-flash-exp'
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'error' => 'No transcript returned from Gemini API'
-                ];
-            }
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => 'Failed to transcribe with Gemini: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get MIME type from audio format
-     */
-    private function getMimeTypeFromFormat($format)
-    {
-        $mime_types = [
-            'wav' => 'audio/wav',
-            'mp3' => 'audio/mpeg',
-            'webm' => 'audio/webm',
-            'ogg' => 'audio/ogg',
-            'm4a' => 'audio/mp4',
-            'flac' => 'audio/flac'
-        ];
-
-        return $mime_types[$format] ?? 'audio/webm';
     }
 }

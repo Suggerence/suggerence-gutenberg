@@ -2,7 +2,7 @@ type DrawingTool = 'brush' | 'marker' | 'eraser' | 'line' | 'rectangle' | 'circl
 
 interface ToolSettings {
     size: number;
-    color: string;
+    color?: string;
     opacity: number;
 }
 
@@ -45,4 +45,16 @@ interface ToolbarProps {
     onRedo: () => void;
     canUndo: boolean;
     canRedo: boolean;
+}
+
+interface TextRenderStyle {
+    fontSize: number;
+    fontFamily: string;
+    color: string;
+    fontWeight: 'normal' | 'bold';
+    fontStyle: 'normal' | 'italic';
+    textDecoration: 'none' | 'underline' | 'line-through' | 'overline';
+    textAlign: 'left' | 'center' | 'right';
+    lineHeight: number;
+    maxWidth: number;
 }

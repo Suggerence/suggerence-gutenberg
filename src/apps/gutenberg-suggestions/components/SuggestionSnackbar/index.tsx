@@ -4,14 +4,14 @@ import { useSuggestionStore } from '@/apps/gutenberg-suggestions/stores/suggesti
 import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { BlockSpecificMCPServerFactory } from '@/shared/mcps/servers/BlockSpecificMCPServerFactory';
-import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
+import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI';
 
 export const SuggestionSnackbar = () => {
     const { activeSuggestion, isGenerating, clearSuggestion } = useSuggestionStore();
     const [isApplying, setIsApplying] = useState(false);
     const [applyStatus, setApplyStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const { updateBlockAttributes } = useDispatch('core/block-editor');
-    const { callAI } = useAI();
+    const { callAI } = useAssistantAI();
 
     if (!activeSuggestion) {
         return null;

@@ -4,6 +4,8 @@
 		"@tailwindcss/typography": "^0.5.16",
 		"@tanstack/router-plugin": "^1.127.5",
 		"@types/jest": "^30.0.0",
+		"@types/wordpress__block-editor": "^11.5.17",
+		"@types/wordpress__blocks": "^12.5.18",
 		"@types/wordpress__url": "^2.14.0",
 		"@wordpress/jest-preset-default": "^12.27.0",
 		"@wordpress/scripts": "latest",

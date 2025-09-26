@@ -5,7 +5,7 @@ interface BlockTreeItem extends BlockInstance {
     hasChildren: boolean;
 }
 
-export interface BlockSelectorProps {
+interface BlockSelectorProps {
     onBlockSelect: (block: BlockInstance) => void;
     selectedBlockId?: string;
     className?: string;

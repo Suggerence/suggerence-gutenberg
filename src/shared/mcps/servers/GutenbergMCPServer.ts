@@ -21,7 +21,11 @@ import {
 } from '@/shared/mcps/tools/block-info';
 import {
     addGeneratedImageTool,
-    addGeneratedImage
+    generateImageWithInputsTool,
+    editImageTool,
+    addGeneratedImage,
+    generateImageWithInputs,
+    editImage
 } from '@/shared/mcps/tools/image-generation';
 
 export class GutenbergMCPServer {
@@ -51,6 +55,8 @@ export class GutenbergMCPServer {
         selectBlockTool,
         updateBlockContentTool,
         addGeneratedImageTool,
+        generateImageWithInputsTool,
+        editImageTool,
         getBlocksInfoTool,
         getSelectedBlockInfoTool
     ];
@@ -80,6 +86,12 @@ export class GutenbergMCPServer {
 
                 case 'add_generated_image':
                     return addGeneratedImage(args.prompt, args.position, args.alt_text);
+
+                case 'generate_image_with_inputs':
+                    return generateImageWithInputs(args.prompt, args.input_images, args.position, args.alt_text);
+
+                case 'edit_image':
+                    return editImage(args.prompt, args.image_url, args.position, args.alt_text);
 
                 case 'select_block':
                     return selectBlock(args.blockId);

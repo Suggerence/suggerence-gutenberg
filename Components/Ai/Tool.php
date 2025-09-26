@@ -224,7 +224,7 @@ class Tool
         }
         
         return match ($type) {
-            'string' => new StringSchema($name, $description, $nullable),
+            'string' => new StringSchema($name, $description, $nullable, $schema['enum'] ?? []),
             'number', 'integer' => new NumberSchema($name, $description, $nullable),
             'boolean' => new BooleanSchema($name, $description, $nullable),
             'array' => static::createArraySchema($name, $schema, $nullable),

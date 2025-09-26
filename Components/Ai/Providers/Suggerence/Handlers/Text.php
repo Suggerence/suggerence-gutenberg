@@ -43,7 +43,7 @@ class Text
 
     public function handle()
     {
-        return $this->sendRequest();
+        $this->sendRequest();
 
         $this->prepareTempResponse();
 
@@ -205,7 +205,13 @@ class Text
         $data = $this->httpResponse->json();
         
         if (data_get($data, 'error')) {
-            throw Exception::providerResponseError(data_get($data, 'error'));
+            throw Exception::providerResponseError(vsprintf(
+                'Suggerence Error: [%s] %s',
+                [
+                    data_get($data, 'error.type', 'unknown'),
+                    data_get($data, 'error.message'),
+                ]
+            ));
         }
     }
 }

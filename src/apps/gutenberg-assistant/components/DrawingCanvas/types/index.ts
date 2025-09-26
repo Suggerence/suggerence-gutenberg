@@ -1,4 +1,4 @@
-type DrawingTool = 'brush' | 'marker' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'arrow' | 'text';
+type DrawingTool = 'brush' | 'marker' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'arrow' | 'text' | 'move';
 
 interface ToolSettings {
     size: number;
@@ -16,6 +16,7 @@ interface DrawingState {
     circleSettings: ToolSettings;
     arrowSettings: ToolSettings;
     textSettings: ToolSettings & { fontSize: number; fontFamily: string; fontWeight: string; fontStyle: string; textDecoration: string; };
+    moveSettings: Record<string, never>;
     isDrawing: boolean;
     startPoint?: { x: number; y: number };
 }

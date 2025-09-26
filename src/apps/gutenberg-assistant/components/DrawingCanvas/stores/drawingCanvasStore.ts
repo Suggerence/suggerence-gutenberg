@@ -147,6 +147,16 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        // Save state before adding text for undo functionality
+        const state = get();
+        const imageDataBeforeText = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        set({
+            undoStack: [...state.undoStack, imageDataBeforeText],
+            redoStack: [],
+            canUndo: true,
+            canRedo: false
+        });
+
         // Set text properties
         ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`;
         ctx.fillStyle = style.color;
@@ -209,22 +219,6 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
 
             // Close text input
         set({ showTextInput: false, textPosition: null });
-
-        // Save state after adding text
-        const textCanvas = canvasRef.current;
-        if (textCanvas) {
-            const ctx = textCanvas.getContext('2d');
-            if (ctx) {
-                const imageData = ctx.getImageData(0, 0, textCanvas.width, textCanvas.height);
-                const state = get();
-                set({
-                    undoStack: [...state.undoStack, imageData],
-                    redoStack: [],
-                    canUndo: true,
-                    canRedo: false
-                });
-            }
-        }
     },
 
     // Utility actions
@@ -334,6 +328,7 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
             case 'circle': return drawingState.circleSettings;
             case 'arrow': return drawingState.arrowSettings;
             case 'text': return drawingState.textSettings;
+            case 'move': return drawingState.moveSettings as any;
             default: return drawingState.brushSettings;
         }
     }

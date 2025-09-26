@@ -7,6 +7,7 @@ import { RectangleTool } from '@/apps/gutenberg-assistant/components/DrawingCanv
 import { CircleTool } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/CircleTool';
 import { ArrowTool } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/ArrowTool';
 import { TextTool } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/TextTool';
+import { MoveTool } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/MoveTool';
 
 class ToolRegistry {
     private tools = new Map<string, DrawingToolBase>();
@@ -26,6 +27,7 @@ class ToolRegistry {
         this.registerTool(new CircleTool());
         this.registerTool(new ArrowTool());
         this.registerTool(new TextTool());
+        this.registerTool(new MoveTool());
     }
 
     registerTool(tool: DrawingToolBase): void {

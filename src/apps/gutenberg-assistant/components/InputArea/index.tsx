@@ -6,7 +6,7 @@ import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInt
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
-import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
+import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI';
 import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
 import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas';
@@ -18,7 +18,7 @@ import { AudioButton } from '@/shared/components/AudioButton';
 export const InputArea = () => {
 
     const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
-    const { callAI, parseAIResponse } = useAI();
+    const { callAI, parseAIResponse } = useAssistantAI();
     const [inputValue, setInputValue] = useState('');
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const [isMediaOpen, setIsMediaOpen] = useState(false);

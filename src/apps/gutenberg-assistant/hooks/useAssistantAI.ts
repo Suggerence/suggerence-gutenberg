@@ -2,7 +2,7 @@ import { select } from '@wordpress/data';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
 
-export const useAI = (): UseAITools =>
+export const useAssistantAI = (): UseAITools =>
 {
     const { selectedContexts } = useContextStore();
 

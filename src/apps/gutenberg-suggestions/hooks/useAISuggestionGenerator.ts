@@ -1,12 +1,12 @@
 import { useEffect } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { useSuggestionStore } from '@/apps/gutenberg-suggestions/stores/suggestionStore';
-import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
+import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI';
 import { BlockSpecificMCPServerFactory } from '@/shared/mcps/servers/BlockSpecificMCPServerFactory';
 
 export const useAISuggestionGenerator = () => {
     const { activeSuggestion, isGenerating, setActiveSuggestion, setIsGenerating } = useSuggestionStore();
-    const { callAI } = useAI();
+    const { callAI } = useAssistantAI();
 
     const { selectedBlock } = useSelect((select) => {
         const { getSelectedBlock } = select('core/block-editor') as any;

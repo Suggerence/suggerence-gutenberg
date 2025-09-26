@@ -4,7 +4,7 @@ import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
-import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-ai';
+import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/useGutenbergAI';
 import { AudioButton } from '@/shared/components/AudioButton';
 
 export const CommandBox = ({ onClose }: CommandBoxProps) => {
@@ -141,19 +141,10 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
                                     {selectedBlock && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <BlockIcon
-                                                // @ts-ignore - WordPress types not available
                                                 icon={selectedBlock.name ? (window as any).wp?.blocks?.getBlockType?.(selectedBlock.name)?.icon : undefined}
                                                 showColors={true}
-                                                style={{
-                                                    width: '14px',
-                                                    height: '14px',
-                                                    flexShrink: 0
-                                                }}
                                             />
-                                            <BlockTitle
-                                                clientId={selectedBlock.clientId}
-                                                context="list-view"
-                                            />
+                                            <BlockTitle clientId={selectedBlock.clientId} />
                                         </div>
                                     )}
                                 </FlexItem>

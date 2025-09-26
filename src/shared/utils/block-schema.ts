@@ -1,30 +1,6 @@
 import { getBlockType } from '@wordpress/blocks';
 import { select } from '@wordpress/data';
 
-export interface BlockAttributeSchema {
-    type: string;
-    source?: string;
-    selector?: string;
-    attribute?: string;
-    query?: Record<string, any>;
-    default?: any;
-    enum?: string[];
-    role?: string;
-    description?: string;
-}
-
-export interface BlockSchema {
-    name: string;
-    title: string;
-    description?: string;
-    category: string;
-    icon?: any;
-    keywords?: string[];
-    attributes: Record<string, BlockAttributeSchema>;
-    supports?: Record<string, any>;
-    example?: Record<string, any>;
-}
-
 /**
  * Get block schema from WordPress block registry
  */
@@ -36,14 +12,31 @@ export function getBlockSchema(blockName: string): BlockSchema | null {
             return null;
         }
 
+        // Convert WordPress BlockAttribute to BlockAttributeSchema
+        const convertedAttributes: Record<string, BlockAttributeSchema> = {};
+        if (blockType.attributes) {
+            Object.entries(blockType.attributes).forEach(([key, attr]: [string, any]) => {
+                convertedAttributes[key] = {
+                    type: attr.type || 'string',
+                    source: attr.source,
+                    selector: attr.selector,
+                    attribute: attr.attribute,
+                    query: attr.query,
+                    default: attr.default,
+                    enum: attr.enum,
+                    description: attr.description
+                };
+            });
+        }
+
         return {
             name: blockType.name,
             title: blockType.title,
             description: blockType.description,
             category: blockType.category,
             icon: blockType.icon,
-            keywords: blockType.keywords,
-            attributes: blockType.attributes || {},
+            keywords: blockType.keywords ? [...blockType.keywords] : undefined,
+            attributes: convertedAttributes,
             supports: blockType.supports || {},
             example: blockType.example
         };

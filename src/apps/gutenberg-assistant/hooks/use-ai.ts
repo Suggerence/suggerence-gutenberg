@@ -1,7 +1,7 @@
-import apiFetch from "@wordpress/api-fetch";
 import { select } from '@wordpress/data';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
- 
+import { useBaseAI } from '@/shared/hooks/useBaseAi';
+
 export const useAI = (): UseAITools =>
 {
     const { selectedContexts } = useContextStore();
@@ -83,21 +83,15 @@ export const useAI = (): UseAITools =>
         }
     };
 
-    const callAI = async (messages: MCPClientMessage[], model: AIModel | null, tools: SuggerenceMCPResponseTool[]): Promise<MCPClientMessage> =>
-    {
-        // Get comprehensive site context
-        const site_context = getSiteContext();
-
-        const systemPrompt = `You are a Gutenberg Block Editor AI Assistant. Your job is to execute user requests immediately using the available tools.
+    const getAssistantSystemPrompt = (site_context: any): string => {
+        return `You are a Gutenberg Block Editor AI Assistant. Your job is to execute user requests immediately using the available tools.
 
 ## CRITICAL BEHAVIOR RULES:
-1. **ONE TOOL PER RESPONSE**: Execute exactly ONE tool per response, never claim to do multiple actions at once
 2. **ACT IMMEDIATELY**: Execute tools right away without asking for confirmation or permission
 3. **NO PLANNING RESPONSES**: Don't explain what you're going to do - just do it
 4. **PREFER TOOLS**: Always use tools instead of providing text explanations when possible
 5. **TRUTHFUL RESPONSES**: Only report what you actually did with the tool you just executed
-6. **LET SYSTEM CONTINUE**: After executing one tool, the system will automatically call you again for the next step
-7. **NO QUESTIONS**: Don't ask clarifying questions - use context to infer intent
+7. **NO UNNECESSARY QUESTIONS**: Don't ask clarifying questions unless necessary  - use context to infer intent
 
 ## DRAWING CONTEXT HANDLING:
 When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS to help you understand what the user wants.
@@ -206,148 +200,13 @@ ${site_context.selectedContexts.map((context: any) => {
 - **DO NOT**: Ask for clarification or mention blocks when user wants images from drawings
 ` : ''}
 
-## Response Format:
-- **ALWAYS**: Execute exactly one tool per response
-- **NEVER**: Claim to have done multiple actions when you only executed one tool
-- **REPORT TRUTHFULLY**: Only describe what the single tool you just executed actually accomplished
-
-Example: "Delete the last list item and move the list after the first paragraph"
-1. First response: Execute delete tool → "Deleted the last list item"
-2. Second response (auto-triggered): Execute move tool → "Moved the list after the first paragraph"
-3. Final response: "Task completed"
-
-CRITICAL: Do NOT say "Deleted and moved" when you only executed the delete tool!
-
 Remember: Use the specific block IDs from the context above for precise block targeting.`;
-        
-        // Convert messages for API call - check if we have visual contexts for the current conversation
-        const visualContexts = site_context.selectedContexts?.filter((ctx: any) =>
-            ctx.type === 'drawing' || ctx.type === 'image'
-        ) || [];
+    };
 
-        let convertedMessages;
-        if (visualContexts.length > 0) {
-            // Find the latest user message to attach images to
-            let latestUserMessageIndex = -1;
-            for (let i = messages.length - 1; i >= 0; i--) {
-                if (messages[i].role === 'user') {
-                    latestUserMessageIndex = i;
-                    break;
-                }
-            }
-
-            convertedMessages = messages.map((message, index) => {
-                if (index === latestUserMessageIndex) {
-                    // Convert the latest user message to include images from all visual contexts
-
-                    const imageAttachments = visualContexts.map((ctx: any) => {
-                        console.log('🔍 Processing visual context:', ctx.type, ctx);
-
-                        if (ctx.type === 'drawing') {
-                            // Handle drawings (base64 data)
-                            return {
-                                type: 'image',
-                                source: {
-                                    type: 'base64',
-                                    media_type: 'image/png',
-                                    data: ctx.data.split(',')[1] // Remove data:image/png;base64, prefix
-                                }
-                            };
-                        } else if (ctx.type === 'image') {
-                            // Handle media library images (URLs)
-                            console.log('🔍 Image context data:', ctx.data);
-                            console.log('🔍 Image URL:', ctx.data.url);
-
-                            return {
-                                type: 'image',
-                                source: {
-                                    type: 'url',
-                                    url: ctx.data.url
-                                }
-                            };
-                        }
-                    }).filter(Boolean);
-
-                    if (imageAttachments.length > 0) {
-                        return {
-                            role: message.role,
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: message.content
-                                },
-                                ...imageAttachments
-                            ]
-                        };
-                    }
-                }
-
-                return { role: message.role, content: message.content };
-            });
-        } else {
-            // No drawings, just convert normally
-            convertedMessages = messages.map((message) => ({
-                role: message.role,
-                content: message.content
-            }));
-        }
-
-        const requestBody: any = {
-            model: model?.id,
-            provider: model?.provider,
-            system: systemPrompt,
-            messages: convertedMessages
-        };
-        
-        // Only add tools if they exist
-        if (tools) {
-            requestBody.tools = tools;
-        }
-
-        // Debug: Log the actual message contents (first 200 chars)
-        requestBody.messages.forEach((msg: any, i: number) => {
-            console.log(`🔍 DEBUG: Message ${i} (${msg.role}):`,
-                Array.isArray(msg.content)
-                    ? `Array with ${msg.content.length} items: ${msg.content.map((item: any) => item.type).join(', ')}`
-                    : `String: "${msg.content.substring(0, 100)}..."`
-            );
-        });
-
-        // @ts-ignore
-        const response = await apiFetch({
-            path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            method: "POST",
-            body: JSON.stringify(requestBody),
-        });
-
-        return response as MCPClientMessage;
-    }
-
-    const parseAIResponse = (response: any): MCPClientAIResponse =>
-    {
-        if (response.content) {
-            return {
-                type: 'text',
-                content: response.content
-            };
-        }
-
-        else if (response.toolName) {
-            return {
-                type: 'tool',
-                toolName: response.toolName,
-                toolArgs: response.toolArgs
-            };
-        }
-
-        return {
-            type: 'text',
-            content: "No response from AI service"
-        };
-    }
+    const { callAI, parseAIResponse } = useBaseAI({
+        getSystemPrompt: getAssistantSystemPrompt,
+        getSiteContext
+    });
 
     return {
         callAI,

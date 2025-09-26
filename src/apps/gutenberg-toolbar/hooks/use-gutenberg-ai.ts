@@ -1,9 +1,8 @@
-import { useAI } from '@/apps/gutenberg-assistant/hooks/use-ai';
 import { useSelect } from '@wordpress/data';
 import { BlockSpecificMCPServerFactory } from '@/shared/mcps/servers/BlockSpecificMCPServerFactory';
+import { useBaseAI } from '@/shared/hooks/useBaseAi';
 
 export const useGutenbergAI = (): UseGutenbergAITools => {
-    const { callAI } = useAI();
 
     // Get current Gutenberg context with block type information
     const {
@@ -185,6 +184,32 @@ Instructions: You have complete information about the selected ${selectedBlockIn
                 date: new Date().toISOString(),
                 capabilities: ['text-generation', 'tool-calling']
             };
+
+            // Get toolbar system prompt
+            const getToolbarSystemPrompt = (): string => {
+                return `Current Post Context:
+- Post Title: ${postTitle || 'Untitled'}
+- Total Blocks: ${blocks.length}
+- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+All Blocks in Post (with IDs for reference):
+${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
+
+Available Tools for ${selectedBlockInfo?.name}:
+${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`;
+            };
+
+            const getSiteContext = () => ({
+                selectedContexts: []
+            });
+
+            // Initialize base AI hook with toolbar-specific prompts
+            const { callAI } = useBaseAI({
+                getSystemPrompt: getToolbarSystemPrompt,
+                getSiteContext
+            });
 
             // Call AI with block-specific tools
             const response = await callAI(messages, defaultModel, blockTools);

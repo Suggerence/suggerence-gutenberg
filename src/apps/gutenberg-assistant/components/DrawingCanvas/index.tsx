@@ -181,12 +181,15 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        // Save state before clearing so it can be undone
+        saveStateToHistory(canvasRef);
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Set white background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }, []);
+    }, [saveStateToHistory]);
 
     const downloadCanvas = useCallback(() => {
         const canvas = canvasRef.current;

@@ -13,7 +13,7 @@ import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanv
 import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelector';
 import { getContextUsageColor, getContextUsageWarning } from '@/shared/utils/contextCalculator';
 import { image, brush } from '@wordpress/icons';
-import { Mic, Square } from 'lucide-react';
+import { AudioButton } from '@/shared/components/AudioButton';
 
 export const InputArea = () => {
 
@@ -22,17 +22,11 @@ export const InputArea = () => {
     const [inputValue, setInputValue] = useState('');
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const [isMediaOpen, setIsMediaOpen] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const [isProcessingAudio, setIsProcessingAudio] = useState(false);
-    const [audioError, setAudioError] = useState<string | null>(null);
     const { isLoading, setIsLoading } = useChatInterfaceStore();
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { addContext, contextUsage, updateContextUsage, selectedContexts } = useContextStore();
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
-    const streamRef = useRef<MediaStream | null>(null);
 
     // Get current Gutenberg state using useSelect to listen for changes
     const gutenbergState = useSelect((select: any) => {
@@ -286,158 +280,25 @@ Remember: Use the specific block IDs from the context above for precise block ta
         setIsMediaOpen(false);
     };
 
-    // Start audio recording
-    const startRecording = useCallback(async () => {
-        if (!navigator.mediaDevices || !window.MediaRecorder) {
-            setAudioError(__('Audio recording is not supported in this browser.', 'suggerence'));
-            return;
-        }
+    const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
+        addMessage(audioMessage);
+        setInputValue('');
+        setIsLoading(true);
 
         try {
-            setAudioError(null);
-            audioChunksRef.current = [];
-
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    sampleRate: 44100
-                }
-            });
-
-            streamRef.current = stream;
-
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm;codecs=opus'
-            });
-
-            mediaRecorderRef.current = mediaRecorder;
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
+            await handleNewMessage([...messages, audioMessage]);
+        } catch (error) {
+            const errorMessage: MCPClientMessage = {
+                role: 'assistant',
+                content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                date: new Date().toISOString()
             };
 
-            mediaRecorder.onstop = () => {
-                processAudio();
-            };
-
-            mediaRecorder.onerror = (event) => {
-                console.error('MediaRecorder error:', event);
-                setAudioError(__('Recording error occurred. Please try again.', 'suggerence'));
-                setIsRecording(false);
-            };
-
-            mediaRecorder.start(1000);
-            setIsRecording(true);
-
-        } catch (err: any) {
-            console.error('Error starting recording:', err);
-            let errorMessage = __('Failed to access microphone. Please check permissions.', 'suggerence');
-
-            if (err.name === 'NotAllowedError') {
-                errorMessage = __('Microphone access denied. Please allow microphone access and try again.', 'suggerence');
-            } else if (err.name === 'NotFoundError') {
-                errorMessage = __('No microphone found. Please connect a microphone and try again.', 'suggerence');
-            } else if (err.name === 'NotSupportedError') {
-                errorMessage = __('Audio recording is not supported in this browser.', 'suggerence');
-            }
-
-            setAudioError(errorMessage);
-            setIsRecording(false);
+            addMessage(errorMessage);
+        } finally {
+            setIsLoading(false);
         }
-    }, []);
-
-    // Stop audio recording
-    const stopRecording = useCallback(() => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-        }
-
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-    }, [isRecording]);
-
-    // Process recorded audio
-    const processAudio = useCallback(async () => {
-        if (audioChunksRef.current.length === 0) return;
-
-        setIsProcessingAudio(true);
-        setAudioError(null);
-
-        try {
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64 = (reader.result as string).split(',')[1];
-
-                // Create user message with audio content
-                const messageContent = [];
-
-                // Add text if provided
-                if (inputValue.trim()) {
-                    messageContent.push({
-                        type: 'text',
-                        text: inputValue.trim()
-                    });
-                }
-
-                // Add audio content
-                messageContent.push({
-                    type: 'audio',
-                    source: {
-                        data: base64,
-                        media_type: 'audio/webm'
-                    }
-                });
-
-                const audioMessage: MCPClientMessage = {
-                    role: 'user',
-                    content: messageContent as any, // Type assertion to handle multi-modal content
-                    date: new Date().toISOString()
-                };
-
-                addMessage(audioMessage);
-                setInputValue('');
-                setIsLoading(true);
-
-                try {
-                    await handleNewMessage([...messages, audioMessage]);
-                } catch (error) {
-                    const errorMessage: MCPClientMessage = {
-                        role: 'assistant',
-                        content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-                        date: new Date().toISOString()
-                    };
-
-                    addMessage(errorMessage);
-                } finally {
-                    setIsLoading(false);
-                    setIsProcessingAudio(false);
-                }
-            };
-
-            reader.readAsDataURL(audioBlob);
-
-        } catch (err) {
-            console.error('Error processing audio:', err);
-            setAudioError(__('Failed to process audio.', 'suggerence'));
-            setIsProcessingAudio(false);
-        }
-    }, [inputValue, messages, addMessage, setIsLoading, handleNewMessage]);
-
-    const handleMicClick = useCallback(() => {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
-    }, [isRecording, startRecording, stopRecording]);
+    }, [messages, addMessage, setIsLoading, handleNewMessage]);
 
     return (
         <VStack spacing={0} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderTop: '1px solid #ddd' }}>
@@ -470,11 +331,6 @@ Remember: Use the specific block IDs from the context above for precise block ta
                 )}
             </div>
 
-            {audioError && (
-                <Notice status="error" isDismissible onRemove={() => setAudioError(null)}>
-                    {audioError}
-                </Notice>
-            )}
 
             <TextareaControl
                 value={inputValue}
@@ -490,7 +346,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
             <HStack justify="end" spacing={2}>
                 <Button
                     onClick={() => setIsMediaOpen(true)}
-                    disabled={isLoading || isRecording || isProcessingAudio}
+                    disabled={isLoading}
                     icon={image}
                     size="compact"
                     aria-label={__("Select image", "suggerence")}
@@ -499,32 +355,23 @@ Remember: Use the specific block IDs from the context above for precise block ta
 
                 <Button
                     onClick={() => setIsCanvasOpen(true)}
-                    disabled={isLoading || isRecording || isProcessingAudio}
+                    disabled={isLoading}
                     icon={brush}
                     size="compact"
                     aria-label={__("Draw diagram", "suggerence")}
                     title={__("Draw a diagram or sketch to add as context", "suggerence")}
                 />
 
-                <Button
-                    onClick={handleMicClick}
-                    disabled={isLoading || isProcessingAudio}
-                    icon={isRecording ? <Square size={20} fill="none" strokeWidth={1.5} /> : <Mic size={20} fill="none" strokeWidth={1.5} />}
+                <AudioButton
+                    onAudioMessage={handleAudioMessage}
+                    inputValue={inputValue}
+                    isLoading={isLoading}
                     size="compact"
-                    isPressed={isRecording}
-                    isBusy={isProcessingAudio}
-                    aria-label={isRecording ? __("Stop recording", "suggerence") : __("Record audio message", "suggerence")}
-                    title={isRecording ? __("Click to stop recording audio", "suggerence") : __("Click to record an audio message", "suggerence")}
-                    style={{
-                        backgroundColor: isRecording ? '#ff6b6b' : undefined,
-                        borderColor: isRecording ? '#ff6b6b' : undefined,
-                        color: isRecording ? 'white' : undefined
-                    }}
                 />
 
                 <Button
                     onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isLoading || isRecording || isProcessingAudio}
+                    disabled={!inputValue.trim() || isLoading}
                     isBusy={isLoading}
                     aria-label={__("Send", "suggerence")}
                     variant="primary"

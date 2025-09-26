@@ -107,7 +107,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         }
 
         // Start drawing path for freehand tools
-        if (['pen', 'marker', 'eraser'].includes(drawingState.currentTool)) {
+        if (['brush', 'marker', 'eraser'].includes(drawingState.currentTool)) {
             ctx.beginPath();
             ctx.moveTo(x, y);
         }
@@ -128,7 +128,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
 
         // Handle different drawing tools
         switch (drawingState.currentTool) {
-            case 'pen':
+            case 'brush':
             case 'marker':
             case 'eraser':
                 // Freehand drawing

@@ -10,10 +10,8 @@ export const Canvas = ({
 
     const getCursor = () => {
         switch (drawingState.currentTool) {
-            case 'pen':
             case 'brush':
             case 'marker':
-            case 'pencil':
                 return 'crosshair';
             case 'eraser':
                 return 'grab';

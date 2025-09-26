@@ -66,8 +66,8 @@ interface DrawingCanvasStore {
 }
 
 const initialDrawingState: DrawingState = {
-    currentTool: 'pen',
-    penSettings: { size: 2, color: '#000000', opacity: 1 },
+    currentTool: 'brush',
+    brushSettings: { size: 2, color: '#000000', opacity: 1 },
     markerSettings: { size: 8, color: '#ffff00', opacity: 0.6 },
     eraserSize: 10,
     lineSettings: { size: 2, color: '#000000', opacity: 1 },
@@ -173,13 +173,13 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
     getToolSettings: () => {
         const { drawingState } = get();
         switch (drawingState.currentTool) {
-            case 'pen': return drawingState.penSettings;
+            case 'brush': return drawingState.brushSettings;
             case 'marker': return drawingState.markerSettings;
             case 'line': return drawingState.lineSettings;
             case 'rectangle':
             case 'circle': return drawingState.shapeSettings;
             case 'text': return drawingState.textSettings;
-            default: return drawingState.penSettings;
+            default: return drawingState.brushSettings;
         }
     }
 }));

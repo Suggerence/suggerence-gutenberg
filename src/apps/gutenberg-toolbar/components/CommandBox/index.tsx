@@ -5,6 +5,7 @@ import { useSelect } from '@wordpress/data';
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/use-gutenberg-ai';
+import { AudioButton } from '@/shared/components/AudioButton';
 
 export const CommandBox = ({ onClose }: CommandBoxProps) => {
     const {
@@ -73,6 +74,28 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
 
     const isLoading = isExecuting || mcpLoading;
 
+    const handleAudioMessage = async (audioMessage: any) => {
+        try {
+            setExecuting(true);
+            setError(null);
+
+            // Pass the full multimodal message to executeCommand
+            const success = await executeCommand(audioMessage);
+
+            if (success) {
+                setResult(__('Audio command executed successfully!', 'suggerence'));
+                setInputValue('');
+                onClose?.();
+            } else {
+                setError(__('Audio command execution failed. Please try again.', 'suggerence'));
+            }
+        } catch (error) {
+            setError(__('An error occurred while executing the audio command.', 'suggerence'));
+            console.error('Audio command execution error:', error);
+        } finally {
+            setExecuting(false);
+        }
+    };
 
     return (
         <div
@@ -134,7 +157,14 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
                                         </div>
                                     )}
                                 </FlexItem>
-                                <FlexItem>
+                                <FlexItem style={{ display: 'flex', gap: '4px' }}>
+                                    <AudioButton
+                                        onAudioMessage={handleAudioMessage}
+                                        inputValue={inputValue}
+                                        isLoading={isLoading}
+                                        size="small"
+                                        showError={false}
+                                    />
                                     <Button
                                         variant="primary"
                                         size="small"

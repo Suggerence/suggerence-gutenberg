@@ -1,4 +1,4 @@
-type DrawingTool = 'pen' | 'marker' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'arrow' | 'text';
+type DrawingTool = 'brush' | 'marker' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'arrow' | 'text';
 
 interface ToolSettings {
     size: number;
@@ -8,7 +8,7 @@ interface ToolSettings {
 
 interface DrawingState {
     currentTool: DrawingTool;
-    penSettings: ToolSettings;
+    brushSettings: ToolSettings;
     markerSettings: ToolSettings;
     eraserSize: number;
     lineSettings: ToolSettings;

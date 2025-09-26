@@ -39,7 +39,7 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
         };
     }, []);
 
-    const executeCommand = async (command: string): Promise<boolean> => {
+    const executeCommand = async (command: string | MCPClientMessage): Promise<boolean> => {
         try {
             // Check if we have a selected block
             if (!selectedBlock) {
@@ -115,10 +115,14 @@ ${selectedBlockInfo.typeDefinition?.supports ? Object.entries(selectedBlockInfo.
             }
 
             // Create message for AI with comprehensive block-aware context
-            const messages: MCPClientMessage[] = [
-                {
-                    role: 'user',
-                    content: `Current Post Context:
+            let messages: MCPClientMessage[];
+
+            if (typeof command === 'string') {
+                // Traditional string command
+                messages = [
+                    {
+                        role: 'user',
+                        content: `Current Post Context:
 - Post Title: ${postTitle || 'Untitled'}
 - Total Blocks: ${blocks.length}
 - Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
@@ -132,9 +136,45 @@ ${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n'
 User Command: ${command}
 
 Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`,
-                    date: new Date().toISOString()
+                        date: new Date().toISOString()
+                    }
+                ];
+            } else {
+                // Multimodal message (like audio)
+                const baseContext = `Current Post Context:
+- Post Title: ${postTitle || 'Untitled'}
+- Total Blocks: ${blocks.length}
+- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+All Blocks in Post (with IDs for reference):
+${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
+
+Available Tools for ${selectedBlockInfo?.name}:
+${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`;
+
+                // Handle multimodal content
+                let messageContent;
+                if (Array.isArray(command.content)) {
+                    // Add context to existing multimodal content
+                    messageContent = [
+                        { type: 'text', text: baseContext },
+                        ...command.content
+                    ];
+                } else {
+                    // Simple content, add context
+                    messageContent = `${baseContext}\n\nUser Command: ${command.content}`;
                 }
-            ];
+
+                messages = [
+                    {
+                        role: 'user',
+                        content: messageContent as any, // Type assertion for multimodal content
+                        date: new Date().toISOString()
+                    }
+                ];
+            }
 
             // Get AI model (we'll use a default one for now)
             const defaultModel: AIModel = {

@@ -19,7 +19,7 @@ import {
     wordpress
 } from '@wordpress/icons';
 import {
-    Pen,
+    Brush,
     Highlighter,
     Minus,
     Square,
@@ -64,19 +64,19 @@ export const CanvasToolbar = ({
     // Get current tool settings
     const getCurrentSettings = (): ToolSettings => {
         switch (drawingState.currentTool) {
-            case 'pen': return drawingState.penSettings;
+            case 'brush': return drawingState.brushSettings;
             case 'marker': return drawingState.markerSettings;
             case 'line': return drawingState.lineSettings;
             case 'rectangle':
             case 'circle': return drawingState.shapeSettings;
             case 'text': return drawingState.textSettings;
-            default: return drawingState.penSettings;
+            default: return drawingState.brushSettings;
         }
     };
 
     const getToolIcon = (tool: DrawingTool) => {
         switch (tool) {
-            case 'pen': return <Pen size={20} />;
+            case 'brush': return <Brush size={20} />;
             case 'marker': return <Highlighter size={20} />;
             case 'eraser': return <Eraser size={20} />;
             case 'line': return <Minus size={20} />;
@@ -111,7 +111,7 @@ export const CanvasToolbar = ({
         {
             label: __('Drawing Tools', 'suggerence'),
             tools: [
-                { tool: 'pen' as DrawingTool, label: __('Pen', 'suggerence') },
+                { tool: 'brush' as DrawingTool, label: __('Brush', 'suggerence') },
                 { tool: 'marker' as DrawingTool, label: __('Marker', 'suggerence') },
                 { tool: 'eraser' as DrawingTool, label: __('Eraser', 'suggerence') }
             ]

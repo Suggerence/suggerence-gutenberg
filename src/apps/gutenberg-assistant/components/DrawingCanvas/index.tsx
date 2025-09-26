@@ -40,8 +40,6 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
     const {
         drawingState,
         temporaryCanvasState,
-        undoStack,
-        redoStack,
         canUndo,
         canRedo,
         textInput,
@@ -56,7 +54,6 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         saveStateToHistory,
         undo,
         redo,
-        clearHistory,
         setTextInput,
         setShowTextInput,
         setTextPosition,
@@ -287,7 +284,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
 
     return (
         <Modal
-            title={__('Enhanced Drawing Canvas', 'suggerence')}
+            title={__('Drawing Canvas', 'suggerence')}
             onRequestClose={onClose}
             style={{ maxWidth: '900px', width: '95vw' }}
             shouldCloseOnClickOutside={false}
@@ -335,7 +332,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
                                                 <div style={{ padding: '16px', minWidth: '200px' }}>
                                                     <SelectControl
                                                         label={__('Font Family', 'suggerence')}
-                                                        value={drawingState.textSettings.fontFamily}
+                                                        value={drawingState.textSettings.fontFamily as "Arial, sans-serif" | "Times New Roman, serif" | "Courier New, monospace" | "Georgia, serif" | "Verdana, sans-serif"}
                                                         options={[
                                                             { label: 'Arial', value: 'Arial, sans-serif' },
                                                             { label: 'Times New Roman', value: 'Times New Roman, serif' },

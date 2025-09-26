@@ -127,19 +127,18 @@ export const Canvas = ({
         <div
             ref={containerRef}
             style={{
-                border: '2px solid #ddd',
-                borderRadius: '8px',
+                border: '1px solid black',
                 backgroundColor: '#fff',
                 cursor: getCursor(),
                 overflow: 'visible', // Allow text editor to show outside canvas
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                position: 'relative' // Enable absolute positioning for text editor
+                position: 'relative', // Enable absolute positioning for text editor
+                width: '100%' // Ensure container takes full width
             }}
         >
             <canvas
                 ref={canvasRef}
-                width={720}
-                height={480}
+                width={800}
+                height={420}
                 onMouseDown={onStartDrawing}
                 onMouseMove={handleMouseMove}
                 onMouseUp={onStopDrawing}
@@ -151,7 +150,8 @@ export const Canvas = ({
                 onTouchCancel={handleTouchEnd}
                 style={{
                     display: 'block',
-                    borderRadius: '6px',
+                    width: '100%', // Make canvas responsive
+                    height: 'auto', // Maintain aspect ratio
                     touchAction: 'none' // Prevent default touch behaviors
                 }}
             />

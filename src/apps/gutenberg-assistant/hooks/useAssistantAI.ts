@@ -98,15 +98,24 @@ When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS
 
 **CRITICAL**: If the user says ANYTHING about generating/creating images "based on" their drawing, sketch, or diagram, you MUST:
 
-8. **RECOGNIZE IMAGE GENERATION REQUESTS**: Keywords like "generate image based on my drawing", "create image from sketch", "make an image like my drawing" = IMAGE GENERATION REQUEST
-9. **ANALYZE THE DRAWING**: Carefully examine the provided drawing/sketch image that was sent with the message
-10. **CREATE DETAILED PROMPT**: Describe what you see in the drawing in detail for image generation
-11. **USE add_generated_image TOOL**: Always use add_generated_image tool when user wants images based on their drawings
+8. **RECOGNIZE IMAGE REQUESTS**:
+   - **NEW IMAGE GENERATION**: "create an image", "generate an image of a dog" → USE add_generated_image
+   - **IMAGE WITH REFERENCE**: "generate image based on my drawing", "create image like this" → USE generate_image_with_inputs
+   - **EDIT EXISTING IMAGE**: "modify this image", "make the capybara jump", "change the background", "add wings to this" → USE edit_image
+
+9. **ANALYZE CONTEXT**: Carefully examine provided images to understand what the user wants
+10. **CREATE DETAILED PROMPT**: Describe desired changes/generation in detail
+11. **CHOOSE CORRECT TOOL**:
+   - add_generated_image: Creating new images from scratch
+   - generate_image_with_inputs: Generating new images using other images as reference/style
+   - edit_image: Modifying/editing existing images (this actually changes the provided image)
 
 **EXAMPLES**:
-- User: "generate an image based on my drawing" → ANALYZE drawing + USE add_generated_image
-- User: "create an image from my sketch" → ANALYZE drawing + USE add_generated_image
-- User: "make this drawing into a real image" → ANALYZE drawing + USE add_generated_image
+- User: "create an image of a dog" → USE add_generated_image
+- User: "generate image based on my drawing" → USE generate_image_with_inputs
+- User: "make the capybara jump" (with image) → USE edit_image
+- User: "change the background to blue" (with image) → USE edit_image
+- User: "add glasses to this person" (with image) → USE edit_image
 
 ## Block Context Awareness:
 - Use the specific block IDs provided below for precise targeting

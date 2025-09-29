@@ -414,8 +414,8 @@ class AiProviders extends BaseApiEndpoints
 
                 // Use the specified provider (Gemini works well for image editing)
                 if (empty($provider)) {
-                    $provider = 'gemini';
-                    $model = 'gemini-2.5-flash-image-preview';
+                    $provider = 'suggerence';
+                    $model = 'suggerence-v1';
                     $imageGenerator = AI::images()->using($provider, $model);
                 }
 

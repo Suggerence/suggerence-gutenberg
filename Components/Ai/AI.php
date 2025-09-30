@@ -3,7 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai;
 
 use SuggerenceGutenberg\Components\Ai\Text\PendingRequest as PendingTextRequest;
-// use SuggerenceGutenberg\Components\Ai\Structured\PendingRequest as PendingStructuredRequest;
+use SuggerenceGutenberg\Components\Ai\Structured\PendingRequest as PendingStructuredRequest;
 // use SuggerenceGutenberg\Components\Ai\Embeddings\PendingRequest as PendingEmbeddingsRequest;
 use SuggerenceGutenberg\Components\Ai\Images\PendingRequest as PendingImagesRequest;
 // use SuggerenceGutenberg\Components\Ai\Audio\PendingRequest as PendingAudioRequest;
@@ -17,7 +17,7 @@ class AI
 
     public static function structured()
     {
-        // return new PendingStructuredRequest;
+        return new PendingStructuredRequest;
     }
 
     public static function embeddings()

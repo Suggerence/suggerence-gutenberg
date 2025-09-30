@@ -46,16 +46,11 @@ export class GenericBlockMCPServer {
 
                 // Add image tools for image-related blocks
                 if (this.isImageBlock(block.name)) {
-                    console.log('Adding image tools for block:', block.name);
-                    console.log('generateImageTool:', generateImageTool);
-                    console.log('generateImageWithInputsTool:', generateImageWithInputsTool);
-                    console.log('generateEditedImageTool:', generateEditedImageTool);
                     tools.push(generateImageTool, generateImageWithInputsTool, generateEditedImageTool);
                 }
             }
         }
 
-        console.log('GenericBlockMCPServer returning tools:', tools);
         return tools;
     }
 

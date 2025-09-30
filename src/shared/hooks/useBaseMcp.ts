@@ -30,7 +30,6 @@ export const useBaseMCP = (
                 name: `${config.toolPrefix}${tool.name}`
             }));
 
-            console.log(`Suggerence Debug: ${config.debugName} tools generated:`, tools);
             return tools;
         } catch (error) {
             console.error(`Failed to get ${config.debugName} tools:`, error);

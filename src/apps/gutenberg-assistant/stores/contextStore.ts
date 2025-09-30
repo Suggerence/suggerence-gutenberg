@@ -12,7 +12,6 @@ export const useContextStore = create<ContextState>((set, get) => ({
             : state.selectedContexts.filter(ctx => ctx.type !== context.type);
 
         const newContexts = [...filteredContexts, context];
-        console.log('Added context:', context, 'Total contexts:', newContexts.length);
 
         return {
             selectedContexts: newContexts
@@ -21,7 +20,6 @@ export const useContextStore = create<ContextState>((set, get) => ({
 
     removeContext: (contextId: string) => set((state) => {
         const newContexts = state.selectedContexts.filter(ctx => ctx.id !== contextId);
-        console.log('Removed context:', contextId, 'Remaining contexts:', newContexts.length);
 
         return {
             selectedContexts: newContexts

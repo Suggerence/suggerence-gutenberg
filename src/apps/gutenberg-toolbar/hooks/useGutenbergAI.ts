@@ -52,12 +52,6 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
             // Get tools (includes block-specific tools like image editing for image blocks)
             const blockTools = genericServer.client.listTools().tools;
 
-            // Debug: Log block-specific tools being sent to AI
-            console.log('Block-specific tools being sent to AI:', blockTools.length);
-            blockTools.forEach((tool: any, index: number) => {
-                console.log(`Block Tool ${index}:`, tool.name, tool.inputSchema);
-            });
-
             // Create comprehensive post content context for the AI
             const allBlocks = blocks.map((block: any) => ({
                 id: block.clientId,

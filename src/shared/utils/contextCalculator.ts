@@ -64,7 +64,6 @@ export function calculateContextUsage(params: {
             }
         }
 
-        console.log(`Context "${context.label}" (${context.type}):`, calculateTokenCount(contextText), 'tokens');
         return total + calculateTokenCount(contextText);
     }, 0);
 
@@ -72,15 +71,6 @@ export function calculateContextUsage(params: {
 
     const totalTokens = systemPromptTokens + messagesTokens + selectedContextsTokens + gutenbergContextTokens;
     const percentage = Math.min(100, Math.round((totalTokens / MAX_CONTEXT_TOKENS) * 100));
-
-    console.log('Context Usage Breakdown:', {
-        systemPrompt: systemPromptTokens,
-        messages: messagesTokens,
-        selectedContexts: selectedContextsTokens,
-        gutenbergContext: gutenbergContextTokens,
-        total: totalTokens,
-        percentage: percentage + '%'
-    });
 
     return {
         totalTokens,

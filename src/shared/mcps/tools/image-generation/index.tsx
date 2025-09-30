@@ -193,8 +193,8 @@ async function generateEditedImageWithAI(
             },
             body: JSON.stringify({
                 prompt: prompt,
-                provider: 'gemini',
-                model: 'gemini-2.5-flash-image-preview',
+                model: 'suggerence-v1',
+                provider: 'suggerence',
                 edit_mode: true,
                 edit_image_url: imageUrl
             })
@@ -229,8 +229,8 @@ async function generateImageWithAIAndInputs(
             },
             body: JSON.stringify({
                 prompt: prompt,
-                provider: 'gemini',
-                model: 'gemini-2.5-flash-image-preview',
+                model: 'suggerence-v1',
+                provider: 'suggerence',
                 input_images: inputImages
             })
         });
@@ -261,8 +261,8 @@ export async function generateImageWithAI(prompt: string): Promise<{ success: bo
             },
             body: JSON.stringify({
                 prompt: prompt,
-                provider: 'gemini',
-                model: 'gemini-2.5-flash-image-preview'
+                model: 'suggerence-v1',
+                provider: 'suggerence'
             })
         });
 
@@ -274,7 +274,6 @@ export async function generateImageWithAI(prompt: string): Promise<{ success: bo
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error generating image with nano banana (Gemini):', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error occurred'

@@ -172,10 +172,10 @@ Instructions: You have complete information about the selected ${selectedBlockIn
 
             // Get AI model (we'll use a default one for now)
             const defaultModel: AIModel = {
-                id: 'gemini-2.0-flash',
-                provider: 'gemini',
-                providerName: 'Gemini',
-                name: 'Gemini 2.0 Flash',
+                id: 'suggerence-v1',
+                provider: 'suggerence',
+                providerName: 'Suggerence',
+                name: 'Suggerence v1',
                 date: new Date().toISOString(),
                 capabilities: ['text-generation', 'tool-calling']
             };

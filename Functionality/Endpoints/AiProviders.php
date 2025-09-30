@@ -412,7 +412,6 @@ class AiProviders extends BaseApiEndpoints
                     $mimeType = $headers['content-type'];
                 }
 
-                // Use the specified provider (Gemini works well for image editing)
                 if (empty($provider)) {
                     $provider = 'suggerence';
                     $model = 'suggerence-v1';

@@ -138,10 +138,10 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
 }`;
 
             const defaultModel = {
-                id: 'gemini-2.0-flash',
-                provider: 'gemini',
-                providerName: 'Gemini',
-                name: 'Gemini 2.0 Flash',
+                id: 'suggerence-v1',
+                provider: 'suggerence',
+                providerName: 'Suggerence',
+                name: 'Suggerence v1',
                 date: new Date().toISOString(),
                 capabilities: ['text-generation']
             };
@@ -278,10 +278,10 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
 }`;
 
             const defaultModel = {
-                id: 'gemini-2.0-flash',
-                provider: 'gemini',
-                providerName: 'Gemini',
-                name: 'Gemini 2.0 Flash',
+                id: 'suggerence-v1',
+                provider: 'suggerence',
+                providerName: 'Suggerence',
+                name: 'Suggerence v1',
                 date: new Date().toISOString(),
                 capabilities: ['text-generation']
             };
@@ -399,10 +399,10 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
 }`;
 
             const defaultModel = {
-                id: 'gemini-2.0-flash',
-                provider: 'gemini',
-                providerName: 'Gemini',
-                name: 'Gemini 2.0 Flash',
+                id: 'suggerence-v1',
+                provider: 'suggerence',
+                providerName: 'Suggerence',
+                name: 'Suggerence v1',
                 date: new Date().toISOString(),
                 capabilities: ['text-generation']
             };

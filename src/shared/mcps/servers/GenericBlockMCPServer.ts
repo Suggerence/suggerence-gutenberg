@@ -1,6 +1,14 @@
 import { select, dispatch } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { generateDynamicBlockTool, generateBlockCapabilityDescription } from '@/shared/utils/dynamic-block-tool-generator';
+import {
+    generateImageTool,
+    generateImageWithInputsTool,
+    generateEditedImageTool,
+    generateImage,
+    generateImageWithInputs,
+    generateEditedImage
+} from '@/shared/mcps/tools/image-generation';
 
 export class GenericBlockMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -35,127 +43,30 @@ export class GenericBlockMCPServer {
                 if (dynamicTool) {
                     tools.push(dynamicTool);
                 }
+
+                // Add image tools for image-related blocks
+                if (this.isImageBlock(block.name)) {
+                    console.log('Adding image tools for block:', block.name);
+                    console.log('generateImageTool:', generateImageTool);
+                    console.log('generateImageWithInputsTool:', generateImageWithInputsTool);
+                    console.log('generateEditedImageTool:', generateEditedImageTool);
+                    tools.push(generateImageTool, generateImageWithInputsTool, generateEditedImageTool);
+                }
             }
         }
 
-        // Always include the generic tools
-        // tools.push(...this.getGenericTools());
-
+        console.log('GenericBlockMCPServer returning tools:', tools);
         return tools;
     }
 
-    private getGenericTools(): SuggerenceMCPResponseTool[] {
-        return [
-        {
-            name: 'modify_block',
-            description: 'Modify any block using WordPress core APIs. Supports all block types and any WordPress functionality.',
-            inputSchema: {
-                type: 'object',
-                properties: {
-                    blockId: {
-                        type: 'string',
-                        description: 'Block client ID (optional, uses selected block if not provided)'
-                    },
-                    attributes: {
-                        type: 'object',
-                        description: 'Block attributes to update (any WordPress block attribute)',
-                        additionalProperties: true
-                    },
-                    // WordPress-specific style object for filters, spacing, etc.
-                    style: {
-                        type: 'object',
-                        description: 'WordPress style object for colors, spacing, borders, typography',
-                        properties: {
-                            color: {
-                                type: 'object',
-                                description: 'Color-related styles including duotone filters',
-                                properties: {
-                                    duotone: {
-                                        type: 'array',
-                                        description: 'Duotone filter colors [highlightColor, shadowColor]',
-                                        items: { type: 'string' },
-                                        minItems: 2,
-                                        maxItems: 2
-                                    }
-                                }
-                            },
-                            spacing: {
-                                type: 'object',
-                                description: 'Spacing (padding, margin)',
-                                additionalProperties: true
-                            },
-                            border: {
-                                type: 'object',
-                                description: 'Border styles',
-                                additionalProperties: true
-                            },
-                            typography: {
-                                type: 'object',
-                                description: 'Typography styles',
-                                additionalProperties: true
-                            }
-                        }
-                    },
-                    // Direct WordPress API calls
-                    transformTo: {
-                        type: 'string',
-                        description: 'Transform block to different type (e.g., "core/cover")'
-                    },
-                    wrapIn: {
-                        type: 'string',
-                        description: 'Wrap block in a container block type'
-                    }
-                }
-            }
-        },
-        {
-            name: 'get_block_info',
-            description: 'Get complete information about a block including attributes, supports, and available actions',
-            inputSchema: {
-                type: 'object',
-                properties: {
-                    blockId: {
-                        type: 'string',
-                        description: 'Block client ID (optional, uses selected block if not provided)'
-                    }
-                }
-            }
-        },
-        {
-            name: 'get_block_capabilities',
-            description: 'Get comprehensive capabilities of the current block based on its block.json schema and supports',
-            inputSchema: {
-                type: 'object',
-                properties: {
-                    blockId: {
-                        type: 'string',
-                        description: 'Block client ID (optional, uses selected block if not provided)'
-                    }
-                }
-            }
-        },
-        {
-            name: 'apply_duotone_filter',
-            description: 'Apply WordPress duotone filter to blocks that support it (images, covers, etc.). Uses WordPress standard style.color.duotone format.',
-            inputSchema: {
-                type: 'object',
-                properties: {
-                    blockId: {
-                        type: 'string',
-                        description: 'Block client ID (optional, uses selected block if not provided)'
-                    },
-                    colors: {
-                        type: 'array',
-                        description: 'Two colors for duotone effect [highlightColor, shadowColor] - hex codes like ["#ffffff", "#000000"]',
-                        items: { type: 'string' },
-                        minItems: 2,
-                        maxItems: 2
-                    }
-                },
-                required: ['colors']
-            }
-        }
+    private isImageBlock(blockName: string): boolean {
+        const imageBlocks = [
+            'core/image',
+            'core/gallery',
+            'core/media-text',
+            'core/cover'
         ];
+        return imageBlocks.includes(blockName);
     }
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -169,17 +80,14 @@ export class GenericBlockMCPServer {
 
         try {
             switch (name) {
-                case 'modify_block':
-                    return this.modifyBlock(args);
+                case 'generate_image':
+                    return generateImage(args.prompt, args.alt_text);
 
-                case 'get_block_info':
-                    return this.getBlockInfo(args.blockId);
+                case 'generate_image_with_inputs':
+                    return generateImageWithInputs(args.prompt, args.input_images, args.alt_text);
 
-                case 'get_block_capabilities':
-                    return this.getBlockCapabilities(args.blockId);
-
-                case 'apply_duotone_filter':
-                    return this.applyDuotoneFilter(args.blockId, args.colors);
+                case 'generate_edited_image':
+                    return generateEditedImage(args.prompt, args.image_url, args.alt_text);
 
                 default:
                     // Check if it's a dynamically generated tool
@@ -299,87 +207,6 @@ export class GenericBlockMCPServer {
         };
     }
 
-    private getBlockInfo(blockId?: string): { content: Array<{ type: string, text: string }> } {
-        const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
-        const { getBlockType } = select('core/blocks') as any;
-
-        const targetBlockId = blockId || getSelectedBlockClientId();
-
-        if (!targetBlockId) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: 'No block selected or specified'
-                }]
-            };
-        }
-
-        const block = getBlock(targetBlockId);
-        if (!block) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Block with ID ${targetBlockId} not found`
-                }]
-            };
-        }
-
-        const blockType = getBlockType(block.name);
-
-        const info = {
-            clientId: targetBlockId,
-            name: block.name,
-            title: blockType?.title || 'Unknown',
-            attributes: block.attributes,
-            supports: blockType?.supports || {},
-            innerBlocks: block.innerBlocks?.map((ib: any) => ({
-                name: ib.name,
-                clientId: ib.clientId
-            })) || []
-        };
-
-        return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(info, null, 2)
-            }]
-        };
-    }
-
-    private getBlockCapabilities(blockId?: string): { content: Array<{ type: string, text: string }> } {
-        const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
-
-        const targetBlockId = blockId || getSelectedBlockClientId();
-
-        if (!targetBlockId) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: 'No block selected or specified'
-                }]
-            };
-        }
-
-        const block = getBlock(targetBlockId);
-        if (!block) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Block with ID ${targetBlockId} not found`
-                }]
-            };
-        }
-
-        const capabilities = generateBlockCapabilityDescription(block.name);
-
-        return {
-            content: [{
-                type: 'text',
-                text: capabilities
-            }]
-        };
-    }
-
     private handleDynamicTool(toolName: string, args: any): { content: Array<{ type: string, text: string }> } {
         // Extract block name from tool name (modify_core_image -> core/image)
         const blockName = toolName.replace('modify_', '').replace(/_/g, '/');
@@ -408,26 +235,5 @@ export class GenericBlockMCPServer {
         });
 
         return merged;
-    }
-
-    private applyDuotoneFilter(blockId: string | undefined, colors: string[]): { content: Array<{ type: string, text: string }> } {
-        if (colors.length !== 2) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: 'Duotone filter requires exactly 2 colors: [highlightColor, shadowColor]'
-                }]
-            };
-        }
-
-        // Use proper WordPress duotone format: style.color.duotone
-        return this.modifyBlock({
-            blockId,
-            style: {
-                color: {
-                    duotone: colors
-                }
-            }
-        });
     }
 }

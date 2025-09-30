@@ -20,13 +20,23 @@ import {
     getSelectedBlockInfo
 } from '@/shared/mcps/tools/block-info';
 import {
-    addGeneratedImageTool,
+    generateImageTool,
     generateImageWithInputsTool,
-    editImageTool,
-    addGeneratedImage,
+    generateEditedImageTool,
+    generateImage,
     generateImageWithInputs,
-    editImage
+    generateEditedImage
 } from '@/shared/mcps/tools/image-generation';
+import {
+    generateBlocksFromCanvasTool,
+    generateBlocksFromCanvas
+} from '@/shared/mcps/tools/canvas-to-blocks';
+import {
+    getAvailableBlocksTool,
+    getBlockSchemaTool,
+    getAvailableBlocks,
+    getBlockSchema
+} from '@/shared/mcps/tools/block-schema';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -54,11 +64,14 @@ export class GutenbergMCPServer {
         deleteBlockTool,
         selectBlockTool,
         updateBlockContentTool,
-        addGeneratedImageTool,
+        generateImageTool,
         generateImageWithInputsTool,
-        editImageTool,
+        generateEditedImageTool,
         getBlocksInfoTool,
-        getSelectedBlockInfoTool
+        getSelectedBlockInfoTool,
+        generateBlocksFromCanvasTool,
+        getAvailableBlocksTool,
+        getBlockSchemaTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -84,14 +97,14 @@ export class GutenbergMCPServer {
                 case 'delete_block':
                     return deleteBlock(args.blockId);
 
-                case 'add_generated_image':
-                    return addGeneratedImage(args.prompt, args.position, args.alt_text);
+                case 'generate_image':
+                    return generateImage(args.prompt, args.alt_text);
 
                 case 'generate_image_with_inputs':
-                    return generateImageWithInputs(args.prompt, args.input_images, args.position, args.alt_text);
+                    return generateImageWithInputs(args.prompt, args.input_images, args.alt_text);
 
-                case 'edit_image':
-                    return editImage(args.prompt, args.image_url, args.position, args.alt_text);
+                case 'generate_edited_image':
+                    return generateEditedImage(args.prompt, args.image_url, args.alt_text);
 
                 case 'select_block':
                     return selectBlock(args.blockId);
@@ -107,6 +120,15 @@ export class GutenbergMCPServer {
 
                 case 'insert_block_after':
                     return insertBlockAfter(args.blockType, args.afterBlockId);
+
+                case 'generate_blocks_from_canvas':
+                    return generateBlocksFromCanvas(args.blockStructure, args.analysis, args.replaceExisting, args.targetPosition);
+
+                case 'get_available_blocks':
+                    return getAvailableBlocks(args.includeInactive, args.category);
+
+                case 'get_block_schema':
+                    return getBlockSchema(args.blockType);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

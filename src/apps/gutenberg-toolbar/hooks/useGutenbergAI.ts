@@ -1,5 +1,5 @@
 import { useSelect } from '@wordpress/data';
-import { BlockSpecificMCPServerFactory } from '@/shared/mcps/servers/BlockSpecificMCPServerFactory';
+import { GenericBlockMCPServer } from '@/shared/mcps/servers/GenericBlockMCPServer';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
 
 export const useGutenbergAI = (): UseGutenbergAITools => {
@@ -46,16 +46,11 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
                 return false;
             }
 
-            // Get block-specific MCP server
-            const blockSpecificServer = BlockSpecificMCPServerFactory.getServerForBlock(selectedBlock.name);
+            // Get generic MCP server with block-specific tools
+            const genericServer = GenericBlockMCPServer.initialize();
 
-            if (!blockSpecificServer) {
-                console.error(`No specific tools available for block type: ${selectedBlock.name}`);
-                return false;
-            }
-
-            // Get block-specific tools
-            const blockTools = blockSpecificServer.client.listTools().tools;
+            // Get tools (includes block-specific tools like image editing for image blocks)
+            const blockTools = genericServer.client.listTools().tools;
 
             // Debug: Log block-specific tools being sent to AI
             console.log('Block-specific tools being sent to AI:', blockTools.length);
@@ -214,14 +209,14 @@ Instructions: You have complete information about the selected ${selectedBlockIn
             // Call AI with block-specific tools
             const response = await callAI(messages, defaultModel, blockTools);
 
-            // If AI wants to use a tool, execute it on the block-specific server
+            // If AI wants to use a tool, execute it on the generic server
             if (response.toolName && response.toolArgs) {
-                const toolResult = await blockSpecificServer.client.callTool({
+                const toolResult = await genericServer.client.callTool({
                     name: response.toolName,
                     arguments: response.toolArgs
                 });
 
-                console.log('Block-specific tool execution result:', toolResult);
+                console.log('Tool execution result:', toolResult);
                 return true;
             }
 

@@ -7,6 +7,28 @@ export const useAssistantAI = (): UseAITools =>
     const { selectedContexts } = useContextStore();
 
     /**
+     * Get available block types with basic information
+     */
+    const getAvailableBlockTypes = () => {
+        try {
+            const { getBlockTypes } = select('core/blocks') as any;
+            const blockTypes = getBlockTypes();
+
+            return blockTypes.map((blockType: any) => ({
+                name: blockType.name,
+                title: blockType.title,
+                description: blockType.description || '',
+                category: blockType.category,
+                keywords: blockType.keywords || [],
+                supports: blockType.supports || {}
+            })).filter((block: any) => !block.name.includes('core/missing') && !block.name.includes('core/freeform'));
+        } catch (error) {
+            console.warn('Suggerence: Could not retrieve available block types', error);
+            return [];
+        }
+    };
+
+    /**
      * Get comprehensive site context including Gutenberg blocks information
      */
     const getSiteContext = () => {
@@ -56,6 +78,9 @@ export const useAssistantAI = (): UseAITools =>
             const postTitle = getEditorPostAttribute?.('title') || getEditedPostAttribute?.('title') || '';
             const postContent = getEditorPostAttribute?.('content') || '';
 
+            // Get available block types
+            const availableBlockTypes = getAvailableBlockTypes();
+
             return {
                 ...baseContext,
                 gutenberg: {
@@ -66,6 +91,7 @@ export const useAssistantAI = (): UseAITools =>
                     },
                     blocks: blocksInfo,
                     selectedBlock: selectedBlockInfo,
+                    availableBlockTypes: availableBlockTypes,
                     lastUpdated: new Date().toISOString()
                 },
                 selectedContexts: selectedContexts || []
@@ -96,32 +122,58 @@ export const useAssistantAI = (): UseAITools =>
 ## DRAWING CONTEXT HANDLING:
 When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS to help you understand what the user wants.
 
-**CRITICAL**: If the user says ANYTHING about generating/creating images "based on" their drawing, sketch, or diagram, you MUST:
+**CRITICAL DECISION TREE**: When user provides drawings/sketches, determine the intent:
 
-8. **RECOGNIZE IMAGE REQUESTS**:
-   - **NEW IMAGE GENERATION**: "create an image", "generate an image of a dog" → USE add_generated_image
+8. **CANVAS-TO-BLOCKS REQUESTS** (MOST COMMON for drawings):
+   - **STRUCTURE GENERATION**: "create blocks from my drawing", "build page from sketch", "generate layout", "create structure" → USE generate_blocks_from_canvas
+   - **LAYOUT CREATION**: "make this layout", "build this page structure", "create content from drawing" → USE generate_blocks_from_canvas
+   - **WIREFRAME TO BLOCKS**: User draws webpage layout, UI elements, page structure → USE generate_blocks_from_canvas
+
+9. **IMAGE GENERATION REQUESTS** (Less common for hand-drawn sketches):
+   - **NEW IMAGE GENERATION**: "create an image", "generate an image of a dog" → USE generate_image
    - **IMAGE WITH REFERENCE**: "generate image based on my drawing", "create image like this" → USE generate_image_with_inputs
-   - **EDIT EXISTING IMAGE**: "modify this image", "make the capybara jump", "change the background", "add wings to this" → USE edit_image
+   - **EDIT EXISTING IMAGE**: "modify this image", "make the capybara jump", "change the background", "add wings to this" → USE generate_edited_image
 
-9. **ANALYZE CONTEXT**: Carefully examine provided images to understand what the user wants
-10. **CREATE DETAILED PROMPT**: Describe desired changes/generation in detail
-11. **CHOOSE CORRECT TOOL**:
-   - add_generated_image: Creating new images from scratch
+10. **ANALYZE DRAWING CONTENT**: Look for layout elements, text boxes, headers, buttons, columns, content areas
+11. **CREATE DETAILED BLOCK STRUCTURE**: When using generate_blocks_from_canvas, provide complete block definitions:
+   - **HEADINGS**: Use blockType "core/heading" with attributes like {content: "Title Text", level: 1-6}
+   - **PARAGRAPHS**: Use blockType "core/paragraph" with attributes like {content: "Text content"}
+   - **BUTTONS**: Use blockType "core/button" with attributes like {text: "Button Text", url: "#"}
+   - **COLUMNS**: Use blockType "core/columns" with innerBlocks containing "core/column" blocks
+   - **LISTS**: Use blockType "core/list" with attributes like {values: "<li>Item 1</li><li>Item 2</li>"}
+   - **IMAGES**: Use blockType "core/image" with attributes like {alt: "Description"}
+   - **GROUPS**: Use blockType "core/group" with innerBlocks for containers
+
+12. **CHOOSE CORRECT TOOL**:
+   - generate_blocks_from_canvas: Creating WordPress content structure from drawings/sketches/wireframes
+   - generate_image: Creating new images from scratch
    - generate_image_with_inputs: Generating new images using other images as reference/style
-   - edit_image: Modifying/editing existing images (this actually changes the provided image)
+   - generate_edited_image: Modifying/editing existing images
 
 **EXAMPLES**:
-- User: "create an image of a dog" → USE add_generated_image
+- User: "create blocks from my drawing" → USE generate_blocks_from_canvas
+- User: "build this page layout" (with sketch) → USE generate_blocks_from_canvas
+- User: "make this wireframe" (with drawing) → USE generate_blocks_from_canvas
+- User: "create an image of a dog" → USE generate_image
 - User: "generate image based on my drawing" → USE generate_image_with_inputs
-- User: "make the capybara jump" (with image) → USE edit_image
-- User: "change the background to blue" (with image) → USE edit_image
-- User: "add glasses to this person" (with image) → USE edit_image
+- User: "make the capybara jump" (with image) → USE generate_edited_image
 
 ## Block Context Awareness:
 - Use the specific block IDs provided below for precise targeting
 - Consider block positions and content when making decisions
 - Understand parent-child relationships in nested blocks
 - Infer positioning based on content structure and user intent
+
+## Available Block Types:
+${site_context.gutenberg?.availableBlockTypes ? `
+You have access to ${site_context.gutenberg.availableBlockTypes.length} block types:
+
+${site_context.gutenberg.availableBlockTypes.map((block: any) =>
+    `- **${block.name}**: ${block.title}${block.description ? ` - ${block.description}` : ''}`
+).join('\n')}
+
+Use the **get_available_blocks** tool to see all available blocks or **get_block_schema** tool to get detailed information about any specific block type.
+` : 'Block types information not available'}
 
 ## Current Editor State:
 ${site_context.gutenberg ? `
@@ -182,16 +234,17 @@ ${site_context.selectedContexts.map((context: any) => {
             contextInfo += `\n\n  🎨 **DRAWING ANALYSIS REQUIRED** 🎨`;
             contextInfo += `\n  - **VISUAL CONTEXT**: This is a hand-drawn sketch/diagram provided by the user`;
             contextInfo += `\n  - **IMAGE ATTACHED**: The user has provided an actual drawing image that you can see`;
-            contextInfo += `\n  - **PURPOSE**: If user asks for image generation "based on drawing", analyze what you see`;
-            contextInfo += `\n  - **MANDATORY**: Use add_generated_image tool with detailed description of the drawing`;
-            contextInfo += `\n  - **KEYWORDS TO WATCH**: "based on drawing", "from sketch", "like my drawing", etc.`;
+            contextInfo += `\n  - **PRIMARY PURPOSE**: Most likely for page structure/layout generation → USE generate_blocks_from_canvas`;
+            contextInfo += `\n  - **SECONDARY PURPOSE**: If specifically for image generation → USE generate_image/generate_image_with_inputs`;
+            contextInfo += `\n  - **ANALYZE LAYOUT**: Look for text boxes, headers, buttons, columns, content areas, wireframe elements`;
+            contextInfo += `\n  - **KEYWORDS TO WATCH**: "create blocks", "build layout", "make structure", "from drawing", etc.`;
         } else if (context.type === 'image') {
             // Special handling for uploaded images
             contextInfo += `\n\n  🖼️ **IMAGE ANALYSIS REQUIRED** 🖼️`;
             contextInfo += `\n  - **VISUAL CONTEXT**: This is an image from the user's media library`;
             contextInfo += `\n  - **IMAGE ATTACHED**: The user has selected an actual image that you can see`;
             contextInfo += `\n  - **PURPOSE**: If user asks for image generation "based on image", analyze what you see`;
-            contextInfo += `\n  - **MANDATORY**: Use add_generated_image tool with detailed description of the image`;
+            contextInfo += `\n  - **MANDATORY**: Use generate_image tool with detailed description of the image`;
             contextInfo += `\n  - **KEYWORDS TO WATCH**: "based on image", "like this image", "similar to image", etc.`;
         }
     }
@@ -203,10 +256,12 @@ ${site_context.selectedContexts.map((context: any) => {
 - When the user mentions content from these selected contexts, use the specific IDs and data provided above to understand what they're referring to.
 
 **🚨 CRITICAL DRAWING INSTRUCTION 🚨**:
-- **IF YOU SEE A DRAWING CONTEXT ABOVE**: The user has attached an actual image/drawing to their message
-- **IF USER ASKS TO GENERATE IMAGE FROM/BASED ON THEIR DRAWING**: This is an IMAGE GENERATION REQUEST, NOT a block request
-- **MANDATORY ACTION**: Use add_generated_image tool with a detailed prompt describing what you see in their drawing
-- **DO NOT**: Ask for clarification or mention blocks when user wants images from drawings
+- **IF YOU SEE A DRAWING CONTEXT ABOVE**: The user has attached an actual sketch/drawing to their message
+- **DETERMINE INTENT**:
+  - **LAYOUT/STRUCTURE REQUEST**: User wants to create page content/blocks → USE generate_blocks_from_canvas
+  - **IMAGE GENERATION REQUEST**: User wants to create actual images → USE generate_image/generate_image_with_inputs
+- **FOR BLOCK GENERATION**: Analyze the drawing for layout elements (headers, text areas, buttons, columns) and create appropriate block structure
+- **DO NOT**: Ask for clarification - analyze the drawing and infer the most likely intent based on content
 ` : ''}
 
 Remember: Use the specific block IDs from the context above for precise block targeting.`;

@@ -4,7 +4,7 @@ namespace SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Handlers;
 
 use SuggerenceGutenberg\Components\Ai\Images\ResponseBuilder;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Concerns\ValidatesResponse;
-use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps\ImageRequestMap;
+use SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Maps\ImageRequestMap;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\GeneratedImage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
@@ -42,12 +42,20 @@ class Images
 
     protected function sendRequest($request)
     {
-        return $this->client->post('gutenberg/images', ImageRequestMap::map($request));
+        $response = $this->client->post('gutenberg/image', ImageRequestMap::map($request));
+        return $response;
     }
 
     protected function extractImages($data)
     {
-        $imageParts = data_get($data, 'predictions', []);
+        // Handle response from our Suggerence API (which returns Google's format)
+        $imageParts = data_get($data, 'generatedImages', []);
+        
+        // Fallback to other possible formats
+        if (empty($imageParts)) {
+            $imageParts = data_get($data, 'predictions', []);
+        }
+        
         if (empty($imageParts)) {
             $parts      = data_get($data, 'candidates.0.content.parts', []);
             $imageParts = array_column(

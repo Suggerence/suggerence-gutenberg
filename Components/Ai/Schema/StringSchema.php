@@ -12,7 +12,8 @@ class StringSchema implements Schema
     public function __construct(
         public $name,
         public $description,
-        public $nullable = false
+        public $nullable = false,
+        public $enum = []
     ) {}
 
     #[\Override]
@@ -23,9 +24,15 @@ class StringSchema implements Schema
 
     public function toArray()
     {
-        return [
+        $array = [
             'description'   => $this->description,
             'type'          => $this->nullable ? $this->castToNullable('string') : 'string'
         ];
+
+        if ($this->enum && !empty($this->enum)) {
+            $array['enum'] = $this->enum;
+        }
+
+        return $array;
     }
 }

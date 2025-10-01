@@ -12,7 +12,7 @@ use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ExtractsCitat
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ExtractsText;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ExtractsThinking;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ProcessesRateLimits;
-use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Maps\FinishReasonMap;
+use SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Maps\FinishReasonMap;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Maps\MessageMap;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Maps\ToolChoiceMap;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Maps\ToolMap;
@@ -130,22 +130,23 @@ class Text
     protected function prepareTempResponse()
     {
         $data = $this->httpResponse->json();
+        $data = data_get($data, 'steps.0');
+
+        // error_log("Response: " . print_r($data, true));
 
         $this->tempResponse = new Response(
             new Collection,
             $this->extractText($data),
-            FinishReasonMap::map(data_get($data, 'stop_reason', '')),
+            FinishReasonMap::map(data_get($data, 'finishReason', '')),
             $this->extractToolCalls($data),
             [],
             new Usage(
-                data_get($data, 'usage.input_tokens'),
-                data_get($data, 'usage.output_tokens'),
-                data_get($data, 'usage.cache_creation_input_tokens'),
-                data_get($data, 'usage.cache_read_input_tokens')
+                data_get($data, 'usage.inputTokens'),
+                data_get($data, 'usage.outputTokens')
             ),
             new Meta(
-                data_get($data, 'id'),
-                data_get($data, 'model'),
+                data_get($data, 'response.id'),
+                data_get($data, 'response.modelId'),
                 $this->processRateLimits($this->httpResponse)
             ),
             new Collection,
@@ -181,10 +182,10 @@ class Text
         $contents = data_get($data, 'content', []);
 
         foreach ($contents as $content) {
-            if (data_get($content, 'type') === 'tool_use') {
+            if (data_get($content, 'type') === 'tool-call') {
                 $toolCalls[] = new ToolCall(
-                    data_get($content, 'id'),
-                    data_get($content, 'name'),
+                    data_get($content, 'toolCallId'),
+                    data_get($content, 'toolName'),
                     data_get($content, 'input')
                 );
             }

@@ -2,11 +2,11 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 const initialMessages = [
-    {
-        role: 'assistant',
-        content: 'Hello! I\'m your Gutenberg AI assistant. I can help you create paragraphs, add headings, generate lists, move blocks, and much more. Just tell me what you\'d like to do with your content!',
-        date: new Date().toISOString()
-    }
+    // {
+    //     role: 'assistant',
+    //     content: 'Hello! I\'m your Gutenberg AI assistant. I can help you create paragraphs, add headings, generate lists, move blocks, and much more. Just tell me what you\'d like to do with your content!',
+    //     date: new Date().toISOString()
+    // }
 ] as MCPClientMessage[];
 
 // Persistent version

@@ -42,7 +42,7 @@ class Images
 
     protected function sendRequest($request)
     {
-        $response = $this->client->post('gutenberg/images', ImageRequestMap::map($request));
+        $response = $this->client->post('gutenberg/draw', ImageRequestMap::map($request));
         return $response;
     }
 

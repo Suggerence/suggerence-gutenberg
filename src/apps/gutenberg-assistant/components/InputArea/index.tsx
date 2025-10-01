@@ -14,6 +14,7 @@ import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelect
 import { getContextUsageColor, getContextUsageWarning } from '@/shared/utils/contextCalculator';
 import { image, brush } from '@wordpress/icons';
 import { AudioButton } from '@/shared/components/AudioButton';
+import domReady from '@wordpress/dom-ready';
 
 export const InputArea = () => {
 
@@ -48,10 +49,14 @@ export const InputArea = () => {
             lastUpdated: Date.now() // Force updates when blocks change
         };
     }, []);
-
+    
     useEffect(() => {
         inputRef.current?.focus();
     }, [isLoading]);
+
+    domReady(() => {
+        inputRef.current?.focus();
+    });
 
     // Comprehensive context calculation function
     const calculateContextUsage = useCallback(() => {

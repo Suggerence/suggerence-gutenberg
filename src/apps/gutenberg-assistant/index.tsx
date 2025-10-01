@@ -4,6 +4,8 @@ import { ChatInterface } from '@/apps/gutenberg-assistant/components/ChatInterfa
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient } from '@tanstack/react-query';
+import { useDispatch } from '@wordpress/data';
+import domReady from '@wordpress/dom-ready';
 
 import './style.scss';
 
@@ -17,7 +19,15 @@ const persister = createAsyncStoragePersister({
     storage: window.localStorage,
 })
 
+
 export const GutenbergAssistant = () => {
+
+    const { openGeneralSidebar } = useDispatch('core/edit-post');
+
+    domReady(() => {
+        openGeneralSidebar('suggerence-gutenberg-assistant/suggerence-chat-sidebar');
+    });
+
     return (
         <>
             <PluginSidebarMoreMenuItem

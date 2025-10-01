@@ -154,9 +154,6 @@ class AiProviders extends BaseApiEndpoints
         $messages       = $request->get_param('messages');
         $tools          = $request->get_param('tools');
 
-        $provider_id = 'gemini';
-        $model = 'gemini-2.0-flash';
-
         if (empty($provider_id)) {
             return new WP_Error(400, 'Provider ID is required');
         }

@@ -58,6 +58,8 @@ interface MCPClientMessage {
 
     aiModel?: string;
 
+    // Tool call fields (for display and tracking)
+    toolCallId?: string;
     toolName?: string;
     toolArgs?: Record<string, any>;
     toolResult?: any;

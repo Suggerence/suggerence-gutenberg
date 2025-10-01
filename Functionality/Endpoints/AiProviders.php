@@ -13,7 +13,9 @@ use SuggerenceGutenberg\Components\Ai\Enums\Provider as ProviderEnum;
 use SuggerenceGutenberg\Components\Ai\Manager as AIManager;
 use SuggerenceGutenberg\Components\Ai\Tool;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\AssistantMessage;
+use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\UserMessage;
+use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolResult;
 use \WP_REST_Response;
 use \WP_Error;
 
@@ -152,6 +154,9 @@ class AiProviders extends BaseApiEndpoints
         $messages       = $request->get_param('messages');
         $tools          = $request->get_param('tools');
 
+        $provider_id = 'gemini';
+        $model = 'gemini-2.0-flash';
+
         if (empty($provider_id)) {
             return new WP_Error(400, 'Provider ID is required');
         }
@@ -175,6 +180,21 @@ class AiProviders extends BaseApiEndpoints
                 if ($message['role'] === 'assistant') {
                     return new AssistantMessage($message['content']);
                 }
+
+                // if ($message['role'] === 'tool') {
+                //     $toolResults = [];
+                //     if (isset($message['toolCallId'])) {
+                //         $toolResult = new ToolResult(
+                //             toolCallId: $message['toolCallId'],
+                //             toolName: $message['toolName'] ?? '',
+                //             args: $message['toolArgs'] ?? [],
+                //             result: $message['toolResult'] ?? $message['content'],
+                //         );
+        
+                //         $toolResults[] = $toolResult;
+                //     }
+                //     return new ToolResultMessage($toolResults);
+                // }
 
                 // Handle user messages - check if content is multi-modal (array) or simple text
                 $content = $message['content'];
@@ -239,20 +259,22 @@ class AiProviders extends BaseApiEndpoints
 
         $result = $text->asText();
 
-        $response = [
+            $response = [
             'role'      => 'assistant',
             'content'   => $result->steps[0]->text,
             'date'      => date('Y-m-d H:i:s'),
 
             'aiModel'   => $model
-        ];
+            ];
 
         if ($result->finishReason === FinishReason::ToolCalls) {
             $response['role'] = 'tool';
+            error_log('Tool calls: ' . json_encode($result->toolCalls));
             $response = [
                 ...$response,
-                'toolName'  => $result->toolCalls[0]->name,
-                'toolArgs'  => $result->toolCalls[0]->arguments
+                'toolCallId' => $result->toolCalls[0]->id,
+                'toolName' => $result->toolCalls[0]->name,
+                'toolArgs' => $result->toolCalls[0]->arguments()
             ];
         }
 

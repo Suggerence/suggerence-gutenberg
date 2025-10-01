@@ -178,6 +178,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
                 role: 'tool',
                 content: `Calling ${aiResponse.toolName} with args ${JSON.stringify(aiResponse.toolArgs)}...`,
                 date: new Date().toISOString(),
+                toolCallId: response.toolCallId,
                 toolName: aiResponse.toolName as string,
                 toolArgs: aiResponse.toolArgs as Record<string, any>,
                 loading: true
@@ -188,18 +189,22 @@ Remember: Use the specific block IDs from the context above for precise block ta
 
                 setLastMessage({
                     role: 'tool',
-                    content: `Tool ${aiResponse.toolName} called with arguments ${JSON.stringify(aiResponse.toolArgs)} and returned ${toolResult.response}. Please, format the response to the user.`,
+                    // content: toolResult.response,
+                    content: `Tool ${aiResponse.toolName} called with arguments ${JSON.stringify(aiResponse.toolArgs)} and returned ${toolResult.response}. Please, format the response to the user or keep executing the necessary tools to complete the user's request.`,
+
                     date: new Date().toISOString(),
+                    toolCallId: response.toolCallId,
                     toolName: aiResponse.toolName as string,
                     toolArgs: aiResponse.toolArgs as Record<string, any>,
                     toolResult: toolResult.response,
                     loading: false
-                });
+                } as any);
             } catch (toolError) {
                 setLastMessage({
                     role: 'tool',
                     content: `Tool ${aiResponse.toolName} failed: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
                     date: new Date().toISOString(),
+                    toolCallId: response.toolCallId,
                     toolName: aiResponse.toolName as string,
                     toolArgs: aiResponse.toolArgs as Record<string, any>,
                     toolResult: 'error',

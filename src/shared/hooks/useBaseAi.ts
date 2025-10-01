@@ -70,14 +70,39 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                     }
                 }
 
-                return { role: message.role, content: message.content };
+                const baseMessage: any = {
+                    role: message.role,
+                    content: message.content
+                };
+
+                // Preserve tool-related fields for tool messages
+                if (message.role === 'tool') {
+                    if ((message as any).toolCallId) baseMessage.toolCallId = (message as any).toolCallId;
+                    if ((message as any).toolName) baseMessage.toolName = (message as any).toolName;
+                    if ((message as any).toolArgs) baseMessage.toolArgs = (message as any).toolArgs;
+                    if ((message as any).toolResult) baseMessage.toolResult = (message as any).toolResult;
+                }
+
+                return baseMessage;
             });
         } else {
             // No visual contexts, just convert normally
-            convertedMessages = messages.map((message) => ({
-                role: message.role,
-                content: message.content
-            }));
+            convertedMessages = messages.map((message) => {
+                const baseMessage: any = {
+                    role: message.role,
+                    content: message.content
+                };
+
+                // Preserve tool-related fields for tool messages
+                if (message.role === 'tool') {
+                    if ((message as any).toolCallId) baseMessage.toolCallId = (message as any).toolCallId;
+                    if ((message as any).toolName) baseMessage.toolName = (message as any).toolName;
+                    if ((message as any).toolArgs) baseMessage.toolArgs = (message as any).toolArgs;
+                    if ((message as any).toolResult) baseMessage.toolResult = (message as any).toolResult;
+                }
+
+                return baseMessage;
+            });
         }
 
         const requestBody: any = {

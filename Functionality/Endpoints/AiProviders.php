@@ -266,7 +266,6 @@ class AiProviders extends BaseApiEndpoints
 
         if ($result->finishReason === FinishReason::ToolCalls) {
             $response['role'] = 'tool';
-            error_log('Tool calls: ' . json_encode($result->toolCalls));
             $response = [
                 ...$response,
                 'toolCallId' => $result->toolCalls[0]->id,

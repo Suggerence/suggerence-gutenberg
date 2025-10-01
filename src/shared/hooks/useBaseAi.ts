@@ -32,7 +32,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                 if (index === latestUserMessageIndex) {
                     // Convert the latest user message to include images from all visual contexts
                     const imageAttachments = visualContexts.map((ctx: any) => {
-                        console.log('🔍 Processing visual context:', ctx.type, ctx);
 
                         if (ctx.type === 'drawing') {
                             // Handle drawings (base64 data)
@@ -46,8 +45,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                             };
                         } else if (ctx.type === 'image') {
                             // Handle media library images (URLs)
-                            console.log('🔍 Image context data:', ctx.data);
-                            console.log('🔍 Image URL:', ctx.data.url);
 
                             return {
                                 type: 'image',
@@ -90,21 +87,10 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             messages: convertedMessages
         };
 
-        // Only add tools if they exist
         if (tools) {
             requestBody.tools = tools;
         }
 
-        // Debug: Log the actual message contents (first 200 chars)
-        requestBody.messages.forEach((msg: any, i: number) => {
-            console.log(`🔍 DEBUG: Message ${i} (${msg.role}):`,
-                Array.isArray(msg.content)
-                    ? `Array with ${msg.content.length} items: ${msg.content.map((item: any) => item.type).join(', ')}`
-                    : `String: "${msg.content.substring(0, 100)}..."`
-            );
-        });
-
-        // @ts-ignore
         const response = await apiFetch({
             path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
             headers: {

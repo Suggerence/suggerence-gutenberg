@@ -11,6 +11,10 @@ import {
     deleteBlock,
     selectBlock,
     updateBlockContent,
+    undo,
+    redo,
+    undoTool,
+    redoTool
 } from '@/shared/mcps/tools/block-manipulation';
 import {
     getBlocksInfoTool,
@@ -106,7 +110,9 @@ export class GutenbergMCPServer {
         getSelectedBlockInfoTool,
         generateBlocksFromCanvasTool,
         getAvailableBlocksTool,
-        getBlockSchemaTool
+        getBlockSchemaTool,
+        undoTool,
+        redoTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -164,6 +170,13 @@ export class GutenbergMCPServer {
 
                 case 'get_block_schema':
                     return getBlockSchema(args.blockType);
+                
+                case 'undo':
+                    return undo();
+                
+                case 'redo':
+                    return redo();
+                
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

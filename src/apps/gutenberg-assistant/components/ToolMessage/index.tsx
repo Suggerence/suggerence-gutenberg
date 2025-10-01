@@ -21,7 +21,7 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
                         <PanelBody
                             title={
                                 isLoading ? (
-                                    `🤔 Executing ${toolDisplayName}`
+                                    `Executing ${toolDisplayName}`
                                 ) : isError ? (
                                     `❌ ${toolDisplayName}`
                                 ) : (

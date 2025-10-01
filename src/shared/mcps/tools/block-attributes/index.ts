@@ -1,5 +1,5 @@
 import { select, dispatch } from '@wordpress/data';
-import { createBlock } from '@wordpress/blocks';
+import { createBlock, cloneBlock } from '@wordpress/blocks';
 import {
     getCurrentBlockSchema,
     getEditableAttributes,
@@ -407,17 +407,20 @@ export function modifyCurrentBlock(
         forceUpdate = false
     } = blockModifications;
     try {
-        const { getSelectedBlockClientId, getBlock, getBlockRootClientId, getBlocks } = select('core/block-editor') as any;
+        const { getSelectedBlockClientId, getBlock, getBlockRootClientId, getBlocks, getMultiSelectedBlockClientIds } = select('core/block-editor') as any;
         const {
             updateBlockAttributes,
             replaceInnerBlocks,
             replaceBlock,
             insertBlock,
             removeBlock,
-            updateBlockListSettings
+            updateBlockListSettings,
+            replaceBlocks,
+            multiSelect
         } = dispatch('core/block-editor') as any;
 
         const targetBlockId = getSelectedBlockClientId();
+        const multiSelectedBlockIds = getMultiSelectedBlockClientIds();
 
         if (!targetBlockId) {
             return {
@@ -469,14 +472,38 @@ export function modifyCurrentBlock(
         // Handle wrapping in container blocks
         if (wrapIn) {
             try {
-                const wrapperBlock = createBlock(wrapIn, {}, [currentBlock]);
+                // Check if multiple blocks are selected
+                const blockIdsToWrap = multiSelectedBlockIds.length > 0
+                    ? multiSelectedBlockIds
+                    : [targetBlockId];
 
-                replaceBlock(targetBlockId, wrapperBlock);
+                // Clone blocks to avoid memory issues with circular references
+                const blocksToWrap = blockIdsToWrap
+                    .map((id: string) => {
+                        const block = getBlock(id);
+                        return block ? cloneBlock(block) : null;
+                    })
+                    .filter(Boolean);
+
+                if (blocksToWrap.length === 0) {
+                    return {
+                        content: [{
+                            type: 'text',
+                            text: 'No blocks found to wrap'
+                        }]
+                    };
+                }
+
+                // Create wrapper with cloned blocks as inner blocks
+                const wrapperBlock = createBlock(wrapIn, {}, blocksToWrap);
+
+                // Replace blocks with wrapper
+                replaceBlocks(blockIdsToWrap, wrapperBlock);
 
                 return {
                     content: [{
                         type: 'text',
-                        text: `Successfully wrapped block ${currentBlock.name} in ${wrapIn}`
+                        text: `Successfully wrapped ${blocksToWrap.length} block(s) in ${wrapIn}`
                     }]
                 };
             } catch (error) {
@@ -484,7 +511,7 @@ export function modifyCurrentBlock(
                     return {
                         content: [{
                             type: 'text',
-                            text: `Failed to wrap block in ${wrapIn}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                            text: `Failed to wrap block(s) in ${wrapIn}: ${error instanceof Error ? error.message : 'Unknown error'}`
                         }]
                     };
                 }

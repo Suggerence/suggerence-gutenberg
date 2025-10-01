@@ -1,3 +1,8 @@
+import apiFetch from "@wordpress/api-fetch";
+
+declare const SuggerenceData: SuggerenceData;
+
+
 export const generateImageTool: SuggerenceMCPResponseTool = {
     name: 'generate_image',
     description: 'Generate an image based on a text prompt',
@@ -185,28 +190,19 @@ async function generateEditedImageWithAI(
     imageUrl: string
 ): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
     try {
-        const response = await fetch('/wp-json/suggerence-gutenberg/ai-providers/v1/providers/image', {
+        const data = await apiFetch({
+            path: '/suggerence-gutenberg/ai-providers/v1/providers/image',
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-WP-Nonce': (window as any).wpApiSettings?.nonce || ''
-            },
-            body: JSON.stringify({
+            data: {
                 prompt: prompt,
                 model: 'suggerence-v1',
                 provider: 'suggerence',
                 edit_mode: true,
                 edit_image_url: imageUrl
-            })
+            }
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data;
+        return data as { success: boolean; image_url?: string; attachment_id?: number; error?: string };
     } catch (error) {
         console.error('Error editing image:', error);
         return {
@@ -221,27 +217,18 @@ async function generateImageWithAIAndInputs(
     inputImages: Array<{ data?: string; media_type?: string; url?: string }>
 ): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
     try {
-        const response = await fetch('/wp-json/suggerence-gutenberg/ai-providers/v1/providers/image', {
+        const data = await apiFetch({
+            path: '/suggerence-gutenberg/ai-providers/v1/providers/image',
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-WP-Nonce': (window as any).wpApiSettings?.nonce || ''
-            },
-            body: JSON.stringify({
+            data: {
                 prompt: prompt,
                 model: 'suggerence-v1',
                 provider: 'suggerence',
                 input_images: inputImages
-            })
+            }
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data;
+        return data as { success: boolean; image_url?: string; attachment_id?: number; error?: string };
     } catch (error) {
         console.error('Error generating image with inputs:', error);
         return {
@@ -253,26 +240,17 @@ async function generateImageWithAIAndInputs(
 
 export async function generateImageWithAI(prompt: string): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
     try {
-        const response = await fetch('/wp-json/suggerence-gutenberg/ai-providers/v1/providers/image', {
+        const data = await apiFetch({
+            path: '/suggerence-gutenberg/ai-providers/v1/providers/image',
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-WP-Nonce': (window as any).wpApiSettings?.nonce || ''
-            },
-            body: JSON.stringify({
+            data: {
                 prompt: prompt,
                 model: 'suggerence-v1',
                 provider: 'suggerence'
-            })
+            }
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data;
+        return data as { success: boolean; image_url?: string; attachment_id?: number; error?: string };
     } catch (error) {
         return {
             success: false,

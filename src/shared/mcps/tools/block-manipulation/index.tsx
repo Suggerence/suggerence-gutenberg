@@ -111,6 +111,24 @@ export const updateBlockContentTool: SuggerenceMCPResponseTool = {
     }
 };
 
+export const undoTool: SuggerenceMCPResponseTool = {
+    name: 'undo',
+    description: 'Undo the last action in the editor',
+    inputSchema: {
+        type: 'object',
+        properties: {}
+    }
+};
+
+export const redoTool: SuggerenceMCPResponseTool = {
+    name: 'redo',
+    description: 'Redo the last undone action in the editor',
+    inputSchema: {
+        type: 'object',
+        properties: {}
+    }
+};
+
 export function addBlock(blockType: string, attributes: Record<string, any> = {}, position: string = 'after', targetBlockId?: string): { content: Array<{ type: string, text: string }> } {
     const { insertBlock } = dispatch('core/block-editor') as any;
     const { getSelectedBlockClientId, getBlockIndex } = select('core/block-editor') as any;
@@ -266,6 +284,52 @@ export function insertBlockAfter(blockType: string, afterBlockId?: string): { co
         content: [{
             type: 'text',
             text: `Inserted ${blockType} block after selected block`
+        }]
+    };
+}
+
+export function undo(): { content: Array<{ type: string, text: string }> } {
+    const { undo } = dispatch('core/editor') as any;
+    const { hasEditorUndo } = select('core/editor') as any;
+
+    if (!hasEditorUndo()) {
+        return {
+            content: [{
+                type: 'text',
+                text: 'No actions to undo'
+            }]
+        };
+    }
+
+    undo();
+
+    return {
+        content: [{
+            type: 'text',
+            text: 'Undone last action successfully'
+        }]
+    };
+}
+
+export function redo(): { content: Array<{ type: string, text: string }> } {
+    const { redo } = dispatch('core/editor') as any;
+    const { hasEditorRedo } = select('core/editor') as any;
+
+    if (!hasEditorRedo()) {
+        return {
+            content: [{
+                type: 'text',
+                text: 'No actions to redo'
+            }]
+        };
+    }
+
+    redo();
+
+    return {
+        content: [{
+            type: 'text',
+            text: 'Redone last action successfully'
         }]
     };
 }

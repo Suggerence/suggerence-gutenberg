@@ -8,20 +8,10 @@ class Loader
 {
     public function __construct()
     {
-        $this->initialize_laravel_services();
         $this->load_dependencies();
 
         add_action('plugins_loaded', [$this, 'load_plugin_textdomain']);
         add_action('after_setup_theme', [$this, 'load_plubo_routes']);
-    }
-
-    /**
-     * Initialize Laravel services required by the plugin
-     */
-    private function initialize_laravel_services(): void
-    {
-        // Initialize the HTTP service provider to make Laravel's Http facade work
-        \SuggerenceGutenberg\Components\HttpServiceProvider::initialize();
     }
 
     private function load_dependencies(): void

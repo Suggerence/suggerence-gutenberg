@@ -2,13 +2,14 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Concerns;
 
-use Illuminate\Support\Facades\Http;
+use SuggerenceGutenberg\Components\Ai\Helpers\WPClient;
 
 trait InitializesClient
 {
     protected function baseClient()
     {
-        return Http::withRequestMiddleware(fn ($request) => $request)
+        return (new WPClient())
+            ->withRequestMiddleware(fn ($request) => $request)
             ->withResponseMiddleware(fn ($response) => $response)
             ->throw();
     }

@@ -141,7 +141,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
         <>
             {/* Dropdown with @ button - appears first */}
             <Dropdown
-                popoverProps={{ placement: 'bottom-start' }}
+                popoverProps={{ placement: 'top-start' }}
                 renderToggle={({ isOpen, onToggle }) => (
                     <Button
                         onClick={onToggle}

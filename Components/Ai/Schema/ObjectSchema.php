@@ -28,13 +28,22 @@ class ObjectSchema implements Schema
     #[\Override]
     public function toArray()
     {
-        return [
+        $array = [
             'description'           => $this->description,
             'type'                  => $this->nullable ? $this->castToNullable('object') : 'object',
-            'properties'            => $this->propertiesArray(),
-            'required'              => $this->requiredFields,
             'additionalProperties'  => $this->allowAdditionalProperties
         ];
+
+        $properties = $this->propertiesArray();
+        if (!empty($properties)) {
+            $array['properties'] = $properties;
+        }
+
+        if (!empty($this->requiredFields)) {
+            $array['required'] = $this->requiredFields;
+        }
+
+        return $array;
     }
 
     protected function propertiesArray()

@@ -108,9 +108,9 @@ class Text
         return $this->client->post(
             'responses',
             array_merge([
-                'model'         => $request->model(),
-                'input'         => (new MessageMap($request->messages(), $request->systemPrompts()))(),
-                'max_output'    => $request->maxTokens()
+                'model'             => $request->model(),
+                'input'             => (new MessageMap($request->messages(), $request->systemPrompts()))(),
+                'max_output_tokens' => $request->maxTokens()
             ], Arr::whereNotNull([
                 'temperature'           => $request->temperature(),
                 'top_p'                 => $request->topP(),

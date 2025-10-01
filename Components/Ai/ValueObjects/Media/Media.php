@@ -4,7 +4,7 @@ namespace SuggerenceGutenberg\Components\Ai\ValueObjects\Media;
 
 use finfo;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
+use SuggerenceGutenberg\Components\Ai\Helpers\WPClient;
 use Illuminate\Support\Facades\Storage;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderOptions;
 
@@ -260,7 +260,7 @@ class Media
             return;
         }
 
-        $content = Http::get($this->url)->body();
+        $content = (new WPClient())->get($this->url)->body();
 
         if (in_array(trim($content), ['', '0'], true)) {
             throw new InvalidArgumentException("{$this->url} returns no content.");

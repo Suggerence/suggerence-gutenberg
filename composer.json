@@ -29,7 +29,6 @@
 		"joanrodas/plubo-routes": "^0.7.8",
 		"php": "\u003e=7.4",
 		"berlindb/core": "^2.0",
-		"illuminate/http": "^12.28",
 		"illuminate/container": "^12.28",
 		"illuminate/support": "^12.28"
 	},

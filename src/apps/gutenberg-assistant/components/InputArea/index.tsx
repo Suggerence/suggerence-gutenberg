@@ -108,14 +108,6 @@ Remember: Use the specific block IDs from the context above for precise block ta
                 });
             }
 
-            console.log('Calculating context usage with:', {
-                messagesCount: messagesWithCurrentInput.length,
-                selectedContextsCount: selectedContexts.length,
-                blocksCount: gutenbergState.blocks.length,
-                inputLength: inputValue.length,
-                systemPromptLength: systemPrompt.length
-            });
-
             updateContextUsage({
                 messages: messagesWithCurrentInput,
                 systemPrompt,
@@ -241,18 +233,18 @@ Remember: Use the specific block IDs from the context above for precise block ta
     }, [messages]);
 
     // Update context usage when anything changes
-    useEffect(() => {
-        calculateContextUsage();
-    }, [calculateContextUsage]);
+    // useEffect(() => {
+    //     calculateContextUsage();
+    // }, [calculateContextUsage]);
 
     // Debounced input change handler for real-time updates
-    useEffect(() => {
-        const debounceTimer = setTimeout(() => {
-            calculateContextUsage();
-        }, 300); // 300ms debounce for input changes
+    // useEffect(() => {
+    //     const debounceTimer = setTimeout(() => {
+    //         calculateContextUsage();
+    //     }, 300); // 300ms debounce for input changes
 
-        return () => clearTimeout(debounceTimer);
-    }, [inputValue, calculateContextUsage]);
+    //     return () => clearTimeout(debounceTimer);
+    // }, [inputValue, calculateContextUsage]);
 
     const handleContextSelect = (context: any) => {
         console.log('Context selected:', context);
@@ -276,7 +268,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
         const imageContext = {
             id: `image-${imageData.id}`,
             type: 'image',
-            label: description || `Image ${imageData.id}`,
+            label: `Image ${imageData.id}`,
             data: imageData,
             timestamp: new Date().toISOString()
         };
@@ -312,7 +304,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
                 <BlockBadge />
 
                 {/* Context Usage Indicator */}
-                {contextUsage && (
+                {/* {contextUsage && (
                     <div
                         style={{
                             display: 'inline-flex',
@@ -333,7 +325,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
                     >
                         {contextUsage.percentage}%
                     </div>
-                )}
+                )} */}
             </div>
 
 

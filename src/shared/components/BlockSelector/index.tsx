@@ -1,4 +1,4 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { SearchControl, Button, Icon } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { check } from '@wordpress/icons';
@@ -153,7 +153,6 @@ export const BlockSelector = ({
                                 }}>
                                     <BlockTitle
                                         clientId={block.clientId}
-                                        context="list-view"
                                     />
                                 </div>
                                 {/* Block preview for images */}

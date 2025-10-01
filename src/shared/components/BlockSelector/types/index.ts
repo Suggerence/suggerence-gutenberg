@@ -1,18 +1,18 @@
 import type { BlockInstance } from '@wordpress/blocks';
 
-interface BlockTreeItem extends BlockInstance {
+export interface BlockTreeItem extends BlockInstance {
     depth: number;
     hasChildren: boolean;
 }
 
-interface BlockSelectorProps {
+export interface BlockSelectorProps {
     onBlockSelect: (block: BlockInstance) => void;
     selectedBlockId?: string;
     className?: string;
     showBlockHierarchy?: boolean;
 }
 
-interface BlockHoverState {
+export interface BlockHoverState {
     blockId: string | null;
     isHovering: boolean;
 }

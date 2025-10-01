@@ -190,7 +190,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         if (!canvas) return;
 
         const imageData = canvas.toDataURL('image/png');
-        onSave(imageData, 'Hand-drawn diagram or sketch');
+        onSave(imageData, 'Drawing');
         onClose();
     }, [onSave, onClose]);
 

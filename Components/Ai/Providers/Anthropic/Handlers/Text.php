@@ -4,8 +4,7 @@ namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Handlers;
 
 use InvalidArgumentException;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
+use SuggerenceGutenberg\Components\Ai\Helpers\Collection;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ProcessesRateLimits;
 use SuggerenceGutenberg\Components\Ai\Concerns\CallsTools;
@@ -27,6 +26,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Text
 {
@@ -70,7 +70,7 @@ class Text
             throw new InvalidArgumentException('Request must be an instance of ' . TextRequest::class);
         }
 
-        return Arr::whereNotNull([
+        return Functions::where_not_null([
             'model'         => $request->model(),
             'system'        => MessageMap::mapSystemMessages($request->systemPrompts()) ?: null,
             'messages'      => MessageMap::map($request->messages(), $request->providerOptions()),
@@ -136,22 +136,22 @@ class Text
         $this->tempResponse = new Response(
             new Collection,
             $this->extractText($data),
-            FinishReasonMap::map(data_get($data, 'stop_reason', '')),
+            FinishReasonMap::map(Functions::data_get($data, 'stop_reason', '')),
             $this->extractToolCalls($data),
             [],
             new Usage(
-                data_get($data, 'usage.input_tokens'),
-                data_get($data, 'usage.output_tokens'),
-                data_get($data, 'usage.cache_creation_input_tokens'),
-                data_get($data, 'usage.cache_read_input_tokens')
+                Functions::data_get($data, 'usage.input_tokens'),
+                Functions::data_get($data, 'usage.output_tokens'),
+                Functions::data_get($data, 'usage.cache_creation_input_tokens'),
+                Functions::data_get($data, 'usage.cache_read_input_tokens')
             ),
             new Meta(
-                data_get($data, 'id'),
-                data_get($data, 'model'),
+                Functions::data_get($data, 'id'),
+                Functions::data_get($data, 'model'),
                 $this->processRateLimits($this->httpResponse)
             ),
             new Collection,
-            Arr::whereNotNull([
+            Functions::where_not_null([
                 'citations' => $this->extractCitations($data),
                 ...$this->extractThinking($data)
             ])
@@ -180,14 +180,14 @@ class Text
     protected function extractToolCalls($data)
     {
         $toolCalls = [];
-        $contents = data_get($data, 'content', []);
+        $contents = Functions::data_get($data, 'content', []);
 
         foreach ($contents as $content) {
-            if (data_get($content, 'type') === 'tool_use') {
+            if (Functions::data_get($content, 'type') === 'tool_use') {
                 $toolCalls[] = new ToolCall(
-                    data_get($content, 'id'),
-                    data_get($content, 'name'),
-                    data_get($content, 'input')
+                    Functions::data_get($content, 'id'),
+                    Functions::data_get($content, 'name'),
+                    Functions::data_get($content, 'input')
                 );
             }
         }

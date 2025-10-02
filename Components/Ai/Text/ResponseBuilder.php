@@ -2,8 +2,9 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Text;
 
-use Illuminate\Support\Collection;
+use SuggerenceGutenberg\Components\Ai\Helpers\Collection;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ResponseBuilder
 {
@@ -33,7 +34,7 @@ class ResponseBuilder
             $finalStep->toolResults,
             $this->calculateTotalUsage(),
             $finalStep->meta,
-            collect($finalStep->messages),
+            Functions::collect($finalStep->messages),
             $finalStep->additionalContent
         );
     }

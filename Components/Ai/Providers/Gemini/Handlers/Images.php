@@ -8,6 +8,7 @@ use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps\ImageRequestMap;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\GeneratedImage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Images
 {
@@ -27,12 +28,12 @@ class Images
 
         $responseBuilder = new ResponseBuilder(
             new Usage(
-                data_get($data, 'usageMetadata.promptTokenCount', 0),
-                data_get($data, 'usageMetadata.candidatesTokenCount', 0)
+                Functions::data_get($data, 'usageMetadata.promptTokenCount', 0),
+                Functions::data_get($data, 'usageMetadata.candidatesTokenCount', 0)
             ),
             new Meta(
-                data_get($data, 'responseId', data_get($data, 'id', '')),
-                data_get($data, 'modelVersion', '')
+                Functions::data_get($data, 'responseId', Functions::data_get($data, 'id', '')),
+                Functions::data_get($data, 'modelVersion', '')
             ),
             $images
         );
@@ -50,20 +51,20 @@ class Images
 
     protected function extractImages($data)
     {
-        $imageParts = data_get($data, 'predictions', []);
+        $imageParts = Functions::data_get($data, 'predictions', []);
         if (empty($imageParts)) {
-            $parts      = data_get($data, 'candidates.0.content.parts', []);
+            $parts      = Functions::data_get($data, 'candidates.0.content.parts', []);
             $imageParts = array_column(
-                array_filter($parts, fn ($part) => data_get($part, 'inlineData.data')),
+                array_filter($parts, fn ($part) => Functions::data_get($part, 'inlineData.data')),
                 'inlineData'
             );
         }
 
         return array_map(fn ($image) => new GeneratedImage(
             null,
-            data_get($image, 'bytesBase64Encoded', data_get($image, 'data')),
+            Functions::data_get($image, 'bytesBase64Encoded', Functions::data_get($image, 'data')),
             null,
-            data_get($image, 'mimeType')
+            Functions::data_get($image, 'mimeType')
         ), $imageParts);
     }
 }

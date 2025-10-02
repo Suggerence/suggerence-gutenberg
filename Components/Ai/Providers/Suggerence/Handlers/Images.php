@@ -8,6 +8,7 @@ use SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Maps\ImageRequestMap;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\GeneratedImage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Images
 {
@@ -27,12 +28,12 @@ class Images
 
         $responseBuilder = new ResponseBuilder(
             new Usage(
-                data_get($data, 'usage.input_tokens', data_get($data, 'usage.prompt_tokens', 0)),
-                data_get($data, 'usage.output_tokens', data_get($data, 'usage.completion_tokens', 0))
+                Functions::data_get($data, 'usage.input_tokens', Functions::data_get($data, 'usage.prompt_tokens', 0)),
+                Functions::data_get($data, 'usage.output_tokens', Functions::data_get($data, 'usage.completion_tokens', 0))
             ),
             new Meta(
-                data_get($data, 'id', 'img_' . bin2hex(random_bytes(8))),
-                data_get($data, 'model', $request->model()),
+                Functions::data_get($data, 'id', 'img_' . bin2hex(random_bytes(8))),
+                Functions::data_get($data, 'model', $request->model()),
             ),
             $images
         );
@@ -49,26 +50,26 @@ class Images
     protected function extractImages($data)
     {
         // Handle response from our Suggerence API (which returns Google's format)
-        $imageParts = data_get($data, 'generatedImages', []);
+        $imageParts = Functions::data_get($data, 'generatedImages', []);
         
         // Fallback to other possible formats
         if (empty($imageParts)) {
-            $imageParts = data_get($data, 'predictions', []);
+            $imageParts = Functions::data_get($data, 'predictions', []);
         }
         
         if (empty($imageParts)) {
-            $parts      = data_get($data, 'candidates.0.content.parts', []);
+            $parts      = Functions::data_get($data, 'candidates.0.content.parts', []);
             $imageParts = array_column(
-                array_filter($parts, fn ($part) => data_get($part, 'inlineData.data')),
+                array_filter($parts, fn ($part) => Functions::data_get($part, 'inlineData.data')),
                 'inlineData'
             );
         }
 
         return array_map(fn ($image) => new GeneratedImage(
             null,
-            data_get($image, 'bytesBase64Encoded', data_get($image, 'data')),
+            Functions::data_get($image, 'bytesBase64Encoded', Functions::data_get($image, 'data')),
             null,
-            data_get($image, 'mimeType')
+            Functions::data_get($image, 'mimeType')
         ), $imageParts);
     }
 }

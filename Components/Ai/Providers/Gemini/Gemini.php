@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini;
 
-use Illuminate\Http\Client\RequestException;
 use SuggerenceGutenberg\Components\Ai\Concerns\InitializesClient;
 use SuggerenceGutenberg\Components\Ai\Concerns\IsConfigurable;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
@@ -18,6 +17,7 @@ use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Handlers\Text;
 use SuggerenceGutenberg\Components\Ai\Enums\Provider as ProviderName;
 use SuggerenceGutenberg\Components\Ai\Providers\Provider;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\SystemMessage;
+
 use Throwable;
 
 class Gemini extends Provider
@@ -127,7 +127,7 @@ class Gemini extends Provider
 
         try {
             return $handler->handle();
-        } catch (RequestException $e) {
+        } catch (Throwable $e) {
             $this->handleRequestException($model, $e);
         }
     }

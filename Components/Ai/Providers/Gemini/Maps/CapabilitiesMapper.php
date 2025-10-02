@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps;
 
 use SuggerenceGutenberg\Components\Ai\Enums\Capabilities;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class CapabilitiesMapper
 {
@@ -58,7 +59,7 @@ class CapabilitiesMapper
             $capabilities[] = Capabilities::MULTIMODAL_OUTPUT;
         }
 
-        if (data_get($model, 'thinking', false)) {
+        if (Functions::data_get($model, 'thinking', false)) {
             $capabilities[] = Capabilities::REASONING;
         }
 

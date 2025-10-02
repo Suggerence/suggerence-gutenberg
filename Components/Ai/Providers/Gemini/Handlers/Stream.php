@@ -2,8 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Handlers;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
+use SuggerenceGutenberg\Components\Ai\Helpers\Str;
 use SuggerenceGutenberg\Components\Ai\Concerns\CallsTools;
 use SuggerenceGutenberg\Components\Ai\Enums\ChunkType;
 use SuggerenceGutenberg\Components\Ai\Enums\FinishReason;
@@ -19,6 +18,8 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
+
 use Throwable;
 
 class Stream
@@ -63,7 +64,7 @@ class Stream
                 continue;
             }
 
-            $content = data_get($data, 'candidates.0.content.parts.0.text') ?? '';
+            $content = Functions::data_get($data, 'candidates.0.content.parts.0.text') ?? '';
             $text .= $content;
 
             $finishReason = $this->mapFinishReason($data);
@@ -74,8 +75,8 @@ class Stream
                 [],
                 $finishReason !== FinishReason::Unknown ? $finishReason : null,
                 new Meta(
-                    data_get($data, 'responseId'),
-                    data_get($data, 'modelVersion')
+                    Functions::data_get($data, 'responseId'),
+                    Functions::data_get($data, 'modelVersion')
                 ),
                 [],
                 ChunkType::Text,
@@ -107,12 +108,12 @@ class Stream
 
     public function extractToolCalls($data, $toolCalls)
     {
-        $parts = data_get($data, 'candidates.0.content.parts', []);
+        $parts = Functions::data_get($data, 'candidates.0.content.parts', []);
 
         foreach ($parts as $index => $part) {
             if (isset($part['functionCall'])) {
-                $toolCalls[$index]['name']      = data_get($part, 'functionCall.name');
-                $toolCalls[$index]['arguments'] = data_get($part, 'functionCall.args', '');
+                $toolCalls[$index]['name']      = Functions::data_get($part, 'functionCall.name');
+                $toolCalls[$index]['arguments'] = Functions::data_get($part, 'functionCall.args', '');
             }
         }
 
@@ -129,8 +130,8 @@ class Stream
             [],
             null,
             new Meta(
-                data_get($data, 'responseId'),
-                data_get($data, 'modelVersion')
+                Functions::data_get($data, 'responseId'),
+                Functions::data_get($data, 'modelVersion')
             ),
             [],
             ChunkType::ToolCall,
@@ -145,8 +146,8 @@ class Stream
             $toolResults,
             null,
             new Meta(
-                data_get($data, 'responseId'),
-                data_get($data, 'modelVersion')
+                Functions::data_get($data, 'responseId'),
+                Functions::data_get($data, 'modelVersion')
             ),
             [],
             ChunkType::ToolResult,
@@ -162,18 +163,18 @@ class Stream
 
     protected function mapToolCalls($toolCalls)
     {
-        return collect($toolCalls)
+        return Functions::collect($toolCalls)
             ->map(fn ($toolCall) => new ToolCall(
                 empty($toolCall['id']) ? 'gm-' . Str::random(20) : $toolCall['id'],
-                data_get($toolCall, 'name'),
-                data_get($toolCall, 'arguments')
+                Functions::data_get($toolCall, 'name'),
+                Functions::data_get($toolCall, 'arguments')
             ))
             ->toArray();
     }
 
     protected function hasToolCalls($data)
     {
-        $parts = data_get($data, 'candidates.0.content.parts', []);
+        $parts = Functions::data_get($data, 'candidates.0.content.parts', []);
 
         foreach ($parts as $part) {
             if (isset($part['functionCall'])) {
@@ -190,18 +191,18 @@ class Stream
 
         return new Usage(
             isset($providerOptions['cachedContentName'])
-                ? (data_get($data, 'usageMetadata.promptTokenCount', 0) - data_get($data, 'usageMetadata.cachedContentTokenCount', 0))
-                : data_get($data, 'usageMetadata.promptTokenCount', 0),
-            data_get($data, 'usageMetadata.candidatesTokenCount', 0),
+                ? (Functions::data_get($data, 'usageMetadata.promptTokenCount', 0) - Functions::data_get($data, 'usageMetadata.cachedContentTokenCount', 0))
+                : Functions::data_get($data, 'usageMetadata.promptTokenCount', 0),
+            Functions::data_get($data, 'usageMetadata.candidatesTokenCount', 0),
             null,
-            data_get($data, 'usageMetadata.cachedContentTokenCount', null),
-            data_get($data, 'usageMetadata.thoughtsTokenCount', null)
+            Functions::data_get($data, 'usageMetadata.cachedContentTokenCount', null),
+            Functions::data_get($data, 'usageMetadata.thoughtsTokenCount', null)
         );
     }
 
     protected function mapFinishReason($data)
     {
-        $finishReason = data_get($data, 'candidates.0.finishReason');
+        $finishReason = Functions::data_get($data, 'candidates.0.finishReason');
 
         if (!$finishReason) {
             return FinishReason::Unknown;
@@ -230,14 +231,14 @@ class Stream
             ->withOptions(['stream' => true])
             ->post(
                 "models/{$request->model()}:streamGenerateContent?alt=sse",
-                Arr::whereNotNull([
+                Functions::where_not_null([
                     ...(new MessageMap($request->messages(), $request->systemPrompts()))(),
                     'cachedContent'     => $providerOptions['cachedContentName'] ?? null,
-                    'generationConfig'  => Arr::whereNotNull([
+                    'generationConfig'  => Functions::where_not_null([
                         'temperature'       => $request->temperature(),
                         'topP'              => $request->topP(),
                         'maxOutputTokens'   => $request->maxTokens(),
-                        'thinkingConfig'    => Arr::whereNotNull([
+                        'thinkingConfig'    => Functions::where_not_null([
                             'thinkingBudget'      => $providerOptions['thinkingBudget'] ?? null
                         ]) ?: null
                     ]),

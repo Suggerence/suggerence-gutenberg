@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps;
 
-use Illuminate\Support\Arr;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ToolMap
 {
@@ -27,7 +27,7 @@ class ToolMap
 
     protected static function mapProperties($properties)
     {
-        return Arr::mapWithKeys($properties, fn ($schema, $name) => [
+        return Functions::map_with_keys($properties, fn ($schema, $name) => [
             $name => (new SchemaMap($schema))->toArray()
         ]);
     }

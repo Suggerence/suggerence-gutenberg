@@ -10,6 +10,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Image;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Media;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Text;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Media\Video;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class UserMessage implements Message
 {
@@ -38,28 +39,28 @@ class UserMessage implements Message
 
     public function images()
     {
-        return collect($this->additionalContent)
+        return Functions::collect($this->additionalContent)
             ->where(fn($part) => $part instanceof Image)
             ->toArray();
     }
 
     public function media()
     {
-        return collect($this->additionalContent)
+        return Functions::collect($this->additionalContent)
             ->filter(fn($part) => $part instanceof Audio || $part instanceof Video || $part instanceof Media)
             ->toArray();
     }
 
     public function documents()
     {
-        return collect($this->additionalContent)
+        return Functions::collect($this->additionalContent)
             ->where(fn($part) => $part instanceof Document)
             ->toArray();
     }
 
     public function audios()
     {
-        return collect($this->additionalContent)
+        return Functions::collect($this->additionalContent)
             ->where(fn($part) => $part instanceof Audio)
             ->toArray();
     }

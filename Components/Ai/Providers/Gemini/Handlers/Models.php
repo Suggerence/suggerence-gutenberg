@@ -7,6 +7,7 @@ use SuggerenceGutenberg\Components\Ai\Models\Model;
 use SuggerenceGutenberg\Components\Ai\Models\ResponseBuilder;
 use SuggerenceGutenberg\Components\Ai\Enums\Provider as ProviderName;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps\CapabilitiesMapper;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Models
 {
@@ -26,7 +27,7 @@ class Models
             throw new Exception('Invalid response from Gemini');
         }
 
-        $models = data_get($data, 'models', []);
+        $models = Functions::data_get($data, 'models', []);
 
         foreach ($models as $model) {
             $this->responseBuilder->addModel(new Model(

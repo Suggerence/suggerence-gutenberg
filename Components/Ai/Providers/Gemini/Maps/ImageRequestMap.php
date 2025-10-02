@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps;
 
-use Illuminate\Support\Arr;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 use InvalidArgumentException;
 
 class ImageRequestMap
@@ -31,7 +31,7 @@ class ImageRequestMap
             }
 
             $parts[] = [
-                'inline_data' => Arr::whereNotNull([
+                'inline_data' => Functions::where_not_null([
                     'mime_type' => $providerOptions['image_mime_type'] ?? null,
                     'data'      => base64_encode($imageContent)
                 ])
@@ -56,7 +56,7 @@ class ImageRequestMap
             'instances' => ['prompt' => $request->prompt()]
         ];
 
-        $parameters = Arr::whereNotNull([
+        $parameters = Functions::where_not_null([
             'sampleCount'       => $providerOptions['n'] ?? null,
             'sampleImageSize'   => $providerOptions['size'] ?? null,
             'aspectRatio'       => $providerOptions['aspect_ratio'] ?? null,

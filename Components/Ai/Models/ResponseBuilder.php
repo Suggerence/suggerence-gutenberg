@@ -2,8 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Models;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
+use SuggerenceGutenberg\Components\Ai\Helpers\Collection;
 
 class ResponseBuilder
 {

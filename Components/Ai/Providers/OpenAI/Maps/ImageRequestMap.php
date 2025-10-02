@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps;
 
-use Illuminate\Support\Arr;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ImageRequestMap
 {
@@ -38,6 +38,6 @@ class ImageRequestMap
 
         $additionalOptions = array_diff_key($providerOptions, $supportedOptions);
 
-        return array_merge($baseData, Arr::whereNotNull($supportedOptions), $additionalOptions);
+        return array_merge($baseData, Functions::where_not_null($supportedOptions), $additionalOptions);
     }
 }

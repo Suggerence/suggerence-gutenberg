@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\Schema;
 
 use SuggerenceGutenberg\Components\Ai\Contracts\Schema;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class EnumSchema implements Schema
 {
@@ -52,7 +53,7 @@ class EnumSchema implements Schema
 
     protected function resolveTypes()
     {
-        return collect($this->options)
+        return Functions::collect($this->options)
             ->map(fn ($option) => match (gettype($option)) {
                 'integer', 'double' => 'number',
                 'string'            => 'string',

@@ -7,6 +7,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\UserMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\AssistantMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\SystemMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class MessageMap
 {
@@ -110,7 +111,7 @@ class MessageMap
         }
 
         if ($message->toolCalls !== []) {
-            $reasoningBlocks = collect($message->toolCalls)
+            $reasoningBlocks = Functions::collect($message->toolCalls)
                 ->whereNotNull('reasoningId')
                 ->unique('reasoningId')
                 ->map(fn ($toolCall) => [

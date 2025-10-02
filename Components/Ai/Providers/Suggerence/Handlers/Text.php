@@ -2,9 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Handlers;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
-use InvalidArgumentException;
+use SuggerenceGutenberg\Components\Ai\Helpers\Collection;
 use SuggerenceGutenberg\Components\Ai\Concerns\CallsTools;
 use SuggerenceGutenberg\Components\Ai\Enums\FinishReason;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
@@ -25,6 +23,9 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
+
+use InvalidArgumentException;
 
 class Text
 {
@@ -68,7 +69,7 @@ class Text
             throw new InvalidArgumentException('Request must be an instance of ' . TextRequest::class);
         }
 
-        return Arr::whereNotNull([
+        return Functions::where_not_null([
             'model'         => $request->model(),
             'system'        => MessageMap::mapSystemMessages($request->systemPrompts()) ?: null,
             'messages'      => MessageMap::map($request->messages(), $request->providerOptions()),
@@ -130,27 +131,27 @@ class Text
     protected function prepareTempResponse()
     {
         $data = $this->httpResponse->json();
-        $data = data_get($data, 'steps.0');
+        $data = Functions::data_get($data, 'steps.0');
 
         // error_log("Response: " . print_r($data, true));
 
         $this->tempResponse = new Response(
             new Collection,
             $this->extractText($data),
-            FinishReasonMap::map(data_get($data, 'finishReason', '')),
+            FinishReasonMap::map(Functions::data_get($data, 'finishReason', '')),
             $this->extractToolCalls($data),
             [],
             new Usage(
-                data_get($data, 'usage.inputTokens'),
-                data_get($data, 'usage.outputTokens')
+                Functions::data_get($data, 'usage.inputTokens'),
+                Functions::data_get($data, 'usage.outputTokens')
             ),
             new Meta(
-                data_get($data, 'response.id'),
-                data_get($data, 'response.modelId'),
+                Functions::data_get($data, 'response.id'),
+                Functions::data_get($data, 'response.modelId'),
                 $this->processRateLimits($this->httpResponse)
             ),
             new Collection,
-            Arr::whereNotNull([
+            Functions::where_not_null([
                 'citations' => $this->extractCitations($data),
                 ...$this->extractThinking($data)
             ])
@@ -179,14 +180,14 @@ class Text
     protected function extractToolCalls($data)
     {
         $toolCalls = [];
-        $contents = data_get($data, 'content', []);
+        $contents = Functions::data_get($data, 'content', []);
 
         foreach ($contents as $content) {
-            if (data_get($content, 'type') === 'tool-call') {
+            if (Functions::data_get($content, 'type') === 'tool-call') {
                 $toolCalls[] = new ToolCall(
-                    data_get($content, 'toolCallId'),
-                    data_get($content, 'toolName'),
-                    data_get($content, 'input')
+                    Functions::data_get($content, 'toolCallId'),
+                    Functions::data_get($content, 'toolName'),
+                    Functions::data_get($content, 'input')
                 );
             }
         }
@@ -205,12 +206,12 @@ class Text
     {
         $data = $this->httpResponse->json();
         
-        if (data_get($data, 'error')) {
+        if (Functions::data_get($data, 'error')) {
             throw Exception::providerResponseError(vsprintf(
                 'Suggerence Error: [%s] %s',
                 [
-                    data_get($data, 'error.type', 'unknown'),
-                    data_get($data, 'error.message'),
+                    Functions::data_get($data, 'error.type', 'unknown'),
+                    Functions::data_get($data, 'error.message'),
                 ]
             ));
         }

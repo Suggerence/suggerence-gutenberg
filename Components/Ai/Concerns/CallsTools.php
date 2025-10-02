@@ -2,11 +2,9 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Concerns;
 
-use Illuminate\Support\ItemNotFoundException;
-use Illuminate\Support\MultipleItemsFoundException;
-
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolResult;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 use Throwable;
 
@@ -46,12 +44,10 @@ trait CallsTools
     protected function resolveTool($name, $tools)
     {
         try {
-            return collect($tools)
+            return Functions::collect($tools)
                 ->sole(fn ($tool) => $tool->name() === $name);
-        } catch (ItemNotFoundException $e) {
+        } catch (Throwable $e) {
             throw Exception::toolNotFound($name, $e);
-        } catch (MultipleItemsFoundException $e) {
-            throw Exception::multipleToolsFound($name, $e);
         }
     }
 }

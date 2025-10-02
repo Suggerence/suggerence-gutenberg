@@ -2,12 +2,12 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Handlers;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Embeddings\Response as EmbeddingsResponse;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Embedding;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\EmbeddingsUsage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Embeddings
 {
@@ -28,7 +28,7 @@ class Embeddings
         }
 
         return new EmbeddingsResponse(
-            [Embedding::fromArray(data_get($data, 'embedding.values', []))],
+            [Embedding::fromArray(Functions::data_get($data, 'embedding.values', []))],
             new EmbeddingsUsage(0), // No token usage information available on Gemini
             new Meta('', '')
         );
@@ -40,7 +40,7 @@ class Embeddings
 
         return $this->client->post(
             "models/{$request->model()}:embedContent",
-            Arr::whereNotNull([
+            Functions::where_not_null([
                 'model'                 => $request->model(),
                 'content'               => [
                     'parts' => [

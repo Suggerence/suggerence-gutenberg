@@ -4,6 +4,7 @@ namespace SuggerenceGutenberg\Components\Ai\Schema;
 
 use SuggerenceGutenberg\Components\Ai\Concerns\NullableSchema;
 use SuggerenceGutenberg\Components\Ai\Contracts\Schema;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ObjectSchema implements Schema
 {
@@ -48,7 +49,7 @@ class ObjectSchema implements Schema
 
     protected function propertiesArray()
     {
-        return collect($this->properties)
+        return Functions::collect($this->properties)
             ->keyBy(fn ($parameter) => $parameter->name())
             ->map(fn ($parameter) => $parameter->toArray())
             ->toArray();

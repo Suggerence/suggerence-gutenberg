@@ -2,10 +2,12 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps;
 
-use InvalidArgumentException;
 use SuggerenceGutenberg\Components\Ai\Enums\Citations\CitationSourceType;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Citation;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\MessagePartWithCitations;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
+
+use InvalidArgumentException;
 
 class CitationsMapper
 {
@@ -81,8 +83,8 @@ class CitationsMapper
     {
         return [
             'type'          => 'url_citation',
-            'start_index'   => data_get($citation->additionalContent, 'responseStartIndex'),
-            'end_index'     => data_get($citation->additionalContent, 'responseEndIndex'),
+            'start_index'   => Functions::data_get($citation->additionalContent, 'responseStartIndex'),
+            'end_index'     => Functions::data_get($citation->additionalContent, 'responseEndIndex'),
             'url'           => $citation->source,
             'title'         => $citation->sourceTitle,
         ];

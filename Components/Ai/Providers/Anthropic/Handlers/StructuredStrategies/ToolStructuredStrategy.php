@@ -5,6 +5,7 @@ namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Handlers\Structu
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\Structured\Response;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\UserMessage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ToolStructuredStrategy extends AnthropicStructuredStrategy
 {
@@ -55,11 +56,11 @@ class ToolStructuredStrategy extends AnthropicStructuredStrategy
         $data = $httpResponse->json();
 
         $toolCalls = array_values(array_filter(
-            data_get($data, 'content', []),
-            fn($content): bool => data_get($content, 'type') === 'tool_use' && data_get($content, 'name') === 'output_structured_data'
+            Functions::data_get($data, 'content', []),
+            fn($content): bool => Functions::data_get($content, 'type') === 'tool_use' && Functions::data_get($content, 'name') === 'output_structured_data'
         ));
 
-        $structured = data_get($toolCalls, '0.input', []);
+        $structured = Functions::data_get($toolCalls, '0.input', []);
 
         return new Response(
             steps: $response->steps,

@@ -9,6 +9,7 @@ use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps\ImageRequestMap;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\GeneratedImage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Images
 {
@@ -29,12 +30,12 @@ class Images
 
         $responseBuilder = new ResponseBuilder(
             new Usage(
-                data_get($data, 'usage.input_tokens', data_get($data, 'usage.prompt_tokens', 0)),
-                data_get($data, 'usage.output_tokens', data_get($data, 'usage.completion_tokens', 0))
+                Functions::data_get($data, 'usage.input_tokens', Functions::data_get($data, 'usage.prompt_tokens', 0)),
+                Functions::data_get($data, 'usage.output_tokens', Functions::data_get($data, 'usage.completion_tokens', 0))
             ),
             new Meta(
-                data_get($data, 'id', 'img_' . bin2hex(random_bytes(8))),
-                data_get($data, 'model', $request->model()),
+                Functions::data_get($data, 'id', 'img_' . bin2hex(random_bytes(8))),
+                Functions::data_get($data, 'model', $request->model()),
                 $this->processRateLimits($response)
             ),
             $images
@@ -73,11 +74,11 @@ class Images
     {
         $images = [];
 
-        foreach (data_get($data, 'data', []) as $imageData) {
+        foreach (Functions::data_get($data, 'data', []) as $imageData) {
             $images[] = new GeneratedImage(
-                data_get($imageData, 'url'),
-                data_get($imageData, 'b64_json'),
-                data_get($imageData, 'revised_prompt')
+                Functions::data_get($imageData, 'url'),
+                Functions::data_get($imageData, 'b64_json'),
+                Functions::data_get($imageData, 'revised_prompt')
             );
         }
 

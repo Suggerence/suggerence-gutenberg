@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Structured;
 
-use Illuminate\Support\Collection;
+use SuggerenceGutenberg\Components\Ai\Helpers\Collection;
 use SuggerenceGutenberg\Components\Ai\Enums\FinishReason;
 use SuggerenceGutenberg\Components\Ai\Exceptions\StructuredDecodingException;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;

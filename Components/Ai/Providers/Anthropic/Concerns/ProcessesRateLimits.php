@@ -2,11 +2,10 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
-
+use SuggerenceGutenberg\Components\Ai\Helpers\Str;
+use SuggerenceGutenberg\Components\Ai\Helpers\Time;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ProviderRateLimit;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 trait ProcessesRateLimits
 {
@@ -25,14 +24,14 @@ trait ProcessesRateLimits
             $rateLimits[$limitName][$fieldName] = $headerValues[0];
         }
 
-        return array_values(Arr::map($rateLimits, function($fields, $limitName) {
-            $resetsAt = data_get($fields, 'reset');
+        return array_values(Functions::arr_map($rateLimits, function($fields, $limitName) {
+            $resetsAt = Functions::data_get($fields, 'reset');
 
             return new ProviderRateLimit(
                 $limitName,
-                data_get($fields, 'limit') !== null ? (int) data_get($fields, 'limit') : null,
-                data_get($fields, 'remaining') !== null ? (int) data_get($fields, 'remaining') : null,
-                $resetsAt ? new Carbon($resetsAt) : null
+                Functions::data_get($fields, 'limit') !== null ? (int) Functions::data_get($fields, 'limit') : null,
+                Functions::data_get($fields, 'remaining') !== null ? (int) Functions::data_get($fields, 'remaining') : null,
+                $resetsAt ? Time::fromString($resetsAt) : null
             );
         }));
     }

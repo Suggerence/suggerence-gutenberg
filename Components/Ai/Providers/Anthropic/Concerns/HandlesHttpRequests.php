@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns;
 
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 trait HandlesHttpRequests
 {
@@ -24,12 +25,12 @@ trait HandlesHttpRequests
     {
         $data = $this->httpResponse->json();
 
-        if (data_get($data, 'type') === 'error') {
+        if (Functions::data_get($data, 'type') === 'error') {
             throw Exception::providerResponseError(vsprintf(
                 'Anthropic Error: [%s] %s',
                 [
-                    data_get($data, 'error.type', 'unknown'),
-                    data_get($data, 'error.message'),
+                    Functions::data_get($data, 'error.type', 'unknown'),
+                    Functions::data_get($data, 'error.message'),
                 ]
             ));
         }

@@ -2,8 +2,8 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\ValueObjects;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\MessagePartWithCitations;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class StreamState
 {
@@ -148,8 +148,8 @@ class StreamState
         if ($this->usage === []) {
             $this->usage = $usage;
         } else {
-            foreach (Arr::dot($usage) as $key => $value) {
-                Arr::set($this->usage, $key, Arr::get($this->usage, $key, 0) + $value);
+            foreach (Functions::arr_dot($usage) as $key => $value) {
+                Functions::arr_set($this->usage, $key, Functions::arr_get($this->usage, $key, 0) + $value);
             }
         }
 

@@ -64,6 +64,7 @@ export const InputArea = () => {
         const aiResponse = parseAIResponse(response);
 
         if (aiResponse.type === 'tool') {
+            // Add the tool execution message
             addMessage({
                 role: 'tool',
                 content: `Calling ${aiResponse.toolName} with args ${JSON.stringify(aiResponse.toolArgs)}...`,
@@ -79,9 +80,7 @@ export const InputArea = () => {
 
                 setLastMessage({
                     role: 'tool',
-                    // content: toolResult.response,
-                    content: `Tool ${aiResponse.toolName} successfully executed with arguments ${JSON.stringify(aiResponse.toolArgs)} and returned ${toolResult.response}. Please, format the response to the user or keep executing the necessary tools to complete the user's request.`,
-
+                    content: toolResult.response,
                     date: new Date().toISOString(),
                     toolCallId: response.toolCallId,
                     toolName: aiResponse.toolName as string,
@@ -92,12 +91,12 @@ export const InputArea = () => {
             } catch (toolError) {
                 setLastMessage({
                     role: 'tool',
-                    content: `Tool ${aiResponse.toolName} failed: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
+                    content: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
                     date: new Date().toISOString(),
                     toolCallId: response.toolCallId,
                     toolName: aiResponse.toolName as string,
                     toolArgs: aiResponse.toolArgs as Record<string, any>,
-                    toolResult: 'error',
+                    toolResult: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
                     loading: false
                 });
             }

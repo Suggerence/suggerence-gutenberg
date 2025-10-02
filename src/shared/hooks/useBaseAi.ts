@@ -87,7 +87,21 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             });
         } else {
             // No visual contexts, just convert normally
-            convertedMessages = messages.map((message) => {
+            const messagesWithAssistant: any[] = [];
+            
+            messages.forEach((message) => {
+                // If this is a tool message with assistant response data, inject assistant message first
+                if (message.role === 'tool' && (message as any)._assistantResponse) {
+                    const assistantMsg = (message as any)._assistantResponse;
+                    messagesWithAssistant.push({
+                        role: 'assistant',
+                        content: assistantMsg.content || '',
+                        ...(((message as any).toolCallId) && { toolCallId: (message as any).toolCallId }),
+                        ...(((message as any).toolName) && { toolName: (message as any).toolName }),
+                        ...(((message as any).toolArgs) && { toolArgs: (message as any).toolArgs })
+                    });
+                }
+
                 const baseMessage: any = {
                     role: message.role,
                     content: message.content
@@ -101,8 +115,10 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                     if ((message as any).toolResult) baseMessage.toolResult = (message as any).toolResult;
                 }
 
-                return baseMessage;
+                messagesWithAssistant.push(baseMessage);
             });
+
+            convertedMessages = messagesWithAssistant;
         }
 
         const requestBody: any = {

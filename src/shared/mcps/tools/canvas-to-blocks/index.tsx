@@ -144,7 +144,11 @@ export function generateBlocksFromCanvas(
         return {
             content: [{
                 type: 'text',
-                text: `Invalid blockStructure format: ${parseError instanceof Error ? parseError.message : 'Could not parse JSON'}. Please provide valid JSON array format or object with "blocks" array.`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'canvas_to_blocks_failed',
+                    error: `Invalid blockStructure format: ${parseError instanceof Error ? parseError.message : 'Could not parse JSON'}. Please provide valid JSON array format or object with "blocks" array.`
+                })
             }]
         };
     }
@@ -153,7 +157,11 @@ export function generateBlocksFromCanvas(
         return {
             content: [{
                 type: 'text',
-                text: 'No block structure provided or invalid format. Please analyze the canvas drawing and provide a detailed block structure array with proper attributes and content.'
+                text: JSON.stringify({
+                    success: false,
+                    action: 'canvas_to_blocks_failed',
+                    error: 'No block structure provided or invalid format. Please analyze the canvas drawing and provide a detailed block structure array with proper attributes and content.'
+                })
             }]
         };
     }
@@ -174,7 +182,11 @@ export function generateBlocksFromCanvas(
             return {
                 content: [{
                     type: 'text',
-                    text: 'Could not create any valid blocks from the provided structure. Make sure to provide proper blockType (e.g., "core/heading", "core/paragraph") and attributes.'
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'canvas_to_blocks_failed',
+                        error: 'Could not create any valid blocks from the provided structure. Make sure to provide proper blockType (e.g., "core/heading", "core/paragraph") and attributes.'
+                    })
                 }]
             };
         }
@@ -188,13 +200,24 @@ export function generateBlocksFromCanvas(
             insertBlocks(blocks, index);
         }
 
-        const blockTypes = blocks.map(block => block.name).join(', ');
-        const action = replaceExisting ? 'Replaced all blocks with' : 'Generated and inserted';
+        const blockDetails = blocks.map(block => ({
+            type: block.name,
+            id: block.clientId
+        }));
 
         return {
             content: [{
                 type: 'text',
-                text: `${action} ${blocks.length} blocks based on canvas analysis: "${analysis}". Created blocks: ${blockTypes}`
+                text: JSON.stringify({
+                    success: true,
+                    action: replaceExisting ? 'blocks_replaced' : 'blocks_generated',
+                    data: {
+                        analysis: analysis,
+                        blocks_count: blocks.length,
+                        blocks: blockDetails,
+                        replaced_existing: replaceExisting
+                    }
+                })
             }]
         };
 
@@ -202,7 +225,11 @@ export function generateBlocksFromCanvas(
         return {
             content: [{
                 type: 'text',
-                text: `Error creating blocks from canvas: ${error instanceof Error ? error.message : 'Unknown error'}. Check the blockStructure format - ensure proper blockType and attributes.`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'canvas_to_blocks_failed',
+                    error: `Error creating blocks from canvas: ${error instanceof Error ? error.message : 'Unknown error'}. Check the blockStructure format - ensure proper blockType and attributes.`
+                })
             }]
         };
     }

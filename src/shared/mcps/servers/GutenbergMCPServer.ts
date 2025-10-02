@@ -15,7 +15,7 @@ import {
     generateBlocksFromCanvasTool, generateBlocksFromCanvas
 } from '@/shared/mcps/tools/canvas-to-blocks';
 import {
-    // getAvailableBlocksTool, getAvailableBlocks,
+    getAvailableBlocksTool, getAvailableBlocks,
     getBlockSchemaTool, getBlockSchema    
 } from '@/shared/mcps/tools/block-schema';
 
@@ -48,6 +48,7 @@ export class GutenbergMCPServer {
         generateEditedImageTool,
         generateBlocksFromCanvasTool,
         getBlockSchemaTool,
+        getAvailableBlocksTool,
         undoTool,
         redoTool
     ];
@@ -87,8 +88,8 @@ export class GutenbergMCPServer {
                 case 'generate_blocks_from_canvas':
                     return generateBlocksFromCanvas(args.blockStructure, args.analysis, args.replaceExisting, args.targetPosition);
 
-                // case 'get_available_blocks':
-                //     return getAvailableBlocks(args.includeInactive, args.category);
+                case 'get_available_blocks':
+                     return getAvailableBlocks(args.includeInactive, args.category);
 
                 case 'get_block_schema':
                     return getBlockSchema(args.blockType);

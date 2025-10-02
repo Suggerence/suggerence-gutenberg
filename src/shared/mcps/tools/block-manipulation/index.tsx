@@ -166,7 +166,17 @@ export function addBlock(blockType: string, attributes: Record<string, any> = {}
     return {
         content: [{
             type: 'text',
-            text: `Added ${blockType} block${attributes && Object.keys(attributes).length > 0 ? ` with attributes: ${JSON.stringify(attributes)}` : ''}`
+            text: JSON.stringify({
+                success: true,
+                action: 'block_added',
+                data: {
+                    block_type: blockType,
+                    block_id: newBlock.clientId,
+                    attributes: attributes,
+                    position: position,
+                    index: index
+                }
+            })
         }]
     };
 }
@@ -190,7 +200,14 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
         return {
             content: [{
                 type: 'text',
-                text: `Block is already at position ${targetIndex}`
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_already_at_position',
+                    data: {
+                        block_id: sourceBlockId,
+                        position: targetIndex
+                    }
+                })
             }]
         };
     }
@@ -201,7 +218,15 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
     return {
         content: [{
             type: 'text',
-            text: `Moved block from position ${currentIndex} to position ${targetIndex}`
+            text: JSON.stringify({
+                success: true,
+                action: 'block_moved',
+                data: {
+                    block_id: sourceBlockId,
+                    from_position: currentIndex,
+                    to_position: targetIndex
+                }
+            })
         }]
     };
 }
@@ -227,14 +252,23 @@ export function duplicateBlock(blockId?: string, position?: number): { content: 
     return {
         content: [{
             type: 'text',
-            text: `Duplicated block successfully at position: ${position}`
+            text: JSON.stringify({
+                success: true,
+                action: 'block_duplicated',
+                data: {
+                    original_block_id: targetBlockId,
+                    new_block_id: clonedBlock.clientId,
+                    block_type: clonedBlock.name,
+                    position: index
+                }
+            })
         }]
     };
 }
 
 export function deleteBlock(blockId?: string): { content: Array<{ type: string, text: string }> } {
     const { removeBlocks } = dispatch('core/block-editor') as any;
-    const { getSelectedBlockClientId } = select('core/block-editor') as any;
+    const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
 
     const targetBlockId = blockId || getSelectedBlockClientId();
 
@@ -242,19 +276,27 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
         throw new Error('No block selected and no blockId provided');
     }
 
+    const block = getBlock(targetBlockId);
     removeBlocks([targetBlockId]);
 
     return {
         content: [{
             type: 'text',
-            text: 'Deleted block successfully'
+            text: JSON.stringify({
+                success: true,
+                action: 'block_deleted',
+                data: {
+                    block_id: targetBlockId,
+                    block_type: block?.name || 'unknown'
+                }
+            })
         }]
     };
 }
 
 function updateBlockContent(blockId: string | undefined, content: string): { content: Array<{ type: string, text: string }> } {
     const { updateBlockAttributes } = dispatch('core/block-editor') as any;
-    const { getSelectedBlockClientId } = select('core/block-editor') as any;
+    const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
 
     const targetBlockId = blockId || getSelectedBlockClientId();
 
@@ -262,12 +304,21 @@ function updateBlockContent(blockId: string | undefined, content: string): { con
         throw new Error('No block selected and no blockId provided');
     }
 
+    const block = getBlock(targetBlockId);
     updateBlockAttributes(targetBlockId, { content });
 
     return {
         content: [{
             type: 'text',
-            text: `Updated block content: "${content}"`
+            text: JSON.stringify({
+                success: true,
+                action: 'block_content_updated',
+                data: {
+                    block_id: targetBlockId,
+                    block_type: block?.name || 'unknown',
+                    content: content
+                }
+            })
         }]
     };
 }
@@ -289,7 +340,11 @@ export function updateBlock(args: {
         return {
             content: [{
                 type: 'text',
-                text: 'No block selected or specified'
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_update_failed',
+                    error: 'No block selected or specified'
+                })
             }]
         };
     }
@@ -299,7 +354,11 @@ export function updateBlock(args: {
         return {
             content: [{
                 type: 'text',
-                text: `Block with ID ${targetBlockId} not found`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_update_failed',
+                    error: `Block with ID ${targetBlockId} not found`
+                })
             }]
         };
     }
@@ -321,7 +380,16 @@ export function updateBlock(args: {
         return {
             content: [{
                 type: 'text',
-                text: `Transformed block from ${currentBlock.name} to ${args.transformTo}`
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_transformed',
+                    data: {
+                        original_block_id: targetBlockId,
+                        new_block_id: newBlock.clientId,
+                        from_type: currentBlock.name,
+                        to_type: args.transformTo
+                    }
+                })
             }]
         };
     }
@@ -333,7 +401,16 @@ export function updateBlock(args: {
         return {
             content: [{
                 type: 'text',
-                text: `Wrapped ${currentBlock.name} in ${args.wrapIn}`
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_wrapped',
+                    data: {
+                        inner_block_id: targetBlockId,
+                        wrapper_block_id: wrapperBlock.clientId,
+                        inner_block_type: currentBlock.name,
+                        wrapper_type: args.wrapIn
+                    }
+                })
             }]
         };
     }
@@ -375,7 +452,16 @@ export function updateBlock(args: {
     return {
         content: [{
             type: 'text',
-            text: `Updated ${currentBlock.name} block. Changed: ${changedProps.join(', ')}`
+            text: JSON.stringify({
+                success: true,
+                action: 'block_updated',
+                data: {
+                    block_id: targetBlockId,
+                    block_type: currentBlock.name,
+                    updated_properties: changedProps,
+                    new_attributes: updateAttributes
+                }
+            })
         }]
     };
 }
@@ -430,7 +516,11 @@ export function undo(): { content: Array<{ type: string, text: string }> } {
         return {
             content: [{
                 type: 'text',
-                text: 'No actions to undo'
+                text: JSON.stringify({
+                    success: false,
+                    action: 'undo_failed',
+                    error: 'No actions to undo'
+                })
             }]
         };
     }
@@ -440,7 +530,11 @@ export function undo(): { content: Array<{ type: string, text: string }> } {
     return {
         content: [{
             type: 'text',
-            text: 'Undone last action successfully'
+            text: JSON.stringify({
+                success: true,
+                action: 'undo_completed',
+                data: {}
+            })
         }]
     };
 }
@@ -453,7 +547,11 @@ export function redo(): { content: Array<{ type: string, text: string }> } {
         return {
             content: [{
                 type: 'text',
-                text: 'No actions to redo'
+                text: JSON.stringify({
+                    success: false,
+                    action: 'redo_failed',
+                    error: 'No actions to redo'
+                })
             }]
         };
     }
@@ -463,7 +561,11 @@ export function redo(): { content: Array<{ type: string, text: string }> } {
     return {
         content: [{
             type: 'text',
-            text: 'Redone last action successfully'
+            text: JSON.stringify({
+                success: true,
+                action: 'redo_completed',
+                data: {}
+            })
         }]
     };
 }

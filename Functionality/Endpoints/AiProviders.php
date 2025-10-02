@@ -172,27 +172,39 @@ class AiProviders extends BaseApiEndpoints
             $text->withSystemPrompt($system);
         }
 
-        $text->withMessages(
-            array_map(function($message) {
-                if ($message['role'] === 'assistant') {
-                    return new AssistantMessage($message['content']);
+        // Build messages array, injecting assistant messages before tool results
+        $processedMessages = [];
+        
+        foreach ($messages as $message) {
+                       
+            // Process the actual message
+            if ($message['role'] === 'assistant') {                
+                $processedMessages[] = new AssistantMessage(
+                    content: $message['content'],
+                );
+            }
+            elseif ($message['role'] === 'tool') {
+                $toolResults = [];
+                
+                if (isset($message['toolCallId']) && isset($message['toolName'])) {
+                    $processedMessages[] = new UserMessage(
+                        content: 'Please execute tool ' . $message['toolCallId'] . ': ' . $message['toolName'] . ' with args ' . json_encode($message['toolArgs']),  // Empty content for tool calls
+                    );
+
+                    $toolResult = new ToolResult(
+                        toolCallId: $message['toolCallId'],
+                        toolName: $message['toolName'] ?? '',
+                        args: $message['toolArgs'] ?? [],
+                        result: $message['toolResult'] ?? $message['content'],
+                    );
+    
+                    $toolResults[] = $toolResult;
                 }
 
-                // if ($message['role'] === 'tool') {
-                //     $toolResults = [];
-                //     if (isset($message['toolCallId'])) {
-                //         $toolResult = new ToolResult(
-                //             toolCallId: $message['toolCallId'],
-                //             toolName: $message['toolName'] ?? '',
-                //             args: $message['toolArgs'] ?? [],
-                //             result: $message['toolResult'] ?? $message['content'],
-                //         );
-        
-                //         $toolResults[] = $toolResult;
-                //     }
-                //     return new ToolResultMessage($toolResults);
-                // }
+                $processedMessages[] = new UserMessage('Tool result: ' . json_encode($toolResults));
+            }
 
+            elseif ($message['role'] === 'user') {
                 // Handle user messages - check if content is multi-modal (array) or simple text
                 $content = $message['content'];
 
@@ -241,13 +253,15 @@ class AiProviders extends BaseApiEndpoints
                         }
                     }
 
-                    return new UserMessage($textContent, $additionalContent);
+                    $processedMessages[] = new UserMessage($textContent, $additionalContent);
                 } else {
                     // Simple text message
-                    return new UserMessage($content);
+                    $processedMessages[] = new UserMessage($content);
                 }
-            }, $messages)
-        );
+            }
+        }
+
+        $text->withMessages($processedMessages);
 
         if ($tools) {
             $tools = array_map(fn($tool) => Tool::formatFromSchema($tool), $tools);
@@ -256,25 +270,28 @@ class AiProviders extends BaseApiEndpoints
 
         $result = $text->asText();
 
-            $response = [
-            'role'      => 'assistant',
-            'content'   => $result->steps[0]->text,
-            'date'      => date('Y-m-d H:i:s'),
-
-            'aiModel'   => $model
-            ];
-
+        // Check if this is a tool call response
         if ($result->finishReason === FinishReason::ToolCalls) {
-            $response['role'] = 'tool';
-            $response = [
-                ...$response,
+            // Return assistant message with tool call information
+            // The frontend will execute the tool and send back the result
+            return [
+                'role'      => 'assistant',
+                'content'   => $result->steps[0]->text,
+                'date'      => date('Y-m-d H:i:s'),
+                'aiModel'   => $model,
                 'toolCallId' => $result->toolCalls[0]->id,
                 'toolName' => $result->toolCalls[0]->name,
                 'toolArgs' => $result->toolCalls[0]->arguments()
             ];
         }
 
-        return $response;
+        // Regular text response
+        return [
+            'role'      => 'assistant',
+            'content'   => $result->steps[0]->text,
+            'date'      => date('Y-m-d H:i:s'),
+            'aiModel'   => $model
+        ];
     }
 
     /**

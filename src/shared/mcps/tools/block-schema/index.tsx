@@ -72,7 +72,11 @@ export function getAvailableBlocks(includeInactive: boolean = false, category?: 
         return {
             content: [{
                 type: 'text',
-                text: `Error fetching available blocks: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'get_available_blocks_failed',
+                    error: `Error fetching available blocks: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
             }]
         };
     }
@@ -88,7 +92,11 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
             return {
                 content: [{
                     type: 'text',
-                    text: `Block type "${blockType}" not found. Use get_available_blocks to see available block types.`
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'get_block_schema_failed',
+                        error: `Block type "${blockType}" not found. Use get_available_blocks to see available block types.`
+                    })
                 }]
             };
         }
@@ -130,7 +138,11 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
         return {
             content: [{
                 type: 'text',
-                text: `Error fetching schema for block "${blockType}": ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'get_block_schema_failed',
+                    error: `Error fetching schema for block "${blockType}": ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
             }]
         };
     }

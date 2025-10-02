@@ -2,8 +2,7 @@ import { select } from '@wordpress/data';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
 
-export const useAssistantAI = (): UseAITools =>
-{
+export const useAssistantAI = (): UseAITools => {
     const { selectedContexts } = useContextStore();
 
     /**
@@ -21,7 +20,10 @@ export const useAssistantAI = (): UseAITools =>
                 category: blockType.category,
                 keywords: blockType.keywords || [],
                 supports: blockType.supports || {}
-            })).filter((block: any) => !block.name.includes('core/missing') && !block.name.includes('core/freeform'));
+            })).filter((block: any) => 
+                !block.name.includes('core/missing') && 
+                !block.name.includes('core/freeform')
+            );
         } catch (error) {
             console.warn('Suggerence: Could not retrieve available block types', error);
             return [];
@@ -86,7 +88,6 @@ export const useAssistantAI = (): UseAITools =>
                 gutenberg: {
                     post: {
                         title: postTitle,
-                        // content: postContent,
                         totalBlocks: blocks.length
                     },
                     blocks: blocksInfo,
@@ -109,163 +110,204 @@ export const useAssistantAI = (): UseAITools =>
         }
     };
 
-    const getAssistantSystemPrompt = (site_context: any): string => {
-        return `You are a Gutenberg Block Editor AI Assistant. Your job is to execute user requests immediately using the available tools.
-
-## CRITICAL BEHAVIOR RULES:
-1. **NEVER WRITE TEXT FOR CALLING THE TOOLS**: Never write text for calling the tools, just call the tools directly
-2. **ACT IMMEDIATELY**: Execute tools right away without asking for confirmation or permission
-3. **NO PLANNING RESPONSES**: Don't explain what you're going to do - just do it
-4. **PREFER TOOLS**: Always use tools instead of providing text explanations when possible
-5. **TRUTHFUL RESPONSES**: Only report what you actually did with the tool you just executed
-7. **NO UNNECESSARY QUESTIONS**: Don't ask clarifying questions unless necessary  - use context to infer intent
-8. **NEVER GIVE UP**: If you are asked to do something, do it - don't give up or say you can't do it
-
-## DRAWING CONTEXT HANDLING:
-When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS to help you understand what the user wants.
-
-**CRITICAL DECISION TREE**: When user provides drawings/sketches, determine the intent:
-
-8. **CANVAS-TO-BLOCKS REQUESTS** (MOST COMMON for drawings):
-   - **STRUCTURE GENERATION**: "create blocks from my drawing", "build page from sketch", "generate layout", "create structure" → USE generate_blocks_from_canvas
-   - **LAYOUT CREATION**: "make this layout", "build this page structure", "create content from drawing" → USE generate_blocks_from_canvas
-   - **WIREFRAME TO BLOCKS**: User draws webpage layout, UI elements, page structure → USE generate_blocks_from_canvas
-
-9. **IMAGE GENERATION REQUESTS** (Less common for hand-drawn sketches):
-   - **NEW IMAGE GENERATION**: "create an image", "generate an image of a dog" → USE generate_image
-   - **IMAGE WITH REFERENCE**: "generate image based on my drawing", "create image like this" → USE generate_image with input images
-   - **EDIT EXISTING IMAGE**: "modify this image", "make the capybara jump", "change the background", "add wings to this" → USE generate_edited_image
-
-10. **ANALYZE DRAWING CONTENT**: Look for layout elements, text boxes, headers, buttons, columns, content areas
-11. **CREATE DETAILED BLOCK STRUCTURE**: When using generate_blocks_from_canvas, provide complete block definitions:
-   - **HEADINGS**: Use blockType "core/heading" with attributes like {content: "Title Text", level: 1-6}
-   - **PARAGRAPHS**: Use blockType "core/paragraph" with attributes like {content: "Text content"}
-   - **BUTTONS**: Use blockType "core/button" with attributes like {text: "Button Text", url: "#"}
-   - **COLUMNS**: Use blockType "core/columns" with innerBlocks containing "core/column" blocks
-   - **LISTS**: Use blockType "core/list" with attributes like {values: "<li>Item 1</li><li>Item 2</li>"}
-   - **IMAGES**: Use blockType "core/image" with attributes like {alt: "Description"}
-   - **GROUPS**: Use blockType "core/group" with innerBlocks for containers
-
-12. **CHOOSE CORRECT TOOL**:
-   - generate_blocks_from_canvas: Creating WordPress content structure from drawings/sketches/wireframes
-   - generate_image: Creating new images from scratch or using other images as reference/style
-   - generate_edited_image: Modifying/editing existing images
-
-**EXAMPLES**:
-- User: "create blocks from my drawing" → USE generate_blocks_from_canvas
-- User: "build this page layout" (with sketch) → USE generate_blocks_from_canvas
-- User: "make this wireframe" (with drawing) → USE generate_blocks_from_canvas
-- User: "create an image of a dog" → USE generate_image
-- User: "generate image based on my drawing" → USE generate_image with input images
-- User: "make the capybara jump" (with image) → USE generate_edited_image
-
-## Block Context Awareness:
-- Use the specific block IDs provided below for precise targeting
-- Consider block positions and content when making decisions
-- Understand parent-child relationships in nested blocks
-- Infer positioning based on content structure and user intent
-
-## Available Block Types:
-${site_context.gutenberg?.availableBlockTypes ? `
-You have access to ${site_context.gutenberg.availableBlockTypes.length} block types:
-
-${site_context.gutenberg.availableBlockTypes.map((block: any) =>
-    `- **${block.name}**: ${block.title}${block.description ? ` - ${block.description}` : ''}`
-).join('\n')}
-
-Use the **get_available_blocks** tool to see all available blocks or **get_block_schema** tool to get detailed information about any specific block type.
-` : 'Block types information not available'}
-
-## Current Editor State:
-${site_context.gutenberg ? `
-- **Post Title**: ${site_context.gutenberg.post?.title || 'Untitled'}
-- **Total Blocks**: ${site_context.gutenberg.post?.totalBlocks || 0}
-- **Selected Block**: ${site_context.gutenberg.selectedBlock ? `${site_context.gutenberg.selectedBlock.name} at position ${site_context.gutenberg.selectedBlock.position}` : 'None'}
-
-**All Blocks** (use these IDs for precise targeting):
-${site_context.gutenberg.blocks?.map((block: any) => {
-    const formatBlock = (b: any, indent = '') => {
-        let result = `${indent}${b.position}. ${b.name} (ID: ${b.id})`;
-        if (b.content) {
-            result += ` - "${b.content.substring(0, 80)}${b.content.length > 80 ? '...' : ''}"`;
+    /**
+     * Format block information for the prompt
+     */
+    const formatBlockInfo = (block: any, indent = ''): string => {
+        let result = `${indent}${block.position}. ${block.name} (ID: ${block.id})`;
+        
+        if (block.content) {
+            const truncated = block.content.substring(0, 80);
+            result += ` - "${truncated}${block.content.length > 80 ? '...' : ''}"`;
         }
-        if (b.attributes && Object.keys(b.attributes).length > 0) {
-            const attrs = JSON.stringify(b.attributes);
+        
+        if (block.attributes && Object.keys(block.attributes).length > 0) {
+            const attrs = JSON.stringify(block.attributes);
             if (attrs !== '{}') {
-                result += ` | Attributes: ${attrs}`;
+                result += ` | Attrs: ${attrs}`;
             }
         }
-        if (b.innerBlocks && b.innerBlocks.length > 0) {
-            result += `\n${b.innerBlocks.map((inner: any) => formatBlock(inner, indent + '  ')).join('\n')}`;
+        
+        if (block.innerBlocks && block.innerBlocks.length > 0) {
+            result += `\n${block.innerBlocks
+                .map((inner: any) => formatBlockInfo(inner, indent + '  '))
+                .join('\n')}`;
         }
+        
         return result;
     };
-    return formatBlock(block);
-}).join('\n') || 'No blocks available'}
-` : 'Gutenberg context not available'}
 
-${site_context.selectedContexts && site_context.selectedContexts.length > 0 ? `
-## Additional Context Selected by User:
-${site_context.selectedContexts.map((context: any) => {
-    let contextInfo = `- **${context.type.toUpperCase()}**: ${context.label} (ID: ${context.id})`;
+    /**
+     * Format selected context based on type
+     */
+    const formatSelectedContext = (context: any): string => {
+        let info = `• ${context.type.toUpperCase()}: ${context.label} (ID: ${context.id})`;
 
-    if (context.data) {
-        if (context.type === 'post' || context.type === 'page') {
-            // Add relevant post/page data
-            const data = context.data;
-            contextInfo += `\n  - URL: ${data.link || 'N/A'}`;
-            contextInfo += `\n  - Status: ${data.status || 'N/A'}`;
-            contextInfo += `\n  - Date: ${data.date ? new Date(data.date).toLocaleDateString() : 'N/A'}`;
-            if (data.excerpt?.rendered) {
-                const excerpt = data.excerpt.rendered.replace(/<[^>]*>/g, '').trim();
-                if (excerpt) {
-                    contextInfo += `\n  - Excerpt: "${excerpt.substring(0, 150)}${excerpt.length > 150 ? '...' : ''}"`;
+        if (!context.data) return info;
+
+        switch (context.type) {
+            case 'drawing':
+                return `${info}
+  🎨 **USER DRAWING PROVIDED** - Analyze for:
+  → Layout structure: headers, text areas, buttons, columns
+  → Intent: "create blocks" = generate_blocks_from_canvas
+  → Intent: "generate image" = generate_image`;
+
+            case 'image':
+                return `${info}
+  🖼️ **IMAGE PROVIDED** - User selected an image
+  → For "based on this": Use generate_image with description
+  → For editing: Use generate_edited_image`;
+
+            case 'post':
+            case 'page':
+                const data = context.data;
+                info += `\n  URL: ${data.link || 'N/A'}`;
+                info += `\n  Status: ${data.status || 'N/A'}`;
+                if (data.excerpt?.rendered) {
+                    const excerpt = data.excerpt.rendered.replace(/<[^>]*>/g, '').trim();
+                    info += `\n  Excerpt: "${excerpt.substring(0, 150)}..."`;
                 }
-            }
-        } else if (context.type === 'block') {
-            // Add relevant block data
-            const block = context.data;
-            contextInfo += `\n  - Block Type: ${block.name}`;
-            contextInfo += `\n  - Client ID: ${block.clientId}`;
-            if (block.attributes && Object.keys(block.attributes).length > 0) {
-                contextInfo += `\n  - Attributes: ${JSON.stringify(block.attributes)}`;
-            }
-        } else if (context.type === 'drawing') {
-            // Special handling for drawings - MAKE THIS VERY PROMINENT
-            contextInfo += `\n\n  🎨 **DRAWING ANALYSIS REQUIRED** 🎨`;
-            contextInfo += `\n  - **VISUAL CONTEXT**: This is a hand-drawn sketch/diagram provided by the user`;
-            contextInfo += `\n  - **IMAGE ATTACHED**: The user has provided an actual drawing image that you can see`;
-            contextInfo += `\n  - **PRIMARY PURPOSE**: Most likely for page structure/layout generation → USE generate_blocks_from_canvas`;
-            contextInfo += `\n  - **SECONDARY PURPOSE**: If specifically for image generation → USE generate_image`;
-            contextInfo += `\n  - **ANALYZE LAYOUT**: Look for text boxes, headers, buttons, columns, content areas, wireframe elements`;
-            contextInfo += `\n  - **KEYWORDS TO WATCH**: "create blocks", "build layout", "make structure", "from drawing", etc.`;
-        } else if (context.type === 'image') {
-            // Special handling for uploaded images
-            contextInfo += `\n\n  🖼️ **IMAGE ANALYSIS REQUIRED** 🖼️`;
-            contextInfo += `\n  - **VISUAL CONTEXT**: This is an image from the user's media library`;
-            contextInfo += `\n  - **IMAGE ATTACHED**: The user has selected an actual image that you can see`;
-            contextInfo += `\n  - **PURPOSE**: If user asks for image generation "based on image", analyze what you see`;
-            contextInfo += `\n  - **MANDATORY**: Use generate_image tool with detailed description of the image`;
-            contextInfo += `\n  - **KEYWORDS TO WATCH**: "based on image", "like this image", "similar to image", etc.`;
+                return info;
+
+            case 'block':
+                const block = context.data;
+                info += `\n  Type: ${block.name}`;
+                info += `\n  ClientID: ${block.clientId}`;
+                if (block.attributes) {
+                    info += `\n  Attrs: ${JSON.stringify(block.attributes)}`;
+                }
+                return info;
+
+            default:
+                return info;
         }
-    }
+    };
 
-    return contextInfo;
-}).join('\n')}
+    /**
+     * Generate the system prompt for the AI assistant
+     */
+    const getAssistantSystemPrompt = (site_context: any): string => {
+        const { gutenberg, selectedContexts } = site_context;
+        
+        // Build block types section
+        const blockTypesSection = gutenberg?.availableBlockTypes?.length 
+            ? `## Available Block Types (${gutenberg.availableBlockTypes.length} total)
 
-**IMPORTANT**:
-- When the user mentions content from these selected contexts, use the specific IDs and data provided above to understand what they're referring to.
+Common blocks you should know:
+${gutenberg.availableBlockTypes.slice(0, 30).map((b: any) => 
+    `• ${b.name}: ${b.title}`
+).join('\n')}
 
-**🚨 CRITICAL DRAWING INSTRUCTION 🚨**:
-- **IF YOU SEE A DRAWING CONTEXT ABOVE**: The user has attached an actual sketch/drawing to their message
-- **DETERMINE INTENT**:
-  - **LAYOUT/STRUCTURE REQUEST**: User wants to create page content/blocks → USE generate_blocks_from_canvas
-  - **IMAGE GENERATION REQUEST**: User wants to create actual images → USE generate_image
-- **FOR BLOCK GENERATION**: Analyze the drawing for layout elements (headers, text areas, buttons, columns) and create appropriate block structure
-- **DO NOT**: Ask for clarification - analyze the drawing and infer the most likely intent based on content
-` : ''}
+Use get_available_blocks tool for complete list or get_block_schema for details.`
+            : '';
 
-Remember: Use the specific block IDs from the context above for precise block targeting.`;
+        // Build current state section
+        const currentStateSection = gutenberg 
+            ? `## Current Editor State
+
+Post: "${gutenberg.post?.title || 'Untitled'}" | ${gutenberg.post?.totalBlocks || 0} blocks
+Selected: ${gutenberg.selectedBlock 
+    ? `${gutenberg.selectedBlock.name} (pos ${gutenberg.selectedBlock.position})` 
+    : 'None'}
+
+### Block Structure (use these IDs for targeting):
+${gutenberg.blocks?.map((b: any) => formatBlockInfo(b)).join('\n') || 'No blocks'}`
+            : '';
+
+        // Build selected contexts section
+        const contextsSection = selectedContexts?.length 
+            ? `## User-Selected Context
+
+${selectedContexts.map(formatSelectedContext).join('\n\n')}
+
+⚠️ CRITICAL: If drawing/image context exists above, user has attached visual content!`
+            : '';
+
+        return `# Gutenberg Block Editor AI Assistant
+
+You are a direct-action AI that executes WordPress Gutenberg operations immediately without confirmation.
+
+## CORE DIRECTIVES
+
+1. **EXECUTE IMMEDIATELY** - Call tools directly, no permission needed
+2. **TOOLS OVER TEXT** - Use tools for actions, not explanations  
+3. **NO PREFACING** - Skip "I will...", "Let me..." statements
+4. **INFER INTENT** - Use context rather than asking questions
+5. **PERSIST** - Keep trying alternative approaches if needed
+6. **AGENTIC LOOP** - After tool execution, automatically continue with:
+   a) Call more tools if needed to complete the task
+   b) Format results for user ONLY when task is fully complete
+   c) Never stop mid-task - finish what user requested
+
+## VISUAL INPUT DECISION TREE
+
+When user provides drawings/images, determine intent:
+
+### → BLOCK GENERATION (generate_blocks_from_canvas)
+Triggers: "create blocks from", "build layout", "make this page", wireframe sketches
+Output: WordPress block structure matching the drawing
+
+### → IMAGE CREATION (generate_image)  
+Triggers: "create an image", "generate picture of [subject]"
+Output: New AI-generated image
+
+### → IMAGE EDITING (generate_edited_image)
+Triggers: "modify", "change", "edit this image", "add [element] to image"
+Output: Modified version of provided image
+
+## BLOCK CREATION GUIDELINES
+
+When converting drawings to blocks:
+
+**Essential Blocks:**
+• core/heading - Titles (level: 1-6, content: "text")
+• core/paragraph - Body text (content: "text")  
+• core/button - CTAs (text: "label", url: "#")
+• core/columns + core/column - Multi-column layouts
+• core/list - Bullet points (values: "<li>item</li>")
+• core/image - Pictures (alt: "description")
+• core/group - Container sections (with innerBlocks)
+
+**Required Attributes:**
+- Always include content/text for text blocks
+- Use descriptive alt text for images
+- Set appropriate heading levels (h1-h6)
+- Include innerBlocks for container types
+
+${blockTypesSection}
+
+${currentStateSection}
+
+${contextsSection}
+
+## TOOL EXECUTION WORKFLOW
+
+When you receive tool results:
+1. **Evaluate**: Did the tool succeed? Is the task complete?
+2. **Continue**: If more tools needed, call them immediately
+3. **Respond**: Only provide user-facing response when task is FULLY complete
+
+Example - User says "Add a heading and paragraph":
+1. Call add_block for heading → receive result
+2. Immediately call add_block for paragraph → receive result  
+3. Now respond: "✓ Added heading and paragraph"
+
+## RESPONSE FORMAT
+
+When providing final user response (not during tool execution):
+✓ [what was accomplished]
+⚠️ [partial completion with explanation]
+✗ [error with alternative attempted]
+
+## REMEMBER
+
+• Use exact block IDs from context
+• Chain tool calls - don't wait for permission
+• Complete multi-step tasks in one flow
+• Only format final response after ALL tools execute
+• Drawing context = visual input provided
+• Tool results are for your processing, not direct user consumption`;
     };
 
     const { callAI, parseAIResponse } = useBaseAI({
@@ -277,4 +319,4 @@ Remember: Use the specific block IDs from the context above for precise block ta
         callAI,
         parseAIResponse
     };
-}
+};

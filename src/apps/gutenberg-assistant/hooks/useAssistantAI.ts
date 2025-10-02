@@ -133,7 +133,7 @@ When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS
 
 9. **IMAGE GENERATION REQUESTS** (Less common for hand-drawn sketches):
    - **NEW IMAGE GENERATION**: "create an image", "generate an image of a dog" → USE generate_image
-   - **IMAGE WITH REFERENCE**: "generate image based on my drawing", "create image like this" → USE generate_image_with_inputs
+   - **IMAGE WITH REFERENCE**: "generate image based on my drawing", "create image like this" → USE generate_image with input images
    - **EDIT EXISTING IMAGE**: "modify this image", "make the capybara jump", "change the background", "add wings to this" → USE generate_edited_image
 
 10. **ANALYZE DRAWING CONTENT**: Look for layout elements, text boxes, headers, buttons, columns, content areas
@@ -148,8 +148,7 @@ When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS
 
 12. **CHOOSE CORRECT TOOL**:
    - generate_blocks_from_canvas: Creating WordPress content structure from drawings/sketches/wireframes
-   - generate_image: Creating new images from scratch
-   - generate_image_with_inputs: Generating new images using other images as reference/style
+   - generate_image: Creating new images from scratch or using other images as reference/style
    - generate_edited_image: Modifying/editing existing images
 
 **EXAMPLES**:
@@ -157,7 +156,7 @@ When you receive images (user drawings/sketches), they are PROVIDED FOR ANALYSIS
 - User: "build this page layout" (with sketch) → USE generate_blocks_from_canvas
 - User: "make this wireframe" (with drawing) → USE generate_blocks_from_canvas
 - User: "create an image of a dog" → USE generate_image
-- User: "generate image based on my drawing" → USE generate_image_with_inputs
+- User: "generate image based on my drawing" → USE generate_image with input images
 - User: "make the capybara jump" (with image) → USE generate_edited_image
 
 ## Block Context Awareness:
@@ -237,7 +236,7 @@ ${site_context.selectedContexts.map((context: any) => {
             contextInfo += `\n  - **VISUAL CONTEXT**: This is a hand-drawn sketch/diagram provided by the user`;
             contextInfo += `\n  - **IMAGE ATTACHED**: The user has provided an actual drawing image that you can see`;
             contextInfo += `\n  - **PRIMARY PURPOSE**: Most likely for page structure/layout generation → USE generate_blocks_from_canvas`;
-            contextInfo += `\n  - **SECONDARY PURPOSE**: If specifically for image generation → USE generate_image/generate_image_with_inputs`;
+            contextInfo += `\n  - **SECONDARY PURPOSE**: If specifically for image generation → USE generate_image`;
             contextInfo += `\n  - **ANALYZE LAYOUT**: Look for text boxes, headers, buttons, columns, content areas, wireframe elements`;
             contextInfo += `\n  - **KEYWORDS TO WATCH**: "create blocks", "build layout", "make structure", "from drawing", etc.`;
         } else if (context.type === 'image') {
@@ -261,7 +260,7 @@ ${site_context.selectedContexts.map((context: any) => {
 - **IF YOU SEE A DRAWING CONTEXT ABOVE**: The user has attached an actual sketch/drawing to their message
 - **DETERMINE INTENT**:
   - **LAYOUT/STRUCTURE REQUEST**: User wants to create page content/blocks → USE generate_blocks_from_canvas
-  - **IMAGE GENERATION REQUEST**: User wants to create actual images → USE generate_image/generate_image_with_inputs
+  - **IMAGE GENERATION REQUEST**: User wants to create actual images → USE generate_image
 - **FOR BLOCK GENERATION**: Analyze the drawing for layout elements (headers, text areas, buttons, columns) and create appropriate block structure
 - **DO NOT**: Ask for clarification - analyze the drawing and infer the most likely intent based on content
 ` : ''}

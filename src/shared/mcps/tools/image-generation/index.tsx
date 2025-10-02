@@ -1,8 +1,5 @@
 import apiFetch from "@wordpress/api-fetch";
 
-declare const SuggerenceData: SuggerenceData;
-
-
 export const generateImageTool: SuggerenceMCPResponseTool = {
     name: 'generate_image',
     description: 'Generate an image based on a text prompt',
@@ -16,21 +13,6 @@ export const generateImageTool: SuggerenceMCPResponseTool = {
             alt_text: {
                 type: 'string',
                 description: 'Alternative text for the image (optional, will use prompt if not provided)'
-            }
-        },
-        required: ['prompt']
-    }
-};
-
-export const generateImageWithInputsTool: SuggerenceMCPResponseTool = {
-    name: 'generate_image_with_inputs',
-    description: 'Generate an image using a text prompt along with input images as reference',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            prompt: {
-                type: 'string',
-                description: 'The text the user sent to ask for an image'
             },
             input_images: {
                 type: 'array',
@@ -53,12 +35,8 @@ export const generateImageWithInputsTool: SuggerenceMCPResponseTool = {
                     }
                 }
             },
-            alt_text: {
-                type: 'string',
-                description: 'Alternative text for the image'
-            }
         },
-        required: ['prompt', 'input_images']
+        required: ['prompt']
     }
 };
 
@@ -85,9 +63,14 @@ export const generateEditedImageTool: SuggerenceMCPResponseTool = {
     }
 };
 
-export async function generateImage(prompt: string, altText?: string): Promise<{ content: Array<{ type: string, text: string }> }> {
+export async function generateImage(
+    prompt: string,
+    altText?: string,
+    inputImages?: Array<{ data?: string; media_type?: string; url?: string }>,
+    editImageUrl?: string
+): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
-        const imageResponse = await generateImageWithAI(prompt);
+        const imageResponse = await generateImageWithAI(prompt, inputImages, editImageUrl);
 
         if (!imageResponse.success) {
             throw new Error(imageResponse.error || 'Failed to generate image');
@@ -100,7 +83,9 @@ export async function generateImage(prompt: string, altText?: string): Promise<{
                 image_id: imageResponse.attachment_id,
                 image_url: imageResponse.image_url,
                 prompt: prompt,
-                alt_text: altText || prompt
+                alt_text: altText || prompt,
+                ...(editImageUrl && { original_image_url: editImageUrl }),
+                ...(inputImages && { input_images_count: inputImages.length })
             }
         };
 
@@ -115,79 +100,18 @@ export async function generateImage(prompt: string, altText?: string): Promise<{
     }
 }
 
-export async function generateImageWithInputs(
-    prompt: string,
-    inputImages: Array<{ data?: string; media_type?: string; url?: string }>,
-    altText?: string
-): Promise<{ content: Array<{ type: string, text: string }> }> {
-    try {
-        const imageResponse = await generateImageWithAIAndInputs(prompt, inputImages);
-
-        if (!imageResponse.success) {
-            throw new Error(imageResponse.error || 'Failed to generate image');
-        }
-
-        const result = {
-            success: true,
-            action: 'image_generated',
-            data: {
-                image_id: imageResponse.attachment_id,
-                image_url: imageResponse.image_url,
-                prompt: prompt,
-                alt_text: altText || prompt,
-                input_images_count: inputImages.length
-            }
-        };
-
-        return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(result, null, 2)
-            }]
-        };
-    } catch (error) {
-        throw new Error(`Failed to generate image with inputs: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-}
-
 export async function generateEditedImage(
     prompt: string,
     imageUrl: string,
     altText?: string
 ): Promise<{ content: Array<{ type: string, text: string }> }> {
-    try {
-        const imageResponse = await generateEditedImageWithAI(prompt, imageUrl);
-
-        if (!imageResponse.success) {
-            throw new Error(imageResponse.error || 'Failed to edit image');
-        }
-
-        const result = {
-            success: true,
-            action: 'image_generated',
-            data: {
-                image_id: imageResponse.attachment_id,
-                image_url: imageResponse.image_url,
-                original_image_url: imageUrl,
-                prompt: prompt,
-                alt_text: altText || prompt
-            }
-        };
-
-        return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(result, null, 2)
-            }]
-        };
-    } catch (error) {
-        throw new Error(`Failed to edit image: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return generateImage(prompt, altText, undefined, imageUrl);
 }
 
-async function generateEditedImageWithAI(
+async function generateImageWithAI(
     prompt: string,
-    imageUrl: string
+    inputImages?: Array<{ data?: string; media_type?: string; url?: string }>,
+    editImageUrl?: string
 ): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
     try {
         const data = await apiFetch({
@@ -197,56 +121,11 @@ async function generateEditedImageWithAI(
                 prompt: prompt,
                 model: 'suggerence-v1',
                 provider: 'suggerence',
-                edit_mode: true,
-                edit_image_url: imageUrl
-            }
-        });
-
-        return data as { success: boolean; image_url?: string; attachment_id?: number; error?: string };
-    } catch (error) {
-        console.error('Error editing image:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        };
-    }
-}
-
-async function generateImageWithAIAndInputs(
-    prompt: string,
-    inputImages: Array<{ data?: string; media_type?: string; url?: string }>
-): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
-    try {
-        const data = await apiFetch({
-            path: '/suggerence-gutenberg/ai-providers/v1/providers/image',
-            method: 'POST',
-            data: {
-                prompt: prompt,
-                model: 'suggerence-v1',
-                provider: 'suggerence',
-                input_images: inputImages
-            }
-        });
-
-        return data as { success: boolean; image_url?: string; attachment_id?: number; error?: string };
-    } catch (error) {
-        console.error('Error generating image with inputs:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        };
-    }
-}
-
-export async function generateImageWithAI(prompt: string): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
-    try {
-        const data = await apiFetch({
-            path: '/suggerence-gutenberg/ai-providers/v1/providers/image',
-            method: 'POST',
-            data: {
-                prompt: prompt,
-                model: 'suggerence-v1',
-                provider: 'suggerence'
+                ...(editImageUrl && {
+                    edit_mode: true,
+                    edit_image_url: editImageUrl
+                }),
+                ...(inputImages && { input_images: inputImages })
             }
         });
 

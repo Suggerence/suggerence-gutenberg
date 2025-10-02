@@ -11,10 +11,8 @@ import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
 import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas';
 import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelector';
-import { getContextUsageColor, getContextUsageWarning } from '@/shared/utils/contextCalculator';
 import { image, brush } from '@wordpress/icons';
 import { AudioButton } from '@/shared/components/AudioButton';
-import domReady from '@wordpress/dom-ready';
 
 export const InputArea = () => {
 
@@ -25,30 +23,9 @@ export const InputArea = () => {
     const [isMediaOpen, setIsMediaOpen] = useState(false);
     const { isLoading, setIsLoading } = useChatInterfaceStore();
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
-    const { addContext, contextUsage, updateContextUsage, selectedContexts } = useContextStore();
+    const { addContext } = useContextStore();
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
-
-    // Get current Gutenberg state using useSelect to listen for changes
-    const gutenbergState = useSelect((select: any) => {
-        const {
-            getBlocks,
-            getEditedPostAttribute,
-        } = select('core/block-editor');
-
-        const {
-            getEditedPostAttribute: getEditorPostAttribute,
-        } = select('core/editor');
-
-        const blocks = getBlocks();
-        const postTitle = getEditorPostAttribute?.('title') || getEditedPostAttribute?.('title') || '';
-
-        return {
-            blocks,
-            postTitle,
-            lastUpdated: Date.now() // Force updates when blocks change
-        };
-    }, []);
     
     useEffect(() => {
         if (!isLoading) {
@@ -59,71 +36,6 @@ export const InputArea = () => {
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
-
-    // Comprehensive context calculation function
-    const calculateContextUsage = useCallback(() => {
-        try {
-            // Build comprehensive gutenberg context
-            const gutenbergContext = {
-                post: {
-                    title: gutenbergState.postTitle,
-                    totalBlocks: gutenbergState.blocks.length
-                },
-                blocks: gutenbergState.blocks.map((block: any, index: number) => ({
-                    position: index,
-                    id: block.clientId,
-                    name: block.name,
-                    content: block.attributes?.content || '',
-                    attributes: block.attributes
-                })),
-                lastUpdated: new Date().toISOString()
-            };
-
-            // Build system prompt with current context
-            const systemPrompt = `You are a Gutenberg Block Editor AI Assistant. Your job is to execute user requests immediately using the available tools.
-
-## CRITICAL BEHAVIOR RULES:
-1. **ONE TOOL PER RESPONSE**: Execute exactly ONE tool per response, never claim to do multiple actions at once
-2. **ACT IMMEDIATELY**: Execute tools right away without asking for confirmation or permission
-3. **NO PLANNING RESPONSES**: Don't explain what you're going to do - just do it
-
-## Block Context Awareness:
-- Use the specific block IDs provided below for precise targeting
-- Consider block positions and content when making decisions
-- Understand parent-child relationships in nested blocks
-
-## Current Editor State:
-${JSON.stringify(gutenbergContext, null, 2)}
-
-## Additional Context Selected by User:
-${selectedContexts.map(ctx => {
-                if (ctx.type === 'drawing') {
-                    return `${ctx.type}: ${ctx.label} - The user has provided a hand-drawn diagram or sketch (base64 image data available)`;
-                }
-                return `${ctx.type}: ${ctx.label}`;
-            }).join(', ') || 'None'}
-
-Remember: Use the specific block IDs from the context above for precise block targeting.`;
-
-            // Include current input as if it were part of messages
-            const messagesWithCurrentInput = [...messages];
-            if (inputValue.trim()) {
-                messagesWithCurrentInput.push({
-                    role: 'user',
-                    content: inputValue,
-                    date: new Date().toISOString()
-                });
-            }
-
-            updateContextUsage({
-                messages: messagesWithCurrentInput,
-                systemPrompt,
-                gutenbergContext
-            });
-        } catch (error) {
-            console.warn('Could not calculate context usage:', error);
-        }
-    }, [gutenbergState, selectedContexts, messages, inputValue, updateContextUsage]);
 
     const handleSendMessage = async () => {
         if (!inputValue.trim() || isLoading) return;
@@ -239,25 +151,6 @@ Remember: Use the specific block IDs from the context above for precise block ta
         }
     }, [messages]);
 
-    // Update context usage when anything changes
-    // useEffect(() => {
-    //     calculateContextUsage();
-    // }, [calculateContextUsage]);
-
-    // Debounced input change handler for real-time updates
-    // useEffect(() => {
-    //     const debounceTimer = setTimeout(() => {
-    //         calculateContextUsage();
-    //     }, 300); // 300ms debounce for input changes
-
-    //     return () => clearTimeout(debounceTimer);
-    // }, [inputValue, calculateContextUsage]);
-
-    const handleContextSelect = (context: any) => {
-        console.log('Context selected:', context);
-        addContext(context);
-    };
-
     const handleCanvasSave = (imageData: string, description?: string) => {
         const drawingContext = {
             id: `drawing-${Date.now()}`,
@@ -307,7 +200,7 @@ Remember: Use the specific block IDs from the context above for precise block ta
     return (
         <VStack spacing={0} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderTop: '1px solid #ddd' }}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-                <ContextMenuBadge onContextSelect={handleContextSelect} />
+                <ContextMenuBadge onContextSelect={addContext} />
                 <BlockBadge />
 
                 {/* Context Usage Indicator */}

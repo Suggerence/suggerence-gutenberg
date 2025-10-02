@@ -57,7 +57,7 @@ export function getAvailableBlocks(includeInactive: boolean = false, category?: 
         }));
 
         // Filter inactive blocks if requested
-        const filteredBlocks = includeInactive ? availableBlocks : availableBlocks.filter(block => block.isActive);
+        const filteredBlocks = includeInactive ? availableBlocks : availableBlocks.filter((block: any) => block.isActive);
 
         return {
             content: [{

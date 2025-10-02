@@ -1,5 +1,18 @@
 import { dispatch, select } from '@wordpress/data';
-import { createBlock } from '@wordpress/blocks';
+import { createBlock, cloneBlock } from '@wordpress/blocks';
+
+function getAvailableBlockTypes(): string[] {
+    try {
+        const { getBlockTypes } = select('core/blocks') as any;
+        const blockTypes = getBlockTypes();
+        return blockTypes
+            .filter((block: any) => !block.deprecated && !block.private)
+            .map((block: any) => block.name);
+    } catch (error) {
+        // Fallback to common block types if WordPress data is not available
+        return ['core/paragraph', 'core/heading', 'core/image', 'core/list', 'core/code', 'core/button', 'core/group', 'core/columns', 'core/cover', 'core/gallery', 'core/audio', 'core/video', 'core/embed', 'core/spacer', 'core/separator', 'core/quote', 'core/table', 'core/html', 'core/shortcode'];
+    }
+}
 
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
@@ -9,11 +22,12 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
         properties: {
             blockType: {
                 type: 'string',
-                description: 'The block type to create. Common types: core/paragraph, core/heading, core/image, core/list, core/code, core/button, core/group, core/columns, core/cover, core/gallery, core/audio, core/video, core/embed, core/spacer, core/separator, core/quote, core/table, core/html, core/shortcode'
+                description: 'The block type to create.',
+                enum: getAvailableBlockTypes()
             },
             attributes: {
                 type: 'object',
-                description: 'Block attributes (optional, depends on block type)',
+                description: 'Block attributes (Depends on block type, see get_block_schema tool)',
                 additionalProperties: true
             },
             position: {
@@ -51,13 +65,17 @@ export const moveBlockTool: SuggerenceMCPResponseTool = {
 
 export const duplicateBlockTool: SuggerenceMCPResponseTool = {
     name: 'duplicate_block',
-    description: 'Duplicate a block in the editor',
+    description: 'Duplicate a block in the editor at a specific position',
     inputSchema: {
         type: 'object',
         properties: {
             blockId: {
                 type: 'string',
                 description: 'The client ID of the block to duplicate (optional, uses selected block if not provided)'
+            },
+            position: {
+                type: 'number',
+                description: 'The target position (0-based index) where to duplicate the block (optional, after selected block if not provided)',
             }
         }
     }
@@ -77,37 +95,35 @@ export const deleteBlockTool: SuggerenceMCPResponseTool = {
     }
 };
 
-export const selectBlockTool: SuggerenceMCPResponseTool = {
-    name: 'select_block',
-    description: 'Select a specific block in the editor by its client ID',
+export const updateBlockTool: SuggerenceMCPResponseTool = {
+    name: 'update_block',
+    description: 'Update any block using WordPress core APIs. Supports all block types and any WordPress functionality including attributes, styles, transforms.',
     inputSchema: {
         type: 'object',
         properties: {
             blockId: {
                 type: 'string',
-                description: 'The client ID of the block to select'
-            }
-        },
-        required: ['blockId']
-    }
-};
-
-export const updateBlockContentTool: SuggerenceMCPResponseTool = {
-    name: 'update_block_content',
-    description: 'Update the content of an existing block',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            blockId: {
-                type: 'string',
-                description: 'The client ID of the block to update (optional, uses selected block if not provided)'
+                description: 'Block client ID (optional, uses selected block if not provided)'
             },
-            content: {
+            attributes: {
+                type: 'object',
+                description: 'Block attributes to update (any WordPress block attribute)',
+                additionalProperties: true
+            },
+            style: {
+                type: 'object',
+                description: 'WordPress style object for colors, spacing, borders, typography',
+                additionalProperties: true
+            },
+            transformTo: {
                 type: 'string',
-                description: 'The new content for the block'
+                description: 'Transform block to different type (e.g., "core/cover")'
+            },
+            wrapIn: {
+                type: 'string',
+                description: 'Wrap block in a container block type'
             }
-        },
-        required: ['content']
+        }
     }
 };
 
@@ -156,8 +172,8 @@ export function addBlock(blockType: string, attributes: Record<string, any> = {}
 }
 
 export function moveBlock(position: number, blockId?: string): { content: Array<{ type: string, text: string }> } {
-    const { removeBlocks, insertBlocks } = dispatch('core/block-editor') as any;
-    const { getSelectedBlockClientId, getBlockIndex, getBlocks, getBlock } = select('core/block-editor') as any;
+    const { moveBlocksToPosition } = dispatch('core/block-editor') as any;
+    const { getSelectedBlockClientId, getBlockIndex, getBlocks, getBlockRootClientId } = select('core/block-editor') as any;
 
     const sourceBlockId = blockId || getSelectedBlockClientId();
 
@@ -179,10 +195,8 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
         };
     }
 
-    const blockToMove = getBlock(sourceBlockId);
-    removeBlocks([sourceBlockId], false);
-    const adjustedIndex = currentIndex < targetIndex ? targetIndex : targetIndex;
-    insertBlocks([blockToMove], adjustedIndex);
+    const rootClientId = getBlockRootClientId(sourceBlockId);
+    moveBlocksToPosition([sourceBlockId], rootClientId, rootClientId, targetIndex);
 
     return {
         content: [{
@@ -192,9 +206,9 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
     };
 }
 
-export function duplicateBlock(blockId?: string): { content: Array<{ type: string, text: string }> } {
-    const { duplicateBlocks } = dispatch('core/block-editor') as any;
-    const { getSelectedBlockClientId } = select('core/block-editor') as any;
+export function duplicateBlock(blockId?: string, position?: number): { content: Array<{ type: string, text: string }> } {
+    const { getSelectedBlockClientId, getBlockIndex, getBlock } = select('core/block-editor') as any;
+    const { insertBlocks } = dispatch('core/block-editor') as any;
 
     const targetBlockId = blockId || getSelectedBlockClientId();
 
@@ -202,12 +216,18 @@ export function duplicateBlock(blockId?: string): { content: Array<{ type: strin
         throw new Error('No block selected and no blockId provided');
     }
 
-    duplicateBlocks([targetBlockId]);
+    const blockToClone = getBlock(targetBlockId);
+    const clonedBlock = cloneBlock(blockToClone);
+
+    let index: number | undefined;
+    index = position !== undefined ? position : getBlockIndex(targetBlockId) + 1;
+
+    insertBlocks([clonedBlock], index);
 
     return {
         content: [{
             type: 'text',
-            text: 'Duplicated block successfully'
+            text: `Duplicated block successfully at position: ${position}`
         }]
     };
 }
@@ -232,20 +252,7 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
     };
 }
 
-export function selectBlock(blockId: string): { content: Array<{ type: string, text: string }> } {
-    const { selectBlock } = dispatch('core/block-editor') as any;
-
-    selectBlock(blockId);
-
-    return {
-        content: [{
-            type: 'text',
-            text: `Selected block ${blockId}`
-        }]
-    };
-}
-
-export function updateBlockContent(blockId: string | undefined, content: string): { content: Array<{ type: string, text: string }> } {
+function updateBlockContent(blockId: string | undefined, content: string): { content: Array<{ type: string, text: string }> } {
     const { updateBlockAttributes } = dispatch('core/block-editor') as any;
     const { getSelectedBlockClientId } = select('core/block-editor') as any;
 
@@ -263,6 +270,133 @@ export function updateBlockContent(blockId: string | undefined, content: string)
             text: `Updated block content: "${content}"`
         }]
     };
+}
+
+export function updateBlock(args: {
+    blockId?: string;
+    attributes?: Record<string, any>;
+    style?: Record<string, any>;
+    transformTo?: string;
+    wrapIn?: string;
+    content?: string;
+}): { content: Array<{ type: string, text: string }> } {
+    const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
+    const { updateBlockAttributes, replaceBlock } = dispatch('core/block-editor') as any;
+
+    const targetBlockId = args.blockId || getSelectedBlockClientId();
+
+    if (!targetBlockId) {
+        return {
+            content: [{
+                type: 'text',
+                text: 'No block selected or specified'
+            }]
+        };
+    }
+
+    const currentBlock = getBlock(targetBlockId);
+    if (!currentBlock) {
+        return {
+            content: [{
+                type: 'text',
+                text: `Block with ID ${targetBlockId} not found`
+            }]
+        };
+    }
+
+    // Handle simple content update
+    if (args.content && !args.attributes && !args.style) {
+        return updateBlockContent(targetBlockId, args.content);
+    }
+
+    // Handle transformations
+    if (args.transformTo) {
+        const newBlock = createBlock(args.transformTo, {
+            ...currentBlock.attributes,
+            ...(args.attributes || {})
+        }, currentBlock.innerBlocks);
+
+        replaceBlock(targetBlockId, newBlock);
+
+        return {
+            content: [{
+                type: 'text',
+                text: `Transformed block from ${currentBlock.name} to ${args.transformTo}`
+            }]
+        };
+    }
+
+    if (args.wrapIn) {
+        const wrapperBlock = createBlock(args.wrapIn, {}, [currentBlock]);
+        replaceBlock(targetBlockId, wrapperBlock);
+
+        return {
+            content: [{
+                type: 'text',
+                text: `Wrapped ${currentBlock.name} in ${args.wrapIn}`
+            }]
+        };
+    }
+
+    // Build attributes object to update
+    const updateAttributes: Record<string, any> = {};
+
+    // Add regular attributes (but extract any style that was mistakenly put here)
+    if (args.attributes) {
+        const { style: attributeStyle, ...otherAttributes } = args.attributes;
+        Object.assign(updateAttributes, otherAttributes);
+
+        // If style was mistakenly put in attributes, merge it with the proper style
+        if (attributeStyle) {
+            console.warn('Style found in attributes - moving to proper style object');
+            const currentStyle = currentBlock.attributes.style || {};
+            const combinedStyle = deepMergeStyles(currentStyle, attributeStyle);
+            updateAttributes.style = args.style ?
+                deepMergeStyles(combinedStyle, args.style) :
+                combinedStyle;
+        }
+    }
+
+    // Handle style object (WordPress way) - deep merge to preserve existing styles
+    if (args.style && !updateAttributes.style) {
+        const currentStyle = currentBlock.attributes.style || {};
+        updateAttributes.style = deepMergeStyles(currentStyle, args.style);
+    }
+
+    // Apply updates using WordPress API
+    updateBlockAttributes(targetBlockId, updateAttributes);
+
+    const changedProps = [
+        ...(args.attributes ? Object.keys(args.attributes) : []),
+        ...(args.style ? ['style'] : []),
+        ...(args.content ? ['content'] : [])
+    ];
+
+    return {
+        content: [{
+            type: 'text',
+            text: `Updated ${currentBlock.name} block. Changed: ${changedProps.join(', ')}`
+        }]
+    };
+}
+
+function deepMergeStyles(currentStyle: any, newStyle: any): any {
+    const merged = { ...currentStyle };
+
+    Object.keys(newStyle).forEach(key => {
+        if (newStyle[key] && typeof newStyle[key] === 'object' && !Array.isArray(newStyle[key])) {
+            // Deep merge for nested objects like color, typography, spacing, border
+            merged[key] = {
+                ...merged[key],
+                ...newStyle[key]
+            };
+        } else {
+            // Direct assignment for primitive values and arrays
+            merged[key] = newStyle[key];
+        }
+    });
+
+    return merged;
 }
 
 export function insertBlockAfter(blockType: string, afterBlockId?: string): { content: Array<{ type: string, text: string }> } {

@@ -55,15 +55,19 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Handle text tool
+        // Handle text tool - use display coordinates for positioning overlay
         if (drawingState.currentTool === 'text') {
-            setTextPosition({ x, y });
+            const displayX = e.clientX - rect.left;
+            const displayY = e.clientY - rect.top;
+            setTextPosition({ x: displayX, y: displayY });
             setShowTextInput(true);
             return;
         }
@@ -102,8 +106,10 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
@@ -213,6 +219,18 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
     const handleAddTextToCanvas = useCallback(() => {
         if (!textInput.trim() || !textPosition) return;
 
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        // Convert display coordinates to canvas coordinates
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const canvasPosition = {
+            x: textPosition.x * scaleX,
+            y: textPosition.y * scaleY
+        };
+
         const textSettings = drawingState.textSettings;
         const style: TextRenderStyle = {
             fontSize: textSettings.fontSize,
@@ -226,7 +244,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
             maxWidth: 300,
         };
 
-        addTextToCanvas(canvasRef, textInput, style, textPosition);
+        addTextToCanvas(canvasRef, textInput, style, canvasPosition);
     }, [textInput, textPosition, drawingState.textSettings, addTextToCanvas]);
 
 
@@ -273,7 +291,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         <Modal
             title={__('Drawing Canvas', 'suggerence')}
             onRequestClose={onClose}
-            style={{ maxWidth: '900px', width: '95vw' }}
+            isFullScreen
             shouldCloseOnClickOutside={false}
             className="suggerence-gutenberg-assistant-modal"
         >

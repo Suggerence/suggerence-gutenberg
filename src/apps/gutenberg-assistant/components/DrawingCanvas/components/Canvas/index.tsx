@@ -35,16 +35,21 @@ export const Canvas = ({
     };
 
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current;
         const container = containerRef.current;
-        if (!container) return;
+        if (!container || !canvas) return;
 
-        const rect = container.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
-        setMousePosition({ x, y });
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
+        // Display position (not scaled) for cursor
+        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         onDraw(e);
-    }, [onDraw]);
+    }, [onDraw, canvasRef]);
 
     const handleMouseEnter = useCallback(() => {
         setShowCursor(true);

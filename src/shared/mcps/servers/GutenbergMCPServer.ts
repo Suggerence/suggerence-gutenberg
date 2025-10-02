@@ -47,7 +47,6 @@ export class GutenbergMCPServer {
         generateImageTool,
         generateEditedImageTool,
         generateBlocksFromCanvasTool,
-        // getAvailableBlocksTool,
         getBlockSchemaTool,
         undoTool,
         redoTool
@@ -78,9 +77,6 @@ export class GutenbergMCPServer {
 
                 case 'generate_image':
                     return generateImage(args.prompt, args.alt_text);
-
-                // case 'generate_image_with_inputs':
-                //     return generateImageWithInputs(args.prompt, args.input_images, args.alt_text);
 
                 case 'generate_edited_image':
                     return generateEditedImage(args.prompt, args.image_url, args.alt_text);

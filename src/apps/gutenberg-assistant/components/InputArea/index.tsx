@@ -26,6 +26,12 @@ export const InputArea = () => {
     const { addContext } = useContextStore();
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const isServerReadyRef = useRef(isGutenbergServerReady);
+
+    // Keep ref updated
+    useEffect(() => {
+        isServerReadyRef.current = isGutenbergServerReady;
+    }, [isGutenbergServerReady]);
     
     useEffect(() => {
         if (!isLoading) {
@@ -37,36 +43,9 @@ export const InputArea = () => {
         inputRef.current?.focus();
     }, []);
 
-    const handleSendMessage = async () => {
-        if (!inputValue.trim() || isLoading) return;
-
-        const userMessage: MCPClientMessage = {
-            role: 'user',
-            content: inputValue,
-            date: new Date().toISOString()
-        };
-
-        addMessage(userMessage);
-        setInputValue('');
-        setIsLoading(true);
-
-        try {
-            await handleNewMessage([...messages, userMessage]);
-        } catch (error) {
-            const errorMessage: MCPClientMessage = {
-                role: 'assistant',
-                content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-                date: new Date().toISOString()
-            };
-
-            addMessage(errorMessage);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleNewMessage = async (currentMessages: MCPClientMessage[] = messages) => {
-        if (!isGutenbergServerReady) {
+    const handleNewMessage = useCallback(async (currentMessages: MCPClientMessage[] = messages) => {
+        if (!isServerReadyRef.current) {
+            console.error('Server not ready!', { isGutenbergServerReady: isServerReadyRef.current });
             throw new Error('Gutenberg MCP server not ready');
         }
 
@@ -130,7 +109,60 @@ export const InputArea = () => {
                 aiModel: defaultModel.id
             });
         }
+    }, [getGutenbergTools, callGutenbergTool, callAI, parseAIResponse, addMessage, setLastMessage]);
+
+    const handleSendMessage = async () => {
+        if (!inputValue.trim() || isLoading) return;
+
+        const userMessage: MCPClientMessage = {
+            role: 'user',
+            content: inputValue,
+            date: new Date().toISOString()
+        };
+
+        addMessage(userMessage);
+        setInputValue('');
+        setIsLoading(true);
+
+        try {
+            await handleNewMessage([...messages, userMessage]);
+        } catch (error) {
+            console.error('Send message error:', error);
+            const errorMessage: MCPClientMessage = {
+                role: 'assistant',
+                content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                date: new Date().toISOString()
+            };
+
+            addMessage(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
     };
+
+    const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
+        console.log('handleAudioMessage called', { isLoading, isGutenbergServerReady, audioMessage });
+        if (isLoading) return;
+
+        addMessage(audioMessage);
+        setInputValue('');
+        setIsLoading(true);
+
+        try {
+            await handleNewMessage([...messages, audioMessage]);
+        } catch (error) {
+            console.error('Audio message error:', error);
+            const errorMessage: MCPClientMessage = {
+                role: 'assistant',
+                content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                date: new Date().toISOString()
+            };
+
+            addMessage(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [isLoading, messages, addMessage, setInputValue, setIsLoading, handleNewMessage]);
 
     const handleKeyPress = (event: React.KeyboardEvent) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -176,26 +208,6 @@ export const InputArea = () => {
         addContext(imageContext);
         setIsMediaOpen(false);
     };
-
-    const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
-        addMessage(audioMessage);
-        setInputValue('');
-        setIsLoading(true);
-
-        try {
-            await handleNewMessage([...messages, audioMessage]);
-        } catch (error) {
-            const errorMessage: MCPClientMessage = {
-                role: 'assistant',
-                content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-                date: new Date().toISOString()
-            };
-
-            addMessage(errorMessage);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [messages, addMessage, setIsLoading, handleNewMessage]);
 
     return (
         <VStack spacing={0} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderTop: '1px solid #ddd' }}>
@@ -263,6 +275,7 @@ export const InputArea = () => {
                     onAudioMessage={handleAudioMessage}
                     inputValue={inputValue}
                     isLoading={isLoading}
+                    disabled={isLoading}
                     size="compact"
                 />
 

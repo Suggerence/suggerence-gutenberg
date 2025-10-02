@@ -2,12 +2,8 @@ import { select, dispatch } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { generateDynamicBlockTool, generateBlockCapabilityDescription } from '@/shared/utils/dynamic-block-tool-generator';
 import {
-    generateImageTool,
-    generateImageWithInputsTool,
-    generateEditedImageTool,
-    generateImage,
-    generateImageWithInputs,
-    generateEditedImage
+    generateImageTool, generateEditedImageTool,
+    generateImage, generateEditedImage
 } from '@/shared/mcps/tools/image-generation';
 
 export class GenericBlockMCPServer {
@@ -46,7 +42,7 @@ export class GenericBlockMCPServer {
 
                 // Add image tools for image-related blocks
                 if (this.isImageBlock(block.name)) {
-                    tools.push(generateImageTool, generateImageWithInputsTool, generateEditedImageTool);
+                    tools.push(generateImageTool, generateEditedImageTool);
                 }
             }
         }
@@ -76,10 +72,7 @@ export class GenericBlockMCPServer {
         try {
             switch (name) {
                 case 'generate_image':
-                    return generateImage(args.prompt, args.alt_text);
-
-                case 'generate_image_with_inputs':
-                    return generateImageWithInputs(args.prompt, args.input_images, args.alt_text);
+                    return generateImage(args.prompt, args.alt_text, args.input_images);
 
                 case 'generate_edited_image':
                     return generateEditedImage(args.prompt, args.image_url, args.alt_text);

@@ -2,8 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Handlers;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
+use SuggerenceGutenberg\Components\Ai\Helpers\Str;
 use SuggerenceGutenberg\Components\Ai\Concerns\CallsTools;
 use SuggerenceGutenberg\Components\Ai\Enums\ChunkType;
 use SuggerenceGutenberg\Components\Ai\Enums\FinishReason;
@@ -21,6 +20,8 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
+
 use Throwable;
 
 class Stream
@@ -115,7 +116,7 @@ class Stream
                 $finishReason !== FinishReason::Unknown ? $finishReason : null,
             );
 
-            if (data_get($data, 'type') === 'response.completed') {
+            if (Functions::data_get($data, 'type') === 'response.completed') {
                 yield new Chunk(
                     '',
                     [],
@@ -125,11 +126,11 @@ class Stream
                     [],
                     ChunkType::Meta,
                     new Usage(
-                        data_get($data, 'response.usage.input_tokens'),
-                        data_get($data, 'response.usage.output_tokens'),
+                        Functions::data_get($data, 'response.usage.input_tokens'),
+                        Functions::data_get($data, 'response.usage.output_tokens'),
                         null,
-                        data_get($data, 'response.usage.input_tokens_details.cached_tokens'),
-                        data_get($data, 'response.usage.output_tokens_details.reasoning_tokens')
+                        Functions::data_get($data, 'response.usage.input_tokens_details.cached_tokens'),
+                        Functions::data_get($data, 'response.usage.output_tokens_details.reasoning_tokens')
                     )
                 );
             }
@@ -163,14 +164,14 @@ class Stream
 
     protected function extractToolCalls($data, $toolCalls, $reasoningItems = [])
     {
-        $type = data_get($data, 'type', '');
+        $type = Functions::data_get($data, 'type', '');
 
-        if ($type === 'response.output_item.added' && data_get($data, 'item.type') === 'function_call') {
-            $index = (int) data_get($data, 'output_index', count($toolCalls));
+        if ($type === 'response.output_item.added' && Functions::data_get($data, 'item.type') === 'function_call') {
+            $index = (int) Functions::data_get($data, 'output_index', count($toolCalls));
 
-            $toolCalls[$index]['id']        = data_get($data, 'item.id');
-            $toolCalls[$index]['call_id']   = data_get($data, 'item.call_id');
-            $toolCalls[$index]['name']      = data_get($data, 'item.name');
+            $toolCalls[$index]['id']        = Functions::data_get($data, 'item.id');
+            $toolCalls[$index]['call_id']   = Functions::data_get($data, 'item.call_id');
+            $toolCalls[$index]['name']      = Functions::data_get($data, 'item.name');
             $toolCalls[$index]['arguments'] = '';
 
             if ($reasoningItems !== []) {
@@ -187,8 +188,8 @@ class Stream
         }
 
         if ($type === 'response.function_call_arguments.done') {
-            $callId     = data_get($data, 'item_id');
-            $arguments  = data_get($data, 'arguments', '');
+            $callId     = Functions::data_get($data, 'item_id');
+            $arguments  = Functions::data_get($data, 'arguments', '');
 
             foreach ($toolCalls as &$call) {
                 if (($call['id'] ?? null) === $callId) {
@@ -244,23 +245,23 @@ class Stream
 
     protected function mapToolCalls($toolCalls)
     {
-        return collect($toolCalls)
+        return Functions::collect($toolCalls)
             ->map(fn ($toolCall) => new ToolCall(
-                data_get($toolCall, 'id'),
-                data_get($toolCall, 'name'),
-                data_get($toolCall, 'arguments'),
-                data_get($toolCall, 'call_id'),
-                data_get($toolCall, 'reasoning_id'),
-                data_get($toolCall, 'reasoning_summary', [])
+                Functions::data_get($toolCall, 'id'),
+                Functions::data_get($toolCall, 'name'),
+                Functions::data_get($toolCall, 'arguments'),
+                Functions::data_get($toolCall, 'call_id'),
+                Functions::data_get($toolCall, 'reasoning_id'),
+                Functions::data_get($toolCall, 'reasoning_summary', [])
             ))
             ->toArray();
     }
 
     protected function hasToolCalls($data)
     {
-        $type = data_get($data, 'type', '');
+        $type = Functions::data_get($data, 'type', '');
 
-        if (data_get($data, 'item.type') === 'function_call') {
+        if (Functions::data_get($data, 'item.type') === 'function_call') {
             return true;
         }
 
@@ -272,19 +273,19 @@ class Stream
 
     protected function hasReasoningItems($data)
     {
-        $type = data_get($data, 'type', '');
+        $type = Functions::data_get($data, 'type', '');
         
-        return $type === 'response.output_item.done' && data_get($data, 'item.type') === 'reasoning';
+        return $type === 'response.output_item.done' && Functions::data_get($data, 'item.type') === 'reasoning';
     }
 
     protected function extractReasoningItems($data, $reasoningItems)
     {
-        if (data_get($data, 'type') === 'response.output_item.done' && data_get($data, 'item.type') === 'reasoning') {
-            $index = (int) data_get($data, 'output_index', count($reasoningItems));
+        if (Functions::data_get($data, 'type') === 'response.output_item.done' && Functions::data_get($data, 'item.type') === 'reasoning') {
+            $index = (int) Functions::data_get($data, 'output_index', count($reasoningItems));
 
             $reasoningItems[$index] = [
-                'id'        => data_get($data, 'item.id'),
-                'summary'   => data_get($data, 'item.summary', [])
+                'id'        => Functions::data_get($data, 'item.id'),
+                'summary'   => Functions::data_get($data, 'item.summary', [])
             ];
         }
 
@@ -293,23 +294,23 @@ class Stream
 
     protected function mapFinishReason($data)
     {
-        $eventType      = Str::after(data_get($data, 'type'), 'response.');
-        $lastOutputType = data_get($data, 'response.output.{last}.type');
+        $eventType      = Str::after(Functions::data_get($data, 'type'), 'response.');
+        $lastOutputType = Functions::data_get($data, 'response.output.{last}.type');
 
         return FinishReasonMap::map($eventType, $lastOutputType);
     }
 
     protected function hasReasoningSummaryDelta($data)
     {
-        $type = data_get($data, 'type', '');
+        $type = Functions::data_get($data, 'type', '');
 
         return $type === 'response.reasoning_summary_text.delta';
     }
 
     protected function extractReasoningSummaryDelta($data)
     {
-        if (data_get($data, 'type') === 'response.reasoning_summary_text.delta') {
-            return (string) data_get($data, 'delta', '');
+        if (Functions::data_get($data, 'type') === 'response.reasoning_summary_text.delta') {
+            return (string) Functions::data_get($data, 'delta', '');
         }
 
         return '';
@@ -317,8 +318,8 @@ class Stream
 
     protected function extractOutputTextDelta($data)
     {
-        if (data_get($data, 'type') === 'response.output_text.delta') {
-            return (string) data_get($data, 'delta', '');
+        if (Functions::data_get($data, 'type') === 'response.output_text.delta') {
+            return (string) Functions::data_get($data, 'delta', '');
         }
 
         return '';
@@ -335,7 +336,7 @@ class Stream
                     'model'             => $request->model(),
                     'input'             => (new MessageMap($request->messages(), $request->systemPrompts()))(),
                     'max_output_tokens' => $request->maxTokens()
-                ], Arr::whereNotNull([
+                ], Functions::where_not_null([
                     'temperature'           => $request->temperature(),
                     'top_p'                 => $request->topP(),
                     'metadata'              => $request->providerOptions('metadata'),
@@ -371,7 +372,7 @@ class Stream
 
     protected function handleErrors($data, $request)
     {
-        $code = data_get($data, 'error.code', 'unknown_error');
+        $code = Functions::data_get($data, 'error.code', 'unknown_error');
         if ($code === 'rate_limit_exceeded') {
             throw new RateLimitedException([]);
         }
@@ -380,7 +381,7 @@ class Stream
             'Sending to model %s failed. Code: %s. Message: %s',
             $request->model(),
             $code,
-            data_get($data, 'error.message', 'No error message provided')
+            Functions::data_get($data, 'error.message', 'No error message provided')
         ));
     }
 }

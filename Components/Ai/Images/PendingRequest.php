@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Images;
 
-use Illuminate\Http\Client\RequestException;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresClient;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresGeneration;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresModels;
@@ -12,8 +11,8 @@ use SuggerenceGutenberg\Components\Ai\Concerns\HasPrompts;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderOptions;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderTools;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasTools;
-use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 
+use Throwable;
 class PendingRequest
 {
     use ConfiguresClient;
@@ -32,7 +31,7 @@ class PendingRequest
 
         try {
             return $this->provider->images($request);
-        } catch (RequestException $e) {
+        } catch (Throwable $e) {
             $this->provider->handleRequestException($request->model(), $e);
         }
     }

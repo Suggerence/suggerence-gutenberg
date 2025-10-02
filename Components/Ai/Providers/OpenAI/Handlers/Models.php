@@ -7,6 +7,7 @@ use SuggerenceGutenberg\Components\Ai\Models\ResponseBuilder;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Concerns\ValidatesResponse;
 use SuggerenceGutenberg\Components\Ai\Enums\Provider as ProviderName;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps\CapabilitiesMapper;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Models
 {
@@ -26,7 +27,7 @@ class Models
 
         $data = $response->json();
 
-        $models = data_get($data, 'data', []);
+        $models = Functions::data_get($data, 'data', []);
 
         foreach ($models as $model) {
             $this->responseBuilder->addModel(new Model(

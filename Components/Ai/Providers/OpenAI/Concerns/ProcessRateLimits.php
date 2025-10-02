@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Concerns;
 
-use Illuminate\Support\Carbon;
+use SuggerenceGutenberg\Components\Ai\Helpers\Time;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ProviderRateLimit;
 
 trait ProcessRateLimits
@@ -44,10 +44,10 @@ trait ProcessRateLimits
             $unit = $matches[2];
 
             return match ($unit) {
-                'ms'    => Carbon::now()->addMilliseconds($value),
-                's'     => Carbon::now()->addSeconds($value),
-                'm'     => Carbon::now()->addMinutes($value),
-                'h'     => Carbon::now()->addHours($value),
+                'ms'    => Time::fromTimestamp(Time::now())->addSeconds($value / 1000),
+                's'     => Time::fromTimestamp(Time::now())->addSeconds($value),
+                'm'     => Time::fromTimestamp(Time::now())->addMinutes($value),
+                'h'     => Time::fromTimestamp(Time::now())->addHours($value),
             };
         }
 

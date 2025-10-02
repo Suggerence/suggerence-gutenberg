@@ -3,8 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Handlers;
 
 use InvalidArgumentException;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
+use SuggerenceGutenberg\Components\Ai\Helpers\Collection;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ExtractsCitations;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ExtractsText;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ExtractsThinking;
@@ -21,6 +20,7 @@ use SuggerenceGutenberg\Components\Ai\Structured\Request as StructuredRequest;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\AssistantMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Structured
 {
@@ -83,7 +83,7 @@ class Structured
             ? new ToolStructuredStrategy(request: $request)
             : new JsonModeStructuredStrategy(request: $request);
 
-        $basePayload = Arr::whereNotNull([
+        $basePayload = Functions::where_not_null([
             'model' => $request->model(),
             'messages' => MessageMap::map($request->messages(), $request->providerOptions()),
             'system' => MessageMap::mapSystemMessages($request->systemPrompts()) ?: null,
@@ -112,19 +112,19 @@ class Structured
             steps: new Collection,
             text: $this->extractText($data),
             structured: [],
-            finishReason: FinishReasonMap::map(data_get($data, 'stop_reason', '')),
+            finishReason: FinishReasonMap::map(Functions::data_get($data, 'stop_reason', '')),
             usage: new Usage(
-                promptTokens: data_get($data, 'usage.input_tokens'),
-                completionTokens: data_get($data, 'usage.output_tokens'),
-                cacheWriteInputTokens: data_get($data, 'usage.cache_creation_input_tokens', null),
-                cacheReadInputTokens: data_get($data, 'usage.cache_read_input_tokens', null)
+                promptTokens: Functions::data_get($data, 'usage.input_tokens'),
+                completionTokens: Functions::data_get($data, 'usage.output_tokens'),
+                cacheWriteInputTokens: Functions::data_get($data, 'usage.cache_creation_input_tokens', null),
+                cacheReadInputTokens: Functions::data_get($data, 'usage.cache_read_input_tokens', null)
             ),
             meta: new Meta(
-                id: data_get($data, 'id'),
-                model: data_get($data, 'model'),
+                id: Functions::data_get($data, 'id'),
+                model: Functions::data_get($data, 'model'),
                 rateLimits: $this->processRateLimits($this->httpResponse)
             ),
-            additionalContent: Arr::whereNotNull([
+            additionalContent: Functions::where_not_null([
                 'citations' => $this->extractCitations($data),
                 ...$this->extractThinking($data),
             ])

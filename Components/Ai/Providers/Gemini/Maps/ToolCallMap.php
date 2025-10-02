@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps;
 
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ToolCallMap
 {
@@ -13,9 +14,9 @@ class ToolCallMap
         }
 
         return array_map(fn ($toolCall) => new ToolCall(
-            data_get($toolCall, 'functionCall.name'),
-            data_get($toolCall, 'functionCall.name'),
-            data_get($toolCall, 'functionCall.args')
+            Functions::data_get($toolCall, 'functionCall.name'),
+            Functions::data_get($toolCall, 'functionCall.name'),
+            Functions::data_get($toolCall, 'functionCall.args')
         ), $toolCalls);
     }
 }

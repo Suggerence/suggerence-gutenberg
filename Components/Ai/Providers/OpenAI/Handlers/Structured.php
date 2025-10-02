@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Handlers;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Concerns\ExtractsCitations;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Concerns\MapsFinishReason;
@@ -17,6 +16,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
 use SuggerenceGutenberg\Components\Ai\Enums\StructuredMode;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Support\StructuredModeResolver;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Structured
 {
@@ -44,10 +44,10 @@ class Structured
 
         $data = $response->json();
 
-        $this->handleRefusal(data_get($data, 'output.{last}.content.0', []));
+        $this->handleRefusal(Functions::data_get($data, 'output.{last}.content.0', []));
 
         $responseMessage = new AssistantMessage(
-            data_get($data, 'output.{last}.content.0.text') ?? '',
+            Functions::data_get($data, 'output.{last}.content.0.text') ?? '',
         );
 
         $request->addMessage($responseMessage);
@@ -60,23 +60,23 @@ class Structured
     protected function addStep($data, $request, $clientResponse)
     {
         $this->responseBuilder->addStep(new Step(
-            data_get($data, 'output.{last}.content.0.text') ?? '',
+            Functions::data_get($data, 'output.{last}.content.0.text') ?? '',
             $this->mapFinishReason($data),
             new Usage(
-                data_get($data, 'usage.input_tokens', 0) - data_get($data, 'usage.input_tokens_details.cached_tokens', 0),
-                data_get($data, 'usage.output_tokens'),
+                Functions::data_get($data, 'usage.input_tokens', 0) - Functions::data_get($data, 'usage.input_tokens_details.cached_tokens', 0),
+                Functions::data_get($data, 'usage.output_tokens'),
                 0,
-                data_get($data, 'usage.input_tokens_details.cached_tokens'),
-                data_get($data, 'usage.output_token_details.reasoning_tokens')
+                Functions::data_get($data, 'usage.input_tokens_details.cached_tokens'),
+                Functions::data_get($data, 'usage.output_token_details.reasoning_tokens')
             ),
             new Meta(
-                data_get($data, 'id'),
-                data_get($data, 'model'),
+                Functions::data_get($data, 'id'),
+                Functions::data_get($data, 'model'),
                 $this->processRateLimits($clientResponse)
             ),
             $request->messages(),
             $request->systemPrompts(),
-            Arr::whereNotNull([
+            Functions::where_not_null([
                 'citations' => $this->extractCitations($data)
             ])
         ));
@@ -90,7 +90,7 @@ class Structured
                 'model'             => $request->model(),
                 'input'             => (new MessageMap($request->messages(), $request->systemPrompts()))(),
                 'max_output_tokens' => $request->maxTokens()
-            ], Arr::whereNotNull([
+            ], Functions::where_not_null([
                 'temperature'           => $request->temperature(),
                 'top_p'                 => $request->topP(),
                 'metadata'              => $request->providerOptions('metadata'),
@@ -123,7 +123,7 @@ class Structured
             throw new Exception(sprintf('%s model does not support structured mode', $request->model()));
         }
 
-        $responseFormat = Arr::whereNotNull([
+        $responseFormat = Functions::where_not_null([
             'type'      => 'json_schema',
             'name'      => $request->schema()->name(),
             'schema'    => $request->schema()->toArray(),
@@ -146,7 +146,7 @@ class Structured
 
     protected function handleRefusal($message)
     {
-        if (data_get($message, 'type') === 'refusal') {
+        if (Functions::data_get($message, 'type') === 'refusal') {
             throw new Exception(sprintf('OpenAI Refusal: %s', $message['refusal'] ?? 'Reason unknown'));
         }
     }

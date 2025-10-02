@@ -2,7 +2,8 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\ValueObjects;
 
-use Illuminate\Support\Carbon;
+use SuggerenceGutenberg\Components\Ai\Helpers\Time;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class GeminiCachedObject
 {
@@ -17,9 +18,9 @@ class GeminiCachedObject
     {
         return new self(
             $model,
-            data_get($response, 'name', ''),
-            data_get($response, 'usageMetadata.totalTokenCount', 0),
-            Carbon::parse(data_get($response, 'expireTime'))
+            Functions::data_get($response, 'name', ''),
+            Functions::data_get($response, 'usageMetadata.totalTokenCount', 0),
+            Time::fromString(Functions::data_get($response, 'expireTime'))
         );
     }
 }

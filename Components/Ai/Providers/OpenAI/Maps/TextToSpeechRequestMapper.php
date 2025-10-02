@@ -2,9 +2,9 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Contracts\ProviderRequestMapper;
 use SuggerenceGutenberg\Components\Ai\Enums\Provider;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class TextToSpeechRequestMapper extends ProviderRequestMapper
 {
@@ -29,7 +29,7 @@ class TextToSpeechRequestMapper extends ProviderRequestMapper
 
         return array_merge(
             $baseData,
-            Arr::whereNotNull($supportedOptions),
+            Functions::where_not_null($supportedOptions),
             array_diff_key($providerOptions, $supportedOptions)
         );
     }

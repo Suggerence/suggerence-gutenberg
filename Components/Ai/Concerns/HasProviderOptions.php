@@ -2,6 +2,8 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Concerns;
 
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
+
 trait HasProviderOptions
 {
     protected $providerOptions;
@@ -19,6 +21,6 @@ trait HasProviderOptions
             return $this->providerOptions;
         }
 
-        return data_get($this->providerOptions, $valuePath, null);
+        return Functions::data_get($this->providerOptions, $valuePath, null);
     }
 }

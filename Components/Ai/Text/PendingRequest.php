@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Text;
 
-use Illuminate\Http\Client\RequestException;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresClient;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresGeneration;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresModels;
@@ -15,6 +14,8 @@ use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderTools;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasTools;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\UserMessage;
+
+use Throwable;
 
 class PendingRequest
 {
@@ -35,7 +36,7 @@ class PendingRequest
 
         try {
             return $this->provider->text( $request );
-        } catch ( RequestException $e ) {
+        } catch ( Throwable $e ) {
             $this->provider->handleRequestException( $request->model(), $e );
         }
     }
@@ -50,7 +51,7 @@ class PendingRequest
             foreach( $chunks as $chunk ) {
                 yield $chunk;
             }
-        } catch ( RequestException $e ) {
+        } catch ( Throwable $e ) {
             $this->provider->handleRequestException( $request->model(), $e );
         }
     }

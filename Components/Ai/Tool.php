@@ -8,7 +8,6 @@ use Error;
 use Throwable;
 use InvalidArgumentException;
 use TypeError;
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderOptions;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\Schema\ArraySchema;
@@ -17,6 +16,7 @@ use SuggerenceGutenberg\Components\Ai\Schema\EnumSchema;
 use SuggerenceGutenberg\Components\Ai\Schema\NumberSchema;
 use SuggerenceGutenberg\Components\Ai\Schema\ObjectSchema;
 use SuggerenceGutenberg\Components\Ai\Schema\StringSchema;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Tool
 {
@@ -143,7 +143,7 @@ class Tool
 
     public function parametersAsArray()
     {
-        return Arr::mapWithKeys($this->parameters, fn ($schema, $name) => [$name => $schema->toArray()]);
+        return Functions::map_with_keys($this->parameters, fn ($schema, $name) => [$name => $schema->toArray()]);
     }
 
     public function name()
@@ -220,7 +220,7 @@ class Tool
         
         // Handle nullable types
         if (is_array($type)) {
-            $type = collect($type)->filter(fn($t) => $t !== 'null')->first();
+            $type = Functions::collect($type)->filter(fn($t) => $t !== 'null')->first();
         }
         
         return match ($type) {
@@ -346,11 +346,11 @@ class Tool
 
     protected function formatExpectedParameters()
     {
-        return collect($this->parameters)
+        return Functions::collect($this->parameters)
             ->map(fn($param): string => sprintf(
                 '%s (%s%s)',
                 $param->name(),
-                class_basename($param),
+                Functions::class_basename($param),
                 in_array($param->name(), $this->requiredParameters) ? ', required' : ''
             ))
             ->join(', ');

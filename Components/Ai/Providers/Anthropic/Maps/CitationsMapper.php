@@ -2,12 +2,11 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Maps;
 
-use Illuminate\Support\Arr;
-
 use SuggerenceGutenberg\Components\Ai\ValueObjects\MessagePartWithCitations;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Citation;
 use SuggerenceGutenberg\Components\Ai\Enums\Citations\CitationSourceType;
 use SuggerenceGutenberg\Components\Ai\Enums\Citations\CitationSourcePositionType;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 use InvalidArgumentException;
 
@@ -62,8 +61,8 @@ class CitationsMapper
             $sourcePositionType,
             $startIndex,
             $endIndex,
-            Arr::whereNotNull([
-                'encrypted_index' => data_get($citationData, 'encrypted_index')
+            Functions::where_not_null([
+                'encrypted_index' => Functions::data_get($citationData, 'encrypted_index')
             ])
         );
     }
@@ -138,7 +137,7 @@ class CitationsMapper
 
             $result['title']    = $citation->sourceTitle;
         }
-        if ($index = data_get($citation->additionalContent, 'encrypted_index')) {
+        if ($index = Functions::data_get($citation->additionalContent, 'encrypted_index')) {
             $result['encrypted_index'] = $index;
         }
 

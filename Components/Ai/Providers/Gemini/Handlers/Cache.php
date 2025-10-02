@@ -2,9 +2,9 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Handlers;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps\MessageMap;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\ValueObjects\GeminiCachedObject;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Cache
 {
@@ -23,7 +23,7 @@ class Cache
 
     protected function sendRequest()
     {
-        $request = Arr::whereNotNull([
+        $request = Functions::where_not_null([
             'model' => "models/{$this->model}",
             ...(new MessageMap($this->messages, $this->systemPrompts))(),
             'ttl'   => $this->ttl . 's'

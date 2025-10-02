@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Handlers;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns\ProcessesRateLimits as ConcernsProcessesRateLimits;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Concerns\ValidatesResponse;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
@@ -11,6 +10,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
 use SuggerenceGutenberg\Components\Ai\Audio\Response as AudioResponse;
 use SuggerenceGutenberg\Components\Ai\Audio\TextResponse;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\GeneratedAudio;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Audio
 {
@@ -48,7 +48,7 @@ class Audio
             )
             ->post(
                 'audio/transcriptions',
-                Arr::whereNotNull([
+                Functions::where_not_null([
                     'model'             => $request->model(),
                     'language'          => $request->providerOptions('language') ?? null,
                     'prompt'            => $request->providerOptions('prompt') ?? null,

@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Handlers;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Concerns\CallsTools;
 use SuggerenceGutenberg\Components\Ai\Enums\FinishReason;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
@@ -19,6 +18,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\AssistantMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Text
 {
@@ -39,17 +39,17 @@ class Text
 
         $data = $response->json();
 
-        $isToolCall = !empty(data_get($data, 'candidates.0.content.parts.0.functionCall'));
+        $isToolCall = !empty(Functions::data_get($data, 'candidates.0.content.parts.0.functionCall'));
 
         $responseMessage = new AssistantMessage(
-            data_get($data, 'candidates.0.content.parts.0.text') ?? '',
-            $isToolCall ? ToolCallMap::map(data_get($data, 'candidates.0.content.parts', [])) : [],
+            Functions::data_get($data, 'candidates.0.content.parts.0.text') ?? '',
+            $isToolCall ? ToolCallMap::map(Functions::data_get($data, 'candidates.0.content.parts', [])) : [],
         );
 
         $request->addMessage($responseMessage);
 
         $finishReason = FinishReasonMap::map(
-            data_get($data, 'candidates.0.finishReason'),
+            Functions::data_get($data, 'candidates.0.finishReason'),
             $isToolCall
         );
 
@@ -64,11 +64,11 @@ class Text
     {
         $providerOptions = $request->providerOptions();
 
-        $thinkingConfig = Arr::whereNotNull([
+        $thinkingConfig = Functions::where_not_null([
             'thinkingBudget' => $providerOptions['thinkingBudget'] ?? null
         ]);
 
-        $generationConfig = Arr::whereNotNull([
+        $generationConfig = Functions::where_not_null([
             'temperature'       => $request->temperature(),
             'topP'              => $request->topP(),
             'maxOutputTokens'   => $request->maxTokens(),
@@ -83,7 +83,7 @@ class Text
 
         if ($request->providerTools() !== []) {
             $tools = [
-                Arr::mapWithKeys(
+                Functions::map_with_keys(
                     $request->providerTools(),
                     fn ($providerTool) => [$providerTool->type => (object) []]
                 )
@@ -96,7 +96,7 @@ class Text
 
         return $this->client->post(
             "models/{$request->model()}:generateContent",
-            Arr::whereNotNull([
+            Functions::where_not_null([
                 ...(new MessageMap($request->messages(), $request->systemPrompts()))(),
                 'cachedContent'     => $providerOptions['cachedContentName'] ?? null,
                 'generationConfig'  => $generationConfig !== [] ? $generationConfig : null,
@@ -118,7 +118,7 @@ class Text
     {
         $toolResults = $this->callTools(
             $request->tools(),
-            ToolCallMap::map(data_get($data, 'candidates.0.content.parts', []))
+            ToolCallMap::map(Functions::data_get($data, 'candidates.0.content.parts', []))
         );
 
         $request->addMessage(new ToolResultMessage($toolResults));
@@ -142,29 +142,29 @@ class Text
         $providerOptions = $request->providerOptions();
 
         $this->responseBuilder->addStep(new Step(
-            data_get($data, 'candidates.0.content.parts.0.text') ?? '',
+            Functions::data_get($data, 'candidates.0.content.parts.0.text') ?? '',
             $finishReason,
-            $finishReason === FinishReason::ToolCalls ? ToolCallMap::map(data_get($data, 'candidates.0.content.parts', [])) : [],
+            $finishReason === FinishReason::ToolCalls ? ToolCallMap::map(Functions::data_get($data, 'candidates.0.content.parts', [])) : [],
             $toolResults,
             new Usage(
                 isset($providerOptions['cachedContentName'])
-                    ? (data_get($data, 'usageMetadata.promptTokenCount', 0) - data_get($data, 'usageMetadata.cachedContentTokenCount', 0))
-                    : data_get($data, 'usageMetadata.promptTokenCount', 0),
-                data_get($data, 'usageMetadata.candidatesTokenCount', 0),
+                    ? (Functions::data_get($data, 'usageMetadata.promptTokenCount', 0) - Functions::data_get($data, 'usageMetadata.cachedContentTokenCount', 0))
+                    : Functions::data_get($data, 'usageMetadata.promptTokenCount', 0),
+                Functions::data_get($data, 'usageMetadata.candidatesTokenCount', 0),
                 null,
-                data_get($data, 'usageMetadata.cachedContentTokenCount', null),
-                data_get($data, 'usageMetadata.thoughtsTokenCount', null)
+                Functions::data_get($data, 'usageMetadata.cachedContentTokenCount', null),
+                Functions::data_get($data, 'usageMetadata.thoughtsTokenCount', null)
             ),
             new Meta(
-                data_get($data, 'id', ''),
-                data_get($data, 'modelVersion')
+                Functions::data_get($data, 'id', ''),
+                Functions::data_get($data, 'modelVersion')
             ),
             $request->messages(),
             $request->systemPrompts(),
-            Arr::whereNotNull([
-                'citations'         => CitationMapper::mapFromGemini(data_get($data, 'candidates.0', [])) ?: null,
-                'searchEntryPoint'  => data_get($data, 'candidates.0.groundingMetadata.searchEntryPoint', null),
-                'searchQueries'     => data_get($data, 'candidates.0.groundingMetadata.webSearchQueries', null),
+            Functions::where_not_null([
+                'citations'         => CitationMapper::mapFromGemini(Functions::data_get($data, 'candidates.0', [])) ?: null,
+                'searchEntryPoint'  => Functions::data_get($data, 'candidates.0.groundingMetadata.searchEntryPoint', null),
+                'searchQueries'     => Functions::data_get($data, 'candidates.0.groundingMetadata.webSearchQueries', null),
             ])
         ));
     }

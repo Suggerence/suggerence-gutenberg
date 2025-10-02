@@ -4,7 +4,8 @@ namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Maps;
 
 use SuggerenceGutenberg\Components\Ai\Contracts\ProviderMediaMapper;
 use SuggerenceGutenberg\Components\Ai\Enums\Provider;
-use Illuminate\Support\Str;
+use SuggerenceGutenberg\Components\Ai\Helpers\Str;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class DocumentMapper extends ProviderMediaMapper
 {
@@ -25,7 +26,7 @@ class DocumentMapper extends ProviderMediaMapper
             'title' => $this->media->documentTitle(),
             'context' => $providerOptions['context'] ?? null,
             'cache_control' => $this->cacheControl,
-            'citations' => data_get($this->requestProviderOptions, 'citations', data_get($providerOptions, 'citations', false))
+            'citations' => Functions::data_get($this->requestProviderOptions, 'citations', Functions::data_get($providerOptions, 'citations', false))
                 ? ['enabled' => true]
                 : null,
         ];

@@ -4,7 +4,6 @@ namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Handlers;
 
 use Generator;
 use Throwable;
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Concerns\CallsTools;
 use SuggerenceGutenberg\Components\Ai\Enums\ChunkType;
 use SuggerenceGutenberg\Components\Ai\Exceptions\ChunkDecodeException;
@@ -21,6 +20,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolResult;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Stream
 {
@@ -94,9 +94,9 @@ class Stream
     protected function handleMessageStart($response, $chunk)
     {
         $this->state
-            ->setModel(data_get($chunk, 'message.model', ''))
-            ->setRequestId(data_get($chunk, 'message.id', ''))
-            ->setUsage(data_get($chunk, 'message.usage', []));
+            ->setModel(Functions::data_get($chunk, 'message.model', ''))
+            ->setRequestId(Functions::data_get($chunk, 'message.id', ''))
+            ->setUsage(Functions::data_get($chunk, 'message.usage', []));
 
         return new Chunk(
             '',
@@ -112,8 +112,8 @@ class Stream
 
     protected function handleContentBlockStart($chunk)
     {
-        $blockType = data_get($chunk, 'content_block.type');
-        $blockIndex = (int) data_get($chunk, 'index');
+        $blockType = Functions::data_get($chunk, 'content_block.type');
+        $blockIndex = (int) Functions::data_get($chunk, 'index');
 
         $this->state
             ->setTempContentBlockType($blockType)
@@ -121,8 +121,8 @@ class Stream
 
         if ($blockType === 'tool_use') {
             $this->state->addToolCall($blockIndex, [
-                'id' => data_get($chunk, 'content_block.id'),
-                'name' => data_get($chunk, 'content_block.name'),
+                'id' => Functions::data_get($chunk, 'content_block.id'),
+                'name' => Functions::data_get($chunk, 'content_block.name'),
                 'input' => '',
             ]);
         }
@@ -132,7 +132,7 @@ class Stream
 
     protected function handleContentBlockDelta($chunk)
     {
-        $deltaType = data_get($chunk, 'delta.type');
+        $deltaType = Functions::data_get($chunk, 'delta.type');
         $blockType = $this->state->tempContentBlockType();
 
         if ($blockType === 'text') {
@@ -169,7 +169,7 @@ class Stream
         }
 
         if ($deltaType === 'citations_delta') {
-            $this->state->setTempCitation(data_get($chunk, 'delta.citation', null));
+            $this->state->setTempCitation(Functions::data_get($chunk, 'delta.citation', null));
         }
 
         return null;
@@ -196,14 +196,14 @@ class Stream
     
     protected function extractTextDelta($chunk)
     {
-        $textDelta = data_get($chunk, 'delta.text', '');
+        $textDelta = Functions::data_get($chunk, 'delta.text', '');
 
         if (empty($textDelta)) {
-            $textDelta = data_get($chunk, 'delta.text_delta.text', '');
+            $textDelta = Functions::data_get($chunk, 'delta.text_delta.text', '');
         }
 
         if (empty($textDelta)) {
-            return data_get($chunk, 'text', '');
+            return Functions::data_get($chunk, 'text', '');
         }
 
         return $textDelta;
@@ -211,10 +211,10 @@ class Stream
 
     protected function handleToolInputDelta($chunk)
     {
-        $jsonDelta = data_get($chunk, 'delta.partial_json', '');
+        $jsonDelta = Functions::data_get($chunk, 'delta.partial_json', '');
 
         if (empty($jsonDelta)) {
-            $jsonDelta = data_get($chunk, 'delta.input_json_delta.partial_json', '');
+            $jsonDelta = Functions::data_get($chunk, 'delta.input_json_delta.partial_json', '');
         }
 
         $blockIndex = $this->state->tempContentBlockIndex();
@@ -229,10 +229,10 @@ class Stream
     protected function handleThinkingBlockDelta($chunk, $deltaType)
     {
         if ($deltaType === 'thinking_delta') {
-            $thinkingDelta = data_get($chunk, 'delta.thinking', '');
+            $thinkingDelta = Functions::data_get($chunk, 'delta.thinking', '');
 
             if (empty($thinkingDelta)) {
-                $thinkingDelta = data_get($chunk, 'delta.thinking_delta.thinking', '');
+                $thinkingDelta = Functions::data_get($chunk, 'delta.thinking_delta.thinking', '');
             }
 
             $this->state->appendThinking($thinkingDelta);
@@ -245,10 +245,10 @@ class Stream
         }
 
         if ($deltaType === 'signature_delta') {
-            $signatureDelta = data_get($chunk, 'delta.signature', '');
+            $signatureDelta = Functions::data_get($chunk, 'delta.signature', '');
 
             if (empty($signatureDelta)) {
-                $signatureDelta = data_get($chunk, 'delta.signature_delta.signature', '');
+                $signatureDelta = Functions::data_get($chunk, 'delta.signature_delta.signature', '');
             }
 
             $this->state->appendThinkingSignature($signatureDelta);
@@ -266,15 +266,15 @@ class Stream
 
         if ($blockType === 'tool_use' && $blockIndex !== null && isset($this->state->toolCalls()[$blockIndex])) {
             $toolCallData = $this->state->toolCalls()[$blockIndex];
-            $input = data_get($toolCallData, 'input');
+            $input = Functions::data_get($toolCallData, 'input');
 
             if (is_string($input) && $this->isValidJson($input)) {
                 $input = json_decode($input, true);
             }
 
             $toolCall = new ToolCall(
-                id: data_get($toolCallData, 'id'),
-                name: data_get($toolCallData, 'name'),
+                id: Functions::data_get($toolCallData, 'id'),
+                name: Functions::data_get($toolCallData, 'name'),
                 arguments: $input
             );
 
@@ -292,13 +292,13 @@ class Stream
 
     protected function handleMessageDelta($chunk, $request, $depth)
     {
-        $stopReason = data_get($chunk, 'delta.stop_reason', '');
+        $stopReason = Functions::data_get($chunk, 'delta.stop_reason', '');
 
         if (! empty($stopReason)) {
             $this->state->setStopReason($stopReason);
         }
 
-        $usage = data_get($chunk, 'usage');
+        $usage = Functions::data_get($chunk, 'usage');
 
         if ($usage) {
             $this->state->setUsage($usage);
@@ -351,14 +351,14 @@ class Stream
     protected function mapToolCalls()
     {
         return array_values(array_map(function ($toolCall) {
-            $input = data_get($toolCall, 'input');
+            $input = Functions::data_get($toolCall, 'input');
             if (is_string($input) && $this->isValidJson($input)) {
                 $input = json_decode($input, true);
             }
 
             return new ToolCall(
-                id: data_get($toolCall, 'id'),
-                name: data_get($toolCall, 'name'),
+                id: Functions::data_get($toolCall, 'id'),
+                name: Functions::data_get($toolCall, 'name'),
                 arguments: $input
             );
         }, $this->state->toolCalls()));
@@ -523,7 +523,7 @@ class Stream
     {
         return $this->client
             ->withOptions(['stream' => true])
-            ->post('messages', Arr::whereNotNull([
+            ->post('messages', Functions::where_not_null([
                 'stream' => true,
                 ...Text::buildHttpRequestPayload($request),
             ]));
@@ -552,15 +552,15 @@ class Stream
 
     protected function handleError($chunk)
     {
-        if (data_get($chunk, 'error.type') === 'overloaded_error') {
+        if (Functions::data_get($chunk, 'error.type') === 'overloaded_error') {
             throw new ProviderOverloadedException('Anthropic');
         }
 
         throw Exception::providerResponseError(vsprintf(
             'Anthropic Error: [%s] %s',
             [
-                data_get($chunk, 'error.type', 'unknown'),
-                data_get($chunk, 'error.message'),
+                Functions::data_get($chunk, 'error.type', 'unknown'),
+                Functions::data_get($chunk, 'error.message'),
             ]
         ));
     }

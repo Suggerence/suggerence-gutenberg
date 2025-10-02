@@ -2,19 +2,19 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Concerns;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps\CitationsMapper;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 trait ExtractsCitations
 {
     protected function extractCitations($responseData)
     {
-        $contentBlock = data_get($responseData, 'output.{last}.content.{last}', []);
+        $contentBlock = Functions::data_get($responseData, 'output.{last}.content.{last}', []);
 
-        if (data_get($contentBlock, 'annotations', []) === []) {
+        if (Functions::data_get($contentBlock, 'annotations', []) === []) {
             return null;
         }
 
-        return Arr::whereNotNull([CitationsMapper::mapFromOpenAI($contentBlock)]);
+        return Functions::where_not_null([CitationsMapper::mapFromOpenAI($contentBlock)]);
     }
 }

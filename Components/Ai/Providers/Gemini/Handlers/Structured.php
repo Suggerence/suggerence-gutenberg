@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Gemini\Handlers;
 
-use Illuminate\Support\Arr;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Concerns\ValidatesResponse;
 use SuggerenceGutenberg\Components\Ai\Providers\Gemini\Maps\FinishReasonMap;
@@ -13,6 +12,7 @@ use SuggerenceGutenberg\Components\Ai\Structured\Step;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\AssistantMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Usage;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Structured
 {
@@ -31,7 +31,7 @@ class Structured
 
         $this->validateResponse($data);
 
-        $responseMessage = new AssistantMessage(data_get($data, 'candidates.0.content.parts.0.text') ?? '');
+        $responseMessage = new AssistantMessage(Functions::data_get($data, 'candidates.0.content.parts.0.text') ?? '');
 
         $request->addMessage($responseMessage);
 
@@ -46,16 +46,16 @@ class Structured
 
         $response = $this->client->post(
             "models/{$request->model()}:generateContent",
-            Arr::whereNotNull([
+            Functions::where_not_null([
                 ...(new MessageMap($request->messages(), $request->systemPrompts()))(),
                 'cachedContent'     => $providerOptions['cachedContentName'] ?? null,
-                'generationConfig'  => Arr::whereNotNull([
+                'generationConfig'  => Functions::where_not_null([
                     'response_mime_type'    => 'application/json',
                     'response_schema'       => (new SchemaMap($request->schema()))->toArray(),
                     'temperature'           => $request->temperature(),
                     'topP'                  => $request->topP(),
                     'maxOutputTokens'       => $request->maxTokens(),
-                    'thinkingConfig'        => Arr::whereNotNull([
+                    'thinkingConfig'        => Functions::where_not_null([
                         'thinkingBudget'      => $providerOptions['thinkingBudget'] ?? null
                     ]) ?? null
                 ]),
@@ -68,24 +68,24 @@ class Structured
 
     protected function validateResponse($data)
     {
-        if (!$data || data_get($data, 'error')) {
+        if (!$data || Functions::data_get($data, 'error')) {
             throw Exception::providerResponseError(vsprintf(
                 'Gemini Error: [%s] %s',
                 [
-                    data_get($data, 'error.code', 'unknown'),
-                    data_get($data, 'error.message', 'unknown'),
+                    Functions::data_get($data, 'error.code', 'unknown'),
+                    Functions::data_get($data, 'error.message', 'unknown'),
                 ]
             ));
         }
 
-        $finishReason   = data_get($data, 'candidates.0.finishReason');
-        $content        = data_get($data, 'candidates.0.content.parts.0.text', '');
-        $thoughtTokens  = data_get($data, 'usageMetadata.thoughtsTokenCount', 0);
+        $finishReason   = Functions::data_get($data, 'candidates.0.finishReason');
+        $content        = Functions::data_get($data, 'candidates.0.content.parts.0.text', '');
+        $thoughtTokens  = Functions::data_get($data, 'usageMetadata.thoughtsTokenCount', 0);
 
         if ($finishReason === 'MAX_TOKENS') {
-            $promptTokens       = data_get($data, 'usageMetadata.promptTokenCount', 0);
-            $candidatesTokens   = data_get($data, 'usageMetadata.candidatesTokenCount', 0);
-            $totalTokens        = data_get($data, 'usageMetadata.totalTokenCount', 0);
+            $promptTokens       = Functions::data_get($data, 'usageMetadata.promptTokenCount', 0);
+            $candidatesTokens   = Functions::data_get($data, 'usageMetadata.candidatesTokenCount', 0);
+            $totalTokens        = Functions::data_get($data, 'usageMetadata.totalTokenCount', 0);
             $outputTokens       = $candidatesTokens - $thoughtTokens;
 
             $isEmpty            = in_array(trim((string) $content), ['', '0'], true);
@@ -109,18 +109,18 @@ class Structured
     {
         $this->responseBuilder->addStep(
             new Step(
-                data_get($data, 'candidates.0.content.parts.0.text') ?? '',
-                FinishReasonMap::map(data_get($data, 'candidates.0.finishReason')),
+                Functions::data_get($data, 'candidates.0.content.parts.0.text') ?? '',
+                FinishReasonMap::map(Functions::data_get($data, 'candidates.0.finishReason')),
                 new Usage(
-                    data_get($data, 'usageMetadata.promptTokenCount', 0),
-                    data_get($data, 'usageMetadata.candidatesTokenCount', 0),
+                    Functions::data_get($data, 'usageMetadata.promptTokenCount', 0),
+                    Functions::data_get($data, 'usageMetadata.candidatesTokenCount', 0),
                     null,
-                    data_get($data, 'usageMetadata.cachedContentTokenCount', null),
-                    data_get($data, 'usageMetadata.thoughtsTokenCount', null)
+                    Functions::data_get($data, 'usageMetadata.cachedContentTokenCount', null),
+                    Functions::data_get($data, 'usageMetadata.thoughtsTokenCount', null)
                 ),
                 new Meta(
-                    data_get($data, 'id', ''),
-                    data_get($data, 'modelVersion')
+                    Functions::data_get($data, 'id', ''),
+                    Functions::data_get($data, 'modelVersion')
                 ),
                 $request->messages(),
                 $request->systemPrompts()

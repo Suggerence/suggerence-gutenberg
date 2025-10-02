@@ -3,9 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\ValueObjects\Media;
 
 use finfo;
-use Illuminate\Support\Facades\File;
 use SuggerenceGutenberg\Components\Ai\Helpers\WPClient;
-use Illuminate\Support\Facades\Storage;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderOptions;
 
 use InvalidArgumentException;
@@ -55,7 +53,7 @@ class Media
             throw new InvalidArgumentException("$path is empty");
         }
 
-        $mimeType = File::mimeType($path);
+        $mimeType = mime_content_type($path);
 
         if ($mimeType === false) {
             throw new InvalidArgumentException("Could not determine mime type for $path");
@@ -70,26 +68,23 @@ class Media
         return $instance;
     }
 
-    public static function fromStoragePath($path, $diskName)
+    public static function fromStoragePath($path, $diskName = null)
     {
-        $disk = Storage::disk($diskName);
-
-        $diskName ??= 'default';
-
-        if ($disk->exists($path) === false) {
-            throw new InvalidArgumentException("$path does not exist on the '$diskName' disk");
+        // Convert to absolute path if it's not already
+        if (!is_file($path)) {
+            throw new InvalidArgumentException("$path does not exist");
         }
 
-        $content = $disk->get($path);
+        $content = file_get_contents($path);
 
-        if (in_array(trim($content ?? ''), ['', '0'], true)) {
-            throw new InvalidArgumentException("$path on the '$diskName' disk is empty.");
+        if ($content === false || in_array(trim($content), ['', '0'], true)) {
+            throw new InvalidArgumentException("$path is empty");
         }
 
-        $mimeType = $disk->mimeType($path);
+        $mimeType = mime_content_type($path);
 
         if ($mimeType === false) {
-            throw new InvalidArgumentException("Could not determine mime type for {$path} on the '$diskName' disk");
+            throw new InvalidArgumentException("Could not determine mime type for {$path}");
         }
 
         $instance = new static;
@@ -196,7 +191,7 @@ class Media
             $this->rawContent = file_get_contents($this->localPath) ?: null;
         }
         elseif ($this->storagePath) {
-            $this->rawContent = Storage::get($this->storagePath);
+            $this->rawContent = file_get_contents($this->storagePath) ?: null;
         }
         elseif ($this->isUrl()) {
             $this->fetchUrlContent();

@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Suggerence\Maps;
 
-use Illuminate\Support\Arr;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 use InvalidArgumentException;
 
 class ImageRequestMap
@@ -29,7 +29,7 @@ class ImageRequestMap
             }
 
             $parts[] = [
-                'inline_data' => Arr::whereNotNull([
+                'inline_data' => Functions::where_not_null([
                     'mime_type' => $providerOptions['image_mime_type'] ?? null,
                     'data'      => base64_encode($imageContent)
                 ])

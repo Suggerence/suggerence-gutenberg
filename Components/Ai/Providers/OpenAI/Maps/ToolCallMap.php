@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Components\Ai\Providers\OpenAI\Maps;
 
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class ToolCallMap
 {
@@ -13,12 +14,12 @@ class ToolCallMap
         }
 
         return array_map(fn ($toolCall) => new ToolCall(
-            data_get($toolCall, 'id'),
-            data_get($toolCall, 'name'),
-            data_get($toolCall, 'arguments'),
-            data_get($toolCall, 'call_id'),
-            data_get($reasonings, '0.id'),
-            data_get($reasonings, '0.summary')
+            Functions::data_get($toolCall, 'id'),
+            Functions::data_get($toolCall, 'name'),
+            Functions::data_get($toolCall, 'arguments'),
+            Functions::data_get($toolCall, 'call_id'),
+            Functions::data_get($reasonings, '0.id'),
+            Functions::data_get($reasonings, '0.summary')
         ), $toolCalls);
     }
 }

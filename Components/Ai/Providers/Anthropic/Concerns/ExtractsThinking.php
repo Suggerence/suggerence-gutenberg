@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Providers\Anthropic\Concerns;
 
-use Illuminate\Support\Arr;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 trait ExtractsThinking
 {
@@ -12,14 +12,14 @@ trait ExtractsThinking
             return [];
         }
 
-        $thinking = Arr::first(
-            data_get($data, 'content', []),
-            fn ($content) => data_get($content, 'type') === 'thinking'
+        $thinking = Functions::arr_first(
+            Functions::data_get($data, 'content', []),
+            fn ($content) => Functions::data_get($content, 'type') === 'thinking'
         );
 
         return [
-            'thinking'              => data_get($thinking, 'thinking'),
-            'thinking_signature'    => data_get($thinking, 'signature')
+            'thinking'              => Functions::data_get($thinking, 'thinking'),
+            'thinking_signature'    => Functions::data_get($thinking, 'signature')
         ];
     }
 }

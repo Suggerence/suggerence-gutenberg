@@ -2,7 +2,6 @@
 
 namespace SuggerenceGutenberg\Components\Ai\Structured;
 
-use Illuminate\Http\Client\RequestException;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresClient;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresModels;
 use SuggerenceGutenberg\Components\Ai\Concerns\ConfiguresProviders;
@@ -13,6 +12,8 @@ use SuggerenceGutenberg\Components\Ai\Concerns\HasProviderOptions;
 use SuggerenceGutenberg\Components\Ai\Concerns\HasSchema;
 use SuggerenceGutenberg\Components\Ai\Exceptions\Exception;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\UserMessage;
+
+use Throwable;
 
 class PendingRequest
 {
@@ -25,18 +26,18 @@ class PendingRequest
     use HasProviderOptions;
     use HasSchema;
 
-    public function asStructured(): Response
+    public function asStructured()
     {
         $request = $this->toRequest();
 
         try {
             return $this->provider->structured($request);
-        } catch (RequestException $e) {
+        } catch (Throwable $e) {
             $this->provider->handleRequestException($request->model(), $e);
         }
     }
 
-    public function toRequest(): Request
+    public function toRequest()
     {
         if ($this->messages && $this->prompt) {
             throw Exception::promptOrMessages();

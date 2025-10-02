@@ -8,6 +8,7 @@ use SuggerenceGutenberg\Components\Ai\Embeddings\Response as EmbeddingsResponse;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Embedding;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\EmbeddingsUsage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Meta;
+use SuggerenceGutenberg\Components\Ai\Helpers\Functions;
 
 class Embeddings
 {
@@ -25,11 +26,11 @@ class Embeddings
         $data = $response->json();
 
         return new EmbeddingsResponse(
-            array_map(fn ($item) => Embedding::fromArray($item['embedding']), data_get($data, 'data', [])),
-            new EmbeddingsUsage(data_get($data, 'usage.total_tokens', null)),
+            array_map(fn ($item) => Embedding::fromArray($item['embedding']), Functions::data_get($data, 'data', [])),
+            new EmbeddingsUsage(Functions::data_get($data, 'usage.total_tokens', null)),
             new Meta(
                 '',
-                data_get($data, 'model', ''),
+                Functions::data_get($data, 'model', ''),
                 $this->processRateLimits($response)
             )
         );

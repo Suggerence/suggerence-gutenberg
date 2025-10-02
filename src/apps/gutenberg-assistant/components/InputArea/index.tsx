@@ -51,12 +51,14 @@ export const InputArea = () => {
     }, []);
     
     useEffect(() => {
-        inputRef.current?.focus();
+        if (!isLoading) {
+            inputRef.current?.focus();
+        }
     }, [isLoading]);
 
-    domReady(() => {
+    useEffect(() => {
         inputRef.current?.focus();
-    });
+    }, []);
 
     // Comprehensive context calculation function
     const calculateContextUsage = useCallback(() => {

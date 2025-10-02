@@ -21,13 +21,19 @@ export const ChatInterface = () => {
     const { isGutenbergServerReady } = useGutenbergMCP();
     const { messages } = useGutenbergAssistantMessagesStore();
     const { isLoading } = useChatInterfaceStore();
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+    const callbackRef = (node: HTMLDivElement | null) => {
+        messagesEndRef.current = node;
+        if (node) {
+            node.scrollIntoView({ behavior: 'smooth' });
+        }
     };
 
-    useEffect(scrollToBottom, [messages]);
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     if (!isGutenbergServerReady) {
         return (
@@ -76,7 +82,7 @@ export const ChatInterface = () => {
                             </HStack>
                         )}
 
-                        <div ref={messagesEndRef} />
+                        <div ref={callbackRef} />
                     </VStack>
                 </div>
 

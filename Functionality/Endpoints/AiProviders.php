@@ -16,6 +16,7 @@ use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\AssistantMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\ToolResultMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\Messages\UserMessage;
 use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolResult;
+use SuggerenceGutenberg\Components\Ai\ValueObjects\ToolCall;
 use \WP_REST_Response;
 use \WP_Error;
 
@@ -187,9 +188,13 @@ class AiProviders extends BaseApiEndpoints
                 $toolResults = [];
                 
                 if (isset($message['toolCallId']) && isset($message['toolName'])) {
-                    $processedMessages[] = new UserMessage(
-                        content: 'Please execute tool ' . $message['toolCallId'] . ': ' . $message['toolName'] . ' with args ' . json_encode($message['toolArgs']),  // Empty content for tool calls
-                    );
+                    $processedMessages[] = new AssistantMessage('Calling tool ' . $message['toolName'] . ' with args ' . json_encode($message['toolArgs']), toolCalls: [
+                        new ToolCall(
+                            id: $message['toolCallId'],
+                            name: $message['toolName'],
+                            arguments: $message['toolArgs'] ?? []
+                        )
+                    ]);
 
                     $toolResult = new ToolResult(
                         toolCallId: $message['toolCallId'],
@@ -201,7 +206,7 @@ class AiProviders extends BaseApiEndpoints
                     $toolResults[] = $toolResult;
                 }
 
-                $processedMessages[] = new UserMessage('Tool result: ' . json_encode($toolResults));
+                $processedMessages[] = new ToolResultMessage($toolResults);
             }
 
             elseif ($message['role'] === 'user') {
@@ -252,6 +257,7 @@ class AiProviders extends BaseApiEndpoints
                             }
                         }
                     }
+
 
                     $processedMessages[] = new UserMessage($textContent, $additionalContent);
                 } else {

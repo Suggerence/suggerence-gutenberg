@@ -90,6 +90,7 @@ class MessageMap
                 ]),
                 ...self::mapImageParts($message->images(), $cacheControl),
                 ...self::mapDocumentParts($message->documents(), $cacheControl, $requestProviderOptions),
+                ...self::mapAudioParts($message->audios(), $cacheControl),
             ],
         ];
     }
@@ -151,6 +152,14 @@ class MessageMap
     {
         return array_map(
             fn($document) => (new DocumentMapper($document, $cacheControl, $requestProviderOptions))->toPayload(),
+            $parts
+        );
+    }
+
+    protected static function mapAudioParts($parts, $cacheControl = null)
+    {
+        return array_map(
+            fn($audio) => (new AudioMapper($audio, $cacheControl))->toPayload(),
             $parts
         );
     }

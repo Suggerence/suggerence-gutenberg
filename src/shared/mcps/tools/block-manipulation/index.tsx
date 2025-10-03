@@ -16,28 +16,28 @@ function getAvailableBlockTypes(): string[] {
 
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
-    description: 'Add any type of block to the editor',
+    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content.',
     inputSchema: {
         type: 'object',
         properties: {
             blockType: {
                 type: 'string',
-                description: 'The block type to create.',
+                description: 'The WordPress block type identifier to create. Must be a valid registered block type (e.g., "core/paragraph" for text, "core/heading" for titles, "core/image" for images, "core/button" for buttons). Use get available blocks tool to see all valid block types if unsure.',
                 enum: getAvailableBlockTypes()
             },
             attributes: {
                 type: 'object',
-                description: 'Block attributes (Depends on block type, see get_block_schema tool)',
+                description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. Use get block schema tool to see all available attributes for a specific block type.',
                 additionalProperties: true
             },
             position: {
                 type: 'string',
-                description: 'Where to insert the block relative to selected block (before, after, or end)',
+                description: 'Insertion position relative to the target block. "before" inserts above the target block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after" if not specified.',
                 enum: ['before', 'after', 'end']
             },
             targetBlockId: {
                 type: 'string',
-                description: 'ID of block to insert relative to (optional, uses selected block if not provided)'
+                description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor. Only needed when inserting relative to a specific block that is not currently selected.'
             }
         },
         required: ['blockType']
@@ -46,17 +46,17 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
 
 export const moveBlockTool: SuggerenceMCPResponseTool = {
     name: 'move_block',
-    description: 'Move a block to any position in the editor',
+    description: 'Relocates an existing block to a different position in the document. Use this when the user wants to reorder content, move a paragraph up or down, or reorganize sections. The tool maintains the block\'s content and attributes while changing only its position in the document structure.',
     inputSchema: {
         type: 'object',
         properties: {
             position: {
                 type: 'number',
-                description: 'The target position (0-based index) where to move the block'
+                description: 'The destination index in the document where the block should be moved (0-based, where 0 is the first position). The position is automatically clamped to valid bounds - values beyond the document length will move the block to the end. Example: position 0 moves to top, position 5 moves to the 6th position.'
             },
             blockId: {
                 type: 'string',
-                description: 'The client ID of the block to move (optional, uses selected block if not provided)'
+                description: 'The client ID of the block to relocate. If omitted, moves the currently selected block in the editor. Use this parameter when moving a specific block that is not currently selected.'
             }
         },
         required: ['position']
@@ -65,17 +65,17 @@ export const moveBlockTool: SuggerenceMCPResponseTool = {
 
 export const duplicateBlockTool: SuggerenceMCPResponseTool = {
     name: 'duplicate_block',
-    description: 'Duplicate a block in the editor at a specific position',
+    description: 'Creates an exact copy of an existing block, including all its content, attributes, and styling. Use this when the user wants to replicate content, create similar sections, or use an existing block as a template. The duplicated block gets a new unique ID but preserves all other properties from the original.',
     inputSchema: {
         type: 'object',
         properties: {
             blockId: {
                 type: 'string',
-                description: 'The client ID of the block to duplicate (optional, uses selected block if not provided)'
+                description: 'The client ID of the block to clone. If not provided, duplicates the currently selected block in the editor. This parameter is useful when duplicating a specific block that is not currently selected.'
             },
             position: {
                 type: 'number',
-                description: 'The target position (0-based index) where to duplicate the block (optional, after selected block if not provided)',
+                description: 'The 0-based index position where the duplicated block should be inserted. If omitted, the copy is inserted immediately after the original block. Example: position 0 inserts at the top, position 3 inserts as the 4th block.',
             }
         }
     }
@@ -83,13 +83,13 @@ export const duplicateBlockTool: SuggerenceMCPResponseTool = {
 
 export const deleteBlockTool: SuggerenceMCPResponseTool = {
     name: 'delete_block',
-    description: 'Delete a block from the editor',
+    description: 'Permanently removes a block and all its content from the document. Use this when the user wants to remove unwanted content, clear sections, or delete specific blocks. WARNING: This action is destructive and removes the block completely. The deletion can be undone using the undo tool if needed.',
     inputSchema: {
         type: 'object',
         properties: {
             blockId: {
                 type: 'string',
-                description: 'The client ID of the block to delete (optional, uses selected block if not provided)'
+                description: 'The client ID of the block to remove from the document. If not provided, deletes the currently selected block in the editor. Use this parameter to delete a specific block that is not currently selected.'
             }
         }
     }
@@ -97,31 +97,31 @@ export const deleteBlockTool: SuggerenceMCPResponseTool = {
 
 export const updateBlockTool: SuggerenceMCPResponseTool = {
     name: 'update_block',
-    description: 'Update any block using WordPress core APIs. Supports all block types and any WordPress functionality including attributes, styles, transforms.',
+    description: 'Modifies an existing block\'s properties, content, styling, or structure. This is the most versatile tool for editing blocks - use it to change text content, update attributes, apply visual styling (colors, spacing, typography), transform blocks to different types, or wrap blocks in containers. Supports all WordPress block types and styling features.',
     inputSchema: {
         type: 'object',
         properties: {
             blockId: {
                 type: 'string',
-                description: 'Block client ID (optional, uses selected block if not provided)'
+                description: 'The client ID of the block to modify. If omitted, updates the currently selected block in the editor. Use this when updating a specific block that is not selected.'
             },
             attributes: {
                 type: 'object',
-                description: 'Block attributes to update (any WordPress block attribute)',
+                description: 'Block-specific attributes to update. These are content and functional properties, NOT visual styles. Examples: {"content": "New text"} for paragraphs, {"level": 3} for heading levels, {"url": "https://..."} for links. Different block types have different attributes - use block schema tool to see available attributes. Visual styling should use the "style" parameter instead.',
                 additionalProperties: true
             },
             style: {
                 type: 'object',
-                description: 'WordPress style object for colors, spacing, borders, typography',
+                description: 'WordPress theme.json-compatible style object for visual appearance. Used for colors, spacing, borders, and typography. Structure: {"color": {"text": "#000000", "background": "#ffffff"}, "spacing": {"padding": {"top": "20px", "left": "10px"}}, "typography": {"fontSize": "18px", "fontWeight": "bold"}, "border": {"radius": "5px", "width": "2px"}}. Styles are deeply merged with existing styles, so you can update individual properties without affecting others.',
                 additionalProperties: true
             },
             transformTo: {
                 type: 'string',
-                description: 'Transform block to different type (e.g., "core/cover")'
+                description: 'Converts the block to a different block type while preserving compatible content. Example: transform "core/paragraph" to "core/heading", or "core/image" to "core/cover". The target block type must be a valid WordPress block (e.g., "core/quote", "core/list"). Use this for semantic changes like converting text to headings or simple blocks to rich containers.'
             },
             wrapIn: {
                 type: 'string',
-                description: 'Wrap block in a container block type'
+                description: 'Wraps the current block inside a container block, making it a child block. Useful for grouping blocks or adding layout containers. Example: wrapIn "core/group" to add a background or wrapIn "core/column" to place in a column layout. The target must be a valid container block type.'
             }
         }
     }
@@ -129,7 +129,7 @@ export const updateBlockTool: SuggerenceMCPResponseTool = {
 
 export const undoTool: SuggerenceMCPResponseTool = {
     name: 'undo',
-    description: 'Undo the last action in the editor',
+    description: 'Reverts the most recent change made in the editor, restoring the document to its previous state. Use this when the user wants to reverse an action, cancel changes, or step backward through edit history. Works with all editor operations including block additions, deletions, moves, and content updates. This tool has no effect if there are no actions to undo.',
     inputSchema: {
         type: 'object',
         properties: {}
@@ -138,7 +138,7 @@ export const undoTool: SuggerenceMCPResponseTool = {
 
 export const redoTool: SuggerenceMCPResponseTool = {
     name: 'redo',
-    description: 'Redo the last undone action in the editor',
+    description: 'Reapplies the most recently undone action, moving forward in the edit history. Use this when the user wants to restore a change that was undone, or step forward through the undo history. Only works after an undo operation has been performed. This tool has no effect if there are no actions to redo.',
     inputSchema: {
         type: 'object',
         properties: {}

@@ -2,17 +2,17 @@ import { select } from '@wordpress/data';
 
 export const getAvailableBlocksTool: SuggerenceMCPResponseTool = {
     name: 'get_available_blocks',
-    description: 'Get list of all available Gutenberg block types with their basic information',
+    description: 'Retrieves a comprehensive list of all WordPress Gutenberg block types registered in the current editor, including their metadata and capabilities. Use this tool when you need to discover what block types are available, explore blocks in a specific category, or determine the correct block type identifier for an add_block or update_block operation. Useful for understanding the user\'s available tools and suggesting appropriate block types for their needs.',
     inputSchema: {
         type: 'object',
         properties: {
             includeInactive: {
                 type: 'boolean',
-                description: 'Whether to include inactive block types (default: false)'
+                description: 'If true, includes deprecated and private block types in the results. If false (default), returns only active, user-facing blocks. Set to true only when you need a complete technical inventory including deprecated blocks. Most use cases should keep this false to avoid suggesting obsolete block types.'
             },
             category: {
                 type: 'string',
-                description: 'Filter blocks by category (text, media, design, widgets, theme, embed)'
+                description: 'Filters results to blocks in a specific WordPress category. Valid categories: "text" (paragraphs, headings, lists), "media" (images, videos, galleries), "design" (buttons, spacers, separators, columns), "widgets" (archives, calendars, tag clouds), "theme" (navigation, site logo, query loops), "embed" (YouTube, Twitter, etc.). Use this to narrow down results when looking for blocks with a specific purpose. Leave empty to get all blocks.'
             }
         }
     }
@@ -20,13 +20,13 @@ export const getAvailableBlocksTool: SuggerenceMCPResponseTool = {
 
 export const getBlockSchemaTool: SuggerenceMCPResponseTool = {
     name: 'get_block_schema',
-    description: 'Get detailed JSON schema and metadata for a specific block type',
+    description: 'Fetches the complete technical schema and configuration for a specific WordPress block type, including all available attributes, supported features, styling capabilities, and block relationships. Use this tool BEFORE using add_block or update_block when you need to know exactly what attributes and options are available for a particular block type. Essential for understanding block capabilities, valid attribute names and types, supported styling properties, and proper block configuration. Returns comprehensive metadata including attributes schema, supports flags, transformations, variations, and contextual information.',
     inputSchema: {
         type: 'object',
         properties: {
             blockType: {
                 type: 'string',
-                description: 'The block type name (e.g., "core/paragraph", "core/heading")',
+                description: 'The exact block type identifier to query. Must be a fully qualified block name including namespace, typically "core/block-name" for WordPress core blocks (e.g., "core/paragraph", "core/heading", "core/image", "core/button", "core/columns"). Custom blocks use their registered namespace (e.g., "my-plugin/custom-block"). Use get_available_blocks first if you\'re unsure of the exact identifier.',
                 required: true
             }
         },

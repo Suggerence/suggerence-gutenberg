@@ -2,35 +2,35 @@ import apiFetch from "@wordpress/api-fetch";
 
 export const generateImageTool: SuggerenceMCPResponseTool = {
     name: 'generate_image',
-    description: 'Generate an image based on a text prompt',
+    description: 'Creates a new AI-generated image from a text description and uploads it to the WordPress media library. Use this when the user requests to create, generate, or design an image from scratch based on their description. The generated image is automatically uploaded to the media library and can be inserted into the document. Supports reference images for style matching or image-to-image generation.',
     inputSchema: {
         type: 'object',
         properties: {
             prompt: {
                 type: 'string',
-                description: 'The text prompt describing the image to generate, or a base64 encoded image'
+                description: 'A detailed text description of the image to generate. Be specific about the subject, style, composition, colors, mood, and any important details. Examples: "A serene mountain landscape at sunset with purple and orange sky", "Modern minimalist logo for a coffee shop with geometric shapes", "Professional product photo of a blue water bottle on white background". More detailed prompts generally produce better results.'
             },
             alt_text: {
                 type: 'string',
-                description: 'Alternative text for the image (optional, will use prompt if not provided)'
+                description: 'Accessibility alternative text that describes the image for screen readers and SEO. Should be a concise description of what the image shows. If not provided, the prompt will be used as alt text. Example: "Mountain landscape at sunset" rather than repeating the full prompt.'
             },
             input_images: {
                 type: 'array',
-                description: 'Array of input images to use as reference for generation',
+                description: 'Optional array of reference images to guide the generation. Use this for style transfer, image-to-image generation, or when you want the AI to match a specific visual style. Each image can be provided as base64 data or a URL. Useful when the user wants consistency with existing images or needs to maintain a specific visual style.',
                 items: {
                     type: 'object',
                     properties: {
                         data: {
                             type: 'string',
-                            description: 'Base64 encoded image data'
+                            description: 'Base64-encoded image data (without the data:image/... prefix). Use this when you have the image content directly available.'
                         },
                         media_type: {
                             type: 'string',
-                            description: 'MIME type of the image (e.g., image/png, image/jpeg)'
+                            description: 'MIME type specifying the image format. Common values: "image/png", "image/jpeg", "image/webp". Required when using base64 data.'
                         },
                         url: {
                             type: 'string',
-                            description: 'URL of the image (alternative to base64 data)'
+                            description: 'Direct URL to the reference image. Use this as an alternative to base64 data when the image is already hosted somewhere. The URL must be publicly accessible.'
                         }
                     }
                 }
@@ -42,21 +42,21 @@ export const generateImageTool: SuggerenceMCPResponseTool = {
 
 export const generateEditedImageTool: SuggerenceMCPResponseTool = {
     name: 'generate_edited_image',
-    description: 'Generate an edited image based on a text prompt and an existing image.',
+    description: 'Modifies an existing image using AI based on text instructions, creating a new edited version. Use this when the user wants to edit, modify, transform, or make changes to an existing image rather than creating one from scratch. Examples: changing backgrounds, adding/removing elements, changing colors or style, or applying transformations. The edited image is saved as a new file in the media library, preserving the original.',
     inputSchema: {
         type: 'object',
         properties: {
             prompt: {
                 type: 'string',
-                description: 'Description of how to edit/modify the image (e.g., "make the capibara jump", "change the background to blue")'
+                description: 'Clear instructions describing what changes to make to the image. Use imperative commands focusing on the desired changes. Examples: "change the background to a sunset beach scene", "remove the person on the left", "make the sky darker and more dramatic", "change all blue elements to green", "add falling snow in the scene". Be specific about what should change while the rest remains the same.'
             },
             image_url: {
                 type: 'string',
-                description: 'URL of the image to edit'
+                description: 'The URL of the source image to edit. This must be a valid, publicly accessible image URL (can be from the WordPress media library or external). Supported formats include JPEG, PNG, and WebP. The image will be used as the base for the AI editing operation.'
             },
             alt_text: {
                 type: 'string',
-                description: 'Alternative text for the edited image'
+                description: 'Accessibility alternative text for the edited image. Should describe what the final edited image shows, not the original. If omitted, the edit prompt will be used. Example: "Beach scene with sunset background" after changing the background.'
             }
         },
         required: ['prompt', 'image_url']

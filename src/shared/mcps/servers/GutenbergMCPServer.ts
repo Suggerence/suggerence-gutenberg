@@ -21,7 +21,7 @@ import {
     getBlockSchemaTool, getBlockSchema    
 } from '@/shared/mcps/tools/block-schema';
 import {
-    searchPatternTool, searchPattern,
+    SearchPatternTool, searchPattern,
     insertPatternTool, insertPattern
 } from '@/shared/mcps/tools/patterns-layouts';
 
@@ -44,7 +44,7 @@ export class GutenbergMCPServer {
         }
     }
 
-    private tools: SuggerenceMCPResponseTool[] = [
+    private staticTools: SuggerenceMCPResponseTool[] = [
         addBlockTool,
         moveBlockTool,
         duplicateBlockTool,
@@ -55,7 +55,6 @@ export class GutenbergMCPServer {
         generateImageTool,
         generateEditedImageTool,
         generateBlocksFromCanvasTool,
-        searchPatternTool,
         insertPatternTool,
         getBlockSchemaTool,
         getAvailableBlocksTool,
@@ -65,7 +64,10 @@ export class GutenbergMCPServer {
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
         return {
-            tools: this.tools
+            tools: [
+                ...this.staticTools,
+                SearchPatternTool() // Generate with dynamic categories
+            ]
         };
     }
 

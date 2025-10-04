@@ -20,6 +20,10 @@ import {
     getAvailableBlocksTool, getAvailableBlocks,
     getBlockSchemaTool, getBlockSchema    
 } from '@/shared/mcps/tools/block-schema';
+import {
+    searchPatternTool, searchPattern,
+    insertPatternTool, insertPattern
+} from '@/shared/mcps/tools/patterns-layouts';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -51,6 +55,8 @@ export class GutenbergMCPServer {
         generateImageTool,
         generateEditedImageTool,
         generateBlocksFromCanvasTool,
+        searchPatternTool,
+        insertPatternTool,
         getBlockSchemaTool,
         getAvailableBlocksTool,
         undoTool,
@@ -111,6 +117,19 @@ export class GutenbergMCPServer {
 
                 case 'generate_blocks_from_canvas':
                     return generateBlocksFromCanvas(args.blockStructure, args.analysis, args.replaceExisting, args.targetPosition);
+
+                case 'search_pattern':
+                    return searchPattern({
+                        search: args.search,
+                        category: args.category
+                    });
+
+                case 'insert_pattern':
+                    return insertPattern({
+                        patternName: args.patternName,
+                        position: args.position,
+                        targetBlockId: args.targetBlockId
+                    });
 
                 case 'get_available_blocks':
                      return getAvailableBlocks(args.includeInactive, args.category);

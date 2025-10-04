@@ -258,16 +258,30 @@ Output: Modified version of provided image
 
 ## BLOCK CREATION GUIDELINES
 
-When converting drawings to blocks:
+**CRITICAL: Use The get block schema tool BEFORE creating unfamiliar or complex blocks (tables, galleries, embeds, etc.)**
 
-**Essential Blocks:**
+When creating blocks:
+
+**Common Blocks (schema known):**
 • core/heading - Titles (level: 1-6, content: "text")
 • core/paragraph - Body text (content: "text")  
 • core/button - CTAs (text: "label", url: "#")
 • core/columns + core/column - Multi-column layouts
 • core/list - Bullet points (values: "<li>item</li>")
-• core/image - Pictures (alt: "description")
+• core/image - Pictures (id: number, url: "...", alt: "description")
 • core/group - Container sections (with innerBlocks)
+
+**Complex Blocks (MUST check schema first):**
+• core/table - Call schema tool to see correct structure
+• core/gallery - Call schema tool to see image array format
+• core/embed - Call schema tool to see provider options
+• Any block you're uncertain about
+
+**Workflow for Complex Blocks:**
+1. Call schema tool with the block type
+2. Review the attributes schema in response
+3. Format your attributes to match the schema
+4. Call block creation tool with properly structured attributes
 
 **Required Attributes:**
 - Always include content/text for text blocks

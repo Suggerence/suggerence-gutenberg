@@ -16,7 +16,7 @@ function getAvailableBlockTypes(): string[] {
 
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
-    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content. Supports creating complex nested layouts like columns with specific widths and content.',
+    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content. Supports creating complex nested layouts like columns with specific widths and content. IMPORTANT: For complex blocks (tables, galleries, embeds, etc.) or blocks you are unfamiliar with, ALWAYS call get schema tool first to understand the correct attribute structure before calling this tool.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -27,7 +27,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
             },
             attributes: {
                 type: 'object',
-                description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. Use get block schema tool to see all available attributes for a specific block type.',
+                description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. For tables, use get block schema tool first - structure is complex: {"body": [{"cells": [{"content": "text", "tag": "td"}]}]}. Use get block schema tool to see all available attributes for any block type.',
                 additionalProperties: true
             },
             innerBlocks: {
@@ -157,7 +157,7 @@ export const transformBlockTool: SuggerenceMCPResponseTool = {
             },
             targetBlockType: {
                 type: 'string',
-                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get_block_schema to see possible transformations for a block type.',
+                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.',
                 required: true
             }
         },
@@ -189,7 +189,7 @@ export const wrapBlockTool: SuggerenceMCPResponseTool = {
             },
             wrapperAttributes: {
                 type: 'object',
-                description: 'Optional attributes for the wrapper block (e.g., background color, padding). Different containers support different attributes - use get_block_schema on the wrapper type to see available options.',
+                description: 'Optional attributes for the wrapper block (e.g., background color, padding). Different containers support different attributes - use get block schema tool on the wrapper type to see available options.',
                 additionalProperties: true
             },
             columnWidths: {
@@ -234,7 +234,11 @@ function createBlockFromDefinition(blockDef: {
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];
 
-    return createBlock(blockDef.blockType, blockDef.attributes || {}, innerBlocks);
+    // Only pass innerBlocks if they exist - some blocks like core/table don't use innerBlocks
+    // and passing an empty array can cause issues with their internal processing
+    return innerBlocks.length > 0
+        ? createBlock(blockDef.blockType, blockDef.attributes || {}, innerBlocks)
+        : createBlock(blockDef.blockType, blockDef.attributes || {});
 }
 
 export function addBlock(
@@ -252,7 +256,101 @@ export function addBlock(
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];
 
-    const newBlock = createBlock(blockType, attributes, processedInnerBlocks);
+    // Special handling for table blocks - ensure body and head are properly structured
+    if (blockType === 'core/table') {
+        console.log('Creating table block with attributes:', JSON.stringify(attributes, null, 2));
+        
+        // WordPress table structure (based on schema example):
+        // body/head: array of row objects
+        // Each row object: { cells: [ { content: "text", tag: "td" }, ... ] }
+        
+        // Convert simple array structure [[cell1, cell2], [cell3, cell4]]
+        // to WordPress structure [{ cells: [{ content: "cell1", tag: "td" }, ...] }, ...]
+        if (attributes.body && Array.isArray(attributes.body)) {
+            attributes.body = attributes.body.map((row: any) => {
+                // If row is already properly structured, keep it
+                if (row && typeof row === 'object' && 'cells' in row) {
+                    return row;
+                }
+                
+                // If row is an array of values, convert to proper structure
+                if (Array.isArray(row)) {
+                    return {
+                        cells: row.map((cell: any) => {
+                            // If cell is already an object, ensure it has proper structure
+                            if (typeof cell === 'object' && cell !== null) {
+                                return {
+                                    content: String(cell.content || cell),
+                                    tag: cell.tag || 'td'
+                                };
+                            }
+                            // If cell is a simple value, wrap it
+                            return {
+                                content: String(cell),
+                                tag: 'td'
+                            };
+                        })
+                    };
+                }
+                
+                return row;
+            });
+        }
+        
+        // Same transformation for head
+        if (attributes.head && Array.isArray(attributes.head)) {
+            attributes.head = attributes.head.map((row: any) => {
+                if (row && typeof row === 'object' && 'cells' in row) {
+                    return row;
+                }
+                
+                if (Array.isArray(row)) {
+                    return {
+                        cells: row.map((cell: any) => {
+                            if (typeof cell === 'object' && cell !== null) {
+                                return {
+                                    content: String(cell.content || cell),
+                                    tag: cell.tag || 'th'
+                                };
+                            }
+                            return {
+                                content: String(cell),
+                                tag: 'th'
+                            };
+                        })
+                    };
+                }
+                
+                return row;
+            });
+        }
+        
+        console.log('Transformed table attributes:', JSON.stringify(attributes, null, 2));
+    }
+
+    // Only pass innerBlocks if they exist - some blocks like core/table don't use innerBlocks
+    // and passing an empty array can cause issues with their internal processing
+    let newBlock: any;
+    try {
+        newBlock = processedInnerBlocks.length > 0
+            ? createBlock(blockType, attributes, processedInnerBlocks)
+            : createBlock(blockType, attributes);
+    } catch (error) {
+        console.error('Error creating block:', error);
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_creation_failed',
+                    error: `Failed to create block: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                    blockType: blockType,
+                    attributes: attributes
+                })
+            }]
+        };
+    }
+    
     const selectedBlockId = targetBlockId || getSelectedBlockClientId();
 
     let index: number | undefined;
@@ -856,7 +954,7 @@ export function transformBlock(args: {
                 text: JSON.stringify({
                     success: false,
                     action: 'block_transform_failed',
-                    error: `Cannot transform ${currentBlock.name} to ${args.targetBlockType}. Possible transformations: ${possibleTransforms.join(', ') || 'none'}. Use get_block_schema on "${currentBlock.name}" to see the "transforms.to" array for allowed transformations.`
+                    error: `Cannot transform ${currentBlock.name} to ${args.targetBlockType}. Possible transformations: ${possibleTransforms.join(', ') || 'none'}. Use get block schema tool on "${currentBlock.name}" to see the "transforms.to" array for allowed transformations.`
                 })
             }]
         };

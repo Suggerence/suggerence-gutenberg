@@ -131,12 +131,18 @@ Common patterns with EXACT attribute names:
 - Columns: No attributes needed, use innerBlocks with core/column children
 - Column: No attributes needed, use innerBlocks for column content
 
+COMPLEX BLOCKS - Call get block schema tool first:
+- Table: Structure is {"body": [{"cells": [{"content": "text", "tag": "td"}]}], "head": [{"cells": [...]}]}
+- Gallery: Check schema for proper image array format
+- Embed: Check schema for provider-specific options
+
 WORKING EXAMPLES:
 Heading: {"blockType": "core/heading", "attributes": {"content": "Welcome", "level": 1}}
 Paragraph: {"blockType": "core/paragraph", "attributes": {"content": "Whales are magnificent..."}}
 Image: {"blockType": "core/image", "attributes": {"id": 123, "url": "https://...", "alt": "whale", "sizeSlug": "large"}}
 Bullet List: {"blockType": "core/list", "attributes": {"ordered": false, "values": "<li>Paris</li><li>Rome</li><li>London</li>"}}
-Numbered List: {"blockType": "core/list", "attributes": {"ordered": true, "values": "<li>First</li><li>Second</li><li>Third</li>"}}`,
+Numbered List: {"blockType": "core/list", "attributes": {"ordered": true, "values": "<li>First</li><li>Second</li><li>Third</li>"}}
+Table: For tables, FIRST call get block schema tool to see the exact structure, then create the block`,
                             additionalProperties: true
                         },
                         innerBlocks: {

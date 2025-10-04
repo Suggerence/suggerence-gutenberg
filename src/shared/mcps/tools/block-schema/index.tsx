@@ -20,7 +20,7 @@ export const getAvailableBlocksTool: SuggerenceMCPResponseTool = {
 
 export const getBlockSchemaTool: SuggerenceMCPResponseTool = {
     name: 'get_block_schema',
-    description: 'Fetches the complete technical schema and configuration for a specific WordPress block type, including all available attributes, supported features, styling capabilities, and block relationships. Use this tool BEFORE using add_block or update_block when you need to know exactly what attributes and options are available for a particular block type. Essential for understanding block capabilities, valid attribute names and types, supported styling properties, and proper block configuration. Returns comprehensive metadata including attributes schema, supports flags, transformations, variations, and contextual information.',
+    description: 'Fetches the complete technical schema and configuration for a specific WordPress block type, including all available attributes, supported features, styling capabilities, and block relationships. MANDATORY: Use this tool BEFORE creating complex blocks like tables, galleries, embeds, or any block type you are unfamiliar with. Essential for understanding block capabilities, valid attribute names and types, attribute structure (especially for complex blocks), supported styling properties, and proper block configuration. Returns comprehensive metadata including attributes schema with default values, types, and structure that you MUST follow when calling creation tool.',
     inputSchema: {
         type: 'object',
         properties: {

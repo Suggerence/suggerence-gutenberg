@@ -98,11 +98,9 @@ export class GenericBlockMCPServer {
         blockId?: string;
         attributes?: Record<string, any>;
         style?: Record<string, any>;
-        transformTo?: string;
-        wrapIn?: string;
     }): { content: Array<{ type: string, text: string }> } {
         const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
-        const { updateBlockAttributes, replaceBlock } = dispatch('core/block-editor') as any;
+        const { updateBlockAttributes } = dispatch('core/block-editor') as any;
 
         const targetBlockId = args.blockId || getSelectedBlockClientId();
 
@@ -121,35 +119,6 @@ export class GenericBlockMCPServer {
                 content: [{
                     type: 'text',
                     text: `Block with ID ${targetBlockId} not found`
-                }]
-            };
-        }
-
-        // Handle transformations
-        if (args.transformTo) {
-            const newBlock = createBlock(args.transformTo, {
-                ...currentBlock.attributes,
-                ...(args.attributes || {})
-            }, currentBlock.innerBlocks);
-
-            replaceBlock(targetBlockId, newBlock);
-
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Transformed block from ${currentBlock.name} to ${args.transformTo}`
-                }]
-            };
-        }
-
-        if (args.wrapIn) {
-            const wrapperBlock = createBlock(args.wrapIn, {}, [currentBlock]);
-            replaceBlock(targetBlockId, wrapperBlock);
-
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Wrapped ${currentBlock.name} in ${args.wrapIn}`
                 }]
             };
         }

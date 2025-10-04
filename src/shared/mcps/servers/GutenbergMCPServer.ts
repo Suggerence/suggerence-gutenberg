@@ -4,6 +4,7 @@ import {
     duplicateBlockTool, duplicateBlock,
     deleteBlockTool, deleteBlock,
     updateBlockTool, updateBlock,
+    transformBlockTool, transformBlock,
     undo, undoTool,
     redo, redoTool
 } from '@/shared/mcps/tools/block-manipulation';
@@ -44,6 +45,7 @@ export class GutenbergMCPServer {
         duplicateBlockTool,
         deleteBlockTool,
         updateBlockTool,
+        transformBlockTool,
         generateImageTool,
         generateEditedImageTool,
         generateBlocksFromCanvasTool,
@@ -83,7 +85,18 @@ export class GutenbergMCPServer {
                     return generateEditedImage(args.prompt, args.image_url, args.alt_text);
 
                 case 'update_block':
-                    return updateBlock(args);
+                    return updateBlock({
+                        blockId: args.blockId,
+                        attributes: args.attributes,
+                        style: args.style,
+                        content: args.content
+                    });
+
+                case 'transform_block':
+                    return transformBlock({
+                        blockId: args.blockId,
+                        targetBlockType: args.targetBlockType
+                    });
 
                 case 'generate_blocks_from_canvas':
                     return generateBlocksFromCanvas(args.blockStructure, args.analysis, args.replaceExisting, args.targetPosition);

@@ -1,5 +1,5 @@
 import { dispatch, select } from '@wordpress/data';
-import { createBlock, cloneBlock } from '@wordpress/blocks';
+import { createBlock, cloneBlock, switchToBlockType } from '@wordpress/blocks';
 
 function getAvailableBlockTypes(): string[] {
     try {
@@ -97,7 +97,7 @@ export const deleteBlockTool: SuggerenceMCPResponseTool = {
 
 export const updateBlockTool: SuggerenceMCPResponseTool = {
     name: 'update_block',
-    description: 'Modifies an existing block\'s properties, content, styling, or structure. This is the most versatile tool for editing blocks - use it to change text content, update attributes, apply visual styling (colors, spacing, typography), transform blocks to different types, or wrap blocks in containers. Supports all WordPress block types and styling features.',
+    description: 'Modifies an existing block\'s properties, content, and styling. Use this tool to change text content, update attributes, or apply visual styling (colors, spacing, typography, borders). Supports all WordPress block types and styling features. For changing a block to a different type, use the transformation tool instead.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -114,16 +114,28 @@ export const updateBlockTool: SuggerenceMCPResponseTool = {
                 type: 'object',
                 description: 'WordPress theme.json-compatible style object for visual appearance. Used for colors, spacing, borders, and typography. Structure: {"color": {"text": "#000000", "background": "#ffffff"}, "spacing": {"padding": {"top": "20px", "left": "10px"}}, "typography": {"fontSize": "18px", "fontWeight": "bold"}, "border": {"radius": "5px", "width": "2px"}}. Styles are deeply merged with existing styles, so you can update individual properties without affecting others.',
                 additionalProperties: true
-            },
-            transformTo: {
-                type: 'string',
-                description: 'Converts the block to a different block type while preserving compatible content. Example: transform "core/paragraph" to "core/heading", or "core/image" to "core/cover". The target block type must be a valid WordPress block (e.g., "core/quote", "core/list"). Use this for semantic changes like converting text to headings or simple blocks to rich containers.'
-            },
-            wrapIn: {
-                type: 'string',
-                description: 'Wraps the current block inside a container block, making it a child block. Useful for grouping blocks or adding layout containers. Example: wrapIn "core/group" to add a background or wrapIn "core/column" to place in a column layout. The target must be a valid container block type.'
             }
         }
+    }
+};
+
+export const transformBlockTool: SuggerenceMCPResponseTool = {
+    name: 'transform_block',
+    description: 'Transforms a block to a different block type while intelligently preserving compatible content and attributes. Use this when the user wants to convert blocks between types (e.g., paragraph to heading, image to cover, quote to paragraph). The tool uses WordPress\'s built-in transformation system which automatically handles attribute mapping and content preservation according to each block\'s registered transform functions. Only allows transformations that are defined as possible by WordPress block registration.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            blockId: {
+                type: 'string',
+                description: 'The client ID of the block to transform. If omitted, transforms the currently selected block in the editor. Use this parameter when transforming a specific block that is not currently selected.'
+            },
+            targetBlockType: {
+                type: 'string',
+                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get_block_schema to see possible transformations for a block type.',
+                required: true
+            }
+        },
+        required: ['targetBlockType']
     }
 };
 
@@ -327,12 +339,10 @@ export function updateBlock(args: {
     blockId?: string;
     attributes?: Record<string, any>;
     style?: Record<string, any>;
-    transformTo?: string;
-    wrapIn?: string;
     content?: string;
 }): { content: Array<{ type: string, text: string }> } {
     const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
-    const { updateBlockAttributes, replaceBlock } = dispatch('core/block-editor') as any;
+    const { updateBlockAttributes } = dispatch('core/block-editor') as any;
 
     const targetBlockId = args.blockId || getSelectedBlockClientId();
 
@@ -366,53 +376,6 @@ export function updateBlock(args: {
     // Handle simple content update
     if (args.content && !args.attributes && !args.style) {
         return updateBlockContent(targetBlockId, args.content);
-    }
-
-    // Handle transformations
-    if (args.transformTo) {
-        const newBlock = createBlock(args.transformTo, {
-            ...currentBlock.attributes,
-            ...(args.attributes || {})
-        }, currentBlock.innerBlocks);
-
-        replaceBlock(targetBlockId, newBlock);
-
-        return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    success: true,
-                    action: 'block_transformed',
-                    data: {
-                        original_block_id: targetBlockId,
-                        new_block_id: newBlock.clientId,
-                        from_type: currentBlock.name,
-                        to_type: args.transformTo
-                    }
-                })
-            }]
-        };
-    }
-
-    if (args.wrapIn) {
-        const wrapperBlock = createBlock(args.wrapIn, {}, [currentBlock]);
-        replaceBlock(targetBlockId, wrapperBlock);
-
-        return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    success: true,
-                    action: 'block_wrapped',
-                    data: {
-                        inner_block_id: targetBlockId,
-                        wrapper_block_id: wrapperBlock.clientId,
-                        inner_block_type: currentBlock.name,
-                        wrapper_type: args.wrapIn
-                    }
-                })
-            }]
-        };
     }
 
     // Build attributes object to update
@@ -464,6 +427,169 @@ export function updateBlock(args: {
             })
         }]
     };
+}
+
+/**
+ * Helper function to get possible transformations for a block type
+ */
+function getPossibleTransformations(blockName: string): string[] {
+    try {
+        const { getBlockType } = select('core/blocks') as any;
+        const blockType = getBlockType(blockName);
+
+        console.log('blockType', blockType);
+        
+        if (!blockType || !blockType.transforms || !blockType.transforms.to) {
+            return [];
+        }
+
+        // Extract target block names from transform definitions
+        const possibleTransforms: string[] = [];
+        blockType.transforms.to.forEach((transform: any) => {
+            if (transform.type === 'block') {
+                // Handle single block transformation
+                if (typeof transform.blocks === 'string') {
+                    possibleTransforms.push(transform.blocks);
+                } else if (Array.isArray(transform.blocks)) {
+                    // Handle multiple possible target blocks
+                    possibleTransforms.push(...transform.blocks);
+                }
+            }
+        });
+
+        return [...new Set(possibleTransforms)]; // Remove duplicates
+    } catch (error) {
+        console.error(`Error getting transformations for ${blockName}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Transform a block to a different block type with validation
+ * Uses WordPress's built-in switchToBlockType which properly executes registered transform functions
+ */
+export function transformBlock(args: {
+    blockId?: string;
+    targetBlockType: string;
+}): { content: Array<{ type: string, text: string }> } {
+    const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
+    const { replaceBlocks } = dispatch('core/block-editor') as any;
+    const { getBlockType } = select('core/blocks') as any;
+
+    const targetBlockId = args.blockId || getSelectedBlockClientId();
+
+    if (!targetBlockId) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_transform_failed',
+                    error: 'No block selected or specified'
+                })
+            }]
+        };
+    }
+
+    const currentBlock = getBlock(targetBlockId);
+    if (!currentBlock) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_transform_failed',
+                    error: `Block with ID ${targetBlockId} not found`
+                })
+            }]
+        };
+    }
+
+    // Validate target block type exists
+    const targetBlockTypeDef = getBlockType(args.targetBlockType);
+    if (!targetBlockTypeDef) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_transform_failed',
+                    error: `Target block type "${args.targetBlockType}" does not exist. Use get_available_blocks to see valid block types.`
+                })
+            }]
+        };
+    }
+
+    // Get possible transformations for the current block
+    const possibleTransforms = getPossibleTransformations(currentBlock.name);
+    
+    // Check if transformation is allowed
+    if (possibleTransforms.length > 0 && !possibleTransforms.includes(args.targetBlockType)) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_transform_failed',
+                    error: `Cannot transform ${currentBlock.name} to ${args.targetBlockType}. Possible transformations: ${possibleTransforms.join(', ') || 'none'}. Use get_block_schema on "${currentBlock.name}" to see the "transforms.to" array for allowed transformations.`
+                })
+            }]
+        };
+    }
+
+    try {
+        // Use WordPress's built-in switchToBlockType which properly handles transformations
+        // This respects the transform functions defined in block registration
+        const transformedBlocks = switchToBlockType(currentBlock, args.targetBlockType);
+        
+        if (!transformedBlocks || transformedBlocks.length === 0) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'block_transform_failed',
+                        error: `Transformation from ${currentBlock.name} to ${args.targetBlockType} failed. The blocks may not be compatible.`
+                    })
+                }]
+            };
+        }
+
+        // Replace the original block with the transformed block(s)
+        replaceBlocks(targetBlockId, transformedBlocks);
+
+        const newBlock = transformedBlocks[0];
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_transformed',
+                    data: {
+                        original_block_id: targetBlockId,
+                        new_block_id: newBlock.clientId,
+                        from_type: currentBlock.name,
+                        to_type: args.targetBlockType,
+                        transformed_blocks_count: transformedBlocks.length,
+                        final_attributes: newBlock.attributes,
+                        inner_blocks_count: newBlock.innerBlocks?.length || 0
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_transform_failed',
+                    error: `Error during transformation: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
 }
 
 function deepMergeStyles(currentStyle: any, newStyle: any): any {

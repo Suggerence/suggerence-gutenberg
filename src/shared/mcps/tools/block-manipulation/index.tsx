@@ -346,28 +346,57 @@ export function duplicateBlock(blockId?: string, position?: number): { content: 
     }
 
     const blockToClone = getBlock(targetBlockId);
-    const clonedBlock = cloneBlock(blockToClone);
+    
+    if (!blockToClone) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_duplicate_failed',
+                    error: `Block with ID ${targetBlockId} not found`
+                })
+            }]
+        };
+    }
 
-    let index: number | undefined;
-    index = position !== undefined ? position : getBlockIndex(targetBlockId) + 1;
+    try {
+        const clonedBlock = cloneBlock(blockToClone);
 
-    insertBlocks([clonedBlock], index);
+        let index: number | undefined;
+        index = position !== undefined ? position : getBlockIndex(targetBlockId) + 1;
 
-    return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                success: true,
-                action: 'block_duplicated',
-                data: {
-                    original_block_id: targetBlockId,
-                    new_block_id: clonedBlock.clientId,
-                    block_type: clonedBlock.name,
-                    position: index
-                }
-            })
-        }]
-    };
+        insertBlocks([clonedBlock], index);
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_duplicated',
+                    data: {
+                        original_block_id: targetBlockId,
+                        new_block_id: clonedBlock.clientId,
+                        block_type: clonedBlock.name,
+                        position: index
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_duplicate_failed',
+                    error: `Error duplicating block: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                    block_id: targetBlockId,
+                    block_type: blockToClone.name || 'unknown'
+                })
+            }]
+        };
+    }
 }
 
 export function deleteBlock(blockId?: string): { content: Array<{ type: string, text: string }> } {
@@ -381,21 +410,61 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
     }
 
     const block = getBlock(targetBlockId);
-    removeBlocks([targetBlockId]);
+    
+    if (!block) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_delete_failed',
+                    error: `Block with ID ${targetBlockId} not found or already deleted`
+                })
+            }]
+        };
+    }
 
-    return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                success: true,
-                action: 'block_deleted',
-                data: {
+    try {
+        // Validate block structure before deletion
+        // If block has innerBlocks, ensure they're valid
+        if (block.innerBlocks && Array.isArray(block.innerBlocks)) {
+            // Filter out any null/undefined entries that might cause issues
+            const validInnerBlocks = block.innerBlocks.filter((innerBlock: any) => innerBlock != null);
+            if (validInnerBlocks.length !== block.innerBlocks.length) {
+                console.warn(`Block ${targetBlockId} has ${block.innerBlocks.length - validInnerBlocks.length} invalid inner blocks`);
+            }
+        }
+        
+        removeBlocks([targetBlockId]);
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_deleted',
+                    data: {
+                        block_id: targetBlockId,
+                        block_type: block.name || 'unknown',
+                        had_inner_blocks: block.innerBlocks?.length > 0
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_delete_failed',
+                    error: `Error deleting block: ${error instanceof Error ? error.message : 'Unknown error'}`,
                     block_id: targetBlockId,
-                    block_type: block?.name || 'unknown'
-                }
-            })
-        }]
-    };
+                    block_type: block.name || 'unknown'
+                })
+            }]
+        };
+    }
 }
 
 function updateBlockContent(blockId: string | undefined, content: string): { content: Array<{ type: string, text: string }> } {

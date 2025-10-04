@@ -5,6 +5,7 @@ import {
     deleteBlockTool, deleteBlock,
     updateBlockTool, updateBlock,
     transformBlockTool, transformBlock,
+    wrapBlockTool, wrapBlock,
     undo, undoTool,
     redo, redoTool
 } from '@/shared/mcps/tools/block-manipulation';
@@ -46,6 +47,7 @@ export class GutenbergMCPServer {
         deleteBlockTool,
         updateBlockTool,
         transformBlockTool,
+        wrapBlockTool,
         generateImageTool,
         generateEditedImageTool,
         generateBlocksFromCanvasTool,
@@ -67,7 +69,7 @@ export class GutenbergMCPServer {
         try {
             switch (name) {
                 case 'add_block':
-                    return addBlock(args.blockType, args.attributes, args.position, args.targetBlockId);
+                    return addBlock(args.blockType, args.attributes, args.position, args.targetBlockId, args.innerBlocks);
 
                 case 'move_block':
                     return moveBlock(args.position, args.blockId);
@@ -96,6 +98,15 @@ export class GutenbergMCPServer {
                     return transformBlock({
                         blockId: args.blockId,
                         targetBlockType: args.targetBlockType
+                    });
+
+                case 'wrap_block':
+                    return wrapBlock({
+                        blockId: args.blockId,
+                        blockIds: args.blockIds,
+                        wrapperBlockType: args.wrapperBlockType,
+                        wrapperAttributes: args.wrapperAttributes,
+                        columnWidths: args.columnWidths
                     });
 
                 case 'generate_blocks_from_canvas':

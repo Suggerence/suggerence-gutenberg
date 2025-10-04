@@ -16,7 +16,7 @@ function getAvailableBlockTypes(): string[] {
 
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
-    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content.',
+    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content. Supports creating complex nested layouts like columns with specific widths and content.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -29,6 +29,32 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                 type: 'object',
                 description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. Use get block schema tool to see all available attributes for a specific block type.',
                 additionalProperties: true
+            },
+            innerBlocks: {
+                type: 'array',
+                description: 'Array of child blocks for container blocks like columns, groups, buttons, etc. Each inner block has same structure: {blockType, attributes, innerBlocks}. Example for 33/66 columns: [{"blockType": "core/column", "attributes": {"width": "33.33%"}, "innerBlocks": [{"blockType": "core/paragraph", "attributes": {"content": "Left"}}]}, {"blockType": "core/column", "attributes": {"width": "66.66%"}, "innerBlocks": [{"blockType": "core/list", "attributes": {"values": "<li>Item 1</li>"}}]}]',
+                items: {
+                    type: 'object',
+                    properties: {
+                        blockType: {
+                            type: 'string',
+                            description: 'Block type for this inner block'
+                        },
+                        attributes: {
+                            type: 'object',
+                            description: 'Attributes for this inner block',
+                            additionalProperties: true
+                        },
+                        innerBlocks: {
+                            type: 'array',
+                            description: 'Nested inner blocks (supports unlimited nesting)',
+                            items: {
+                                type: 'object'
+                            }
+                        }
+                    },
+                    required: ['blockType']
+                }
             },
             position: {
                 type: 'string',
@@ -139,6 +165,45 @@ export const transformBlockTool: SuggerenceMCPResponseTool = {
     }
 };
 
+export const wrapBlockTool: SuggerenceMCPResponseTool = {
+    name: 'wrap_block',
+    description: 'Wraps one or more blocks inside a container block (e.g., Group, Columns, Cover). This is different from transforming - the original block(s) remain unchanged but become children of a new container block. Common use cases: wrapping an image in columns to create a layout, putting multiple blocks in a group to apply a background, or adding blocks to a cover for overlays. For columns, supports intelligent distribution with custom widths (e.g., 33/66, 25/75, 50/50).',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            blockId: {
+                type: 'string',
+                description: 'The client ID of the block to wrap. If omitted, wraps the currently selected block in the editor. To wrap multiple blocks, use blockIds instead.'
+            },
+            blockIds: {
+                type: 'array',
+                description: 'Array of block client IDs to wrap together in the container. Use this to wrap multiple blocks at once. If provided, blockId is ignored. For columns, blocks are distributed left-to-right according to columnWidths.',
+                items: {
+                    type: 'string'
+                }
+            },
+            wrapperBlockType: {
+                type: 'string',
+                description: 'The container block type to wrap with. Must be a valid WordPress container block like "core/group" (generic container with background/padding), "core/columns" (creates a columns layout), "core/column" (single column), "core/cover" (image/color overlay container), or "core/buttons" (button group container).',
+                required: true
+            },
+            wrapperAttributes: {
+                type: 'object',
+                description: 'Optional attributes for the wrapper block (e.g., background color, padding). Different containers support different attributes - use get_block_schema on the wrapper type to see available options.',
+                additionalProperties: true
+            },
+            columnWidths: {
+                type: 'array',
+                description: 'For columns wrapper only: Array of width percentages for each column (e.g., ["33.33%", "66.66%"] for 33/66 layout, ["25%", "75%"] for 25/75, or ["50%", "50%"] for 50/50). Must match number of blocks being wrapped. First block goes in first column, second in second column, etc. If omitted, columns are equal width.',
+                items: {
+                    type: 'string'
+                }
+            }
+        },
+        required: ['wrapperBlockType']
+    }
+};
+
 export const undoTool: SuggerenceMCPResponseTool = {
     name: 'undo',
     description: 'Reverts the most recent change made in the editor, restoring the document to its previous state. Use this when the user wants to reverse an action, cancel changes, or step backward through edit history. Works with all editor operations including block additions, deletions, moves, and content updates. This tool has no effect if there are no actions to undo.',
@@ -157,11 +222,37 @@ export const redoTool: SuggerenceMCPResponseTool = {
     }
 };
 
-export function addBlock(blockType: string, attributes: Record<string, any> = {}, position: string = 'after', targetBlockId?: string): { content: Array<{ type: string, text: string }> } {
+/**
+ * Helper function to recursively create blocks with innerBlocks
+ */
+function createBlockFromDefinition(blockDef: {
+    blockType: string;
+    attributes?: Record<string, any>;
+    innerBlocks?: any[];
+}): any {
+    const innerBlocks = blockDef.innerBlocks?.map(innerBlockDef => 
+        createBlockFromDefinition(innerBlockDef)
+    ).filter(Boolean) || [];
+
+    return createBlock(blockDef.blockType, blockDef.attributes || {}, innerBlocks);
+}
+
+export function addBlock(
+    blockType: string, 
+    attributes: Record<string, any> = {}, 
+    position: string = 'after', 
+    targetBlockId?: string,
+    innerBlocks?: any[]
+): { content: Array<{ type: string, text: string }> } {
     const { insertBlock } = dispatch('core/block-editor') as any;
     const { getSelectedBlockClientId, getBlockIndex } = select('core/block-editor') as any;
 
-    const newBlock = createBlock(blockType, attributes);
+    // Create inner blocks recursively if provided
+    const processedInnerBlocks = innerBlocks?.map(innerBlockDef => 
+        createBlockFromDefinition(innerBlockDef)
+    ).filter(Boolean) || [];
+
+    const newBlock = createBlock(blockType, attributes, processedInnerBlocks);
     const selectedBlockId = targetBlockId || getSelectedBlockClientId();
 
     let index: number | undefined;
@@ -186,7 +277,8 @@ export function addBlock(blockType: string, attributes: Record<string, any> = {}
                     block_id: newBlock.clientId,
                     attributes: attributes,
                     position: position,
-                    index: index
+                    index: index,
+                    inner_blocks_count: processedInnerBlocks.length
                 }
             })
         }]
@@ -430,14 +522,178 @@ export function updateBlock(args: {
 }
 
 /**
+ * Wrap one or more blocks in a container block
+ * This creates a new container and clones the blocks into it to avoid circular references
+ */
+export function wrapBlock(args: {
+    blockId?: string;
+    blockIds?: string[];
+    wrapperBlockType: string;
+    wrapperAttributes?: Record<string, any>;
+    columnWidths?: string[];
+}): { content: Array<{ type: string, text: string }> } {
+    const { getSelectedBlockClientId, getBlock, getBlockIndex, getBlockRootClientId } = select('core/block-editor') as any;
+    const { replaceBlocks } = dispatch('core/block-editor') as any;
+    const { getBlockType } = select('core/blocks') as any;
+
+    // Determine which blocks to wrap
+    let blocksToWrap: any[] = [];
+    let blockIdsToWrap: string[] = [];
+
+    if (args.blockIds && args.blockIds.length > 0) {
+        // Wrap multiple specified blocks
+        blockIdsToWrap = args.blockIds;
+        blocksToWrap = args.blockIds.map(id => getBlock(id)).filter(Boolean);
+    } else {
+        // Wrap single block (specified or selected)
+        const targetBlockId = args.blockId || getSelectedBlockClientId();
+        if (!targetBlockId) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'wrap_block_failed',
+                        error: 'No block selected or specified'
+                    })
+                }]
+            };
+        }
+        const targetBlock = getBlock(targetBlockId);
+        if (!targetBlock) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'wrap_block_failed',
+                        error: `Block with ID ${targetBlockId} not found`
+                    })
+                }]
+            };
+        }
+        blockIdsToWrap = [targetBlockId];
+        blocksToWrap = [targetBlock];
+    }
+
+    if (blocksToWrap.length === 0) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'wrap_block_failed',
+                    error: 'No valid blocks found to wrap'
+                })
+            }]
+        };
+    }
+
+    // Validate wrapper block type exists
+    const wrapperBlockTypeDef = getBlockType(args.wrapperBlockType);
+    if (!wrapperBlockTypeDef) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'wrap_block_failed',
+                    error: `Wrapper block type "${args.wrapperBlockType}" does not exist. Use get_available_blocks to see valid block types.`
+                })
+            }]
+        };
+    }
+
+    // Validate column widths if provided
+    if (args.columnWidths && args.wrapperBlockType === 'core/columns') {
+        if (args.columnWidths.length !== blocksToWrap.length) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'wrap_block_failed',
+                        error: `Column widths count (${args.columnWidths.length}) must match blocks count (${blocksToWrap.length})`
+                    })
+                }]
+            };
+        }
+    }
+
+    try {
+        // Clone the blocks to avoid circular reference issues
+        const clonedBlocks = blocksToWrap.map(block => cloneBlock(block));
+
+        let wrapperBlock: any;
+
+        // Special handling for columns - wrap each block in a column with optional widths
+        if (args.wrapperBlockType === 'core/columns') {
+            const columns = clonedBlocks.map((block, index) => {
+                const columnAttributes: Record<string, any> = {};
+                
+                // Apply width if provided
+                if (args.columnWidths && args.columnWidths[index]) {
+                    columnAttributes.width = args.columnWidths[index];
+                }
+                
+                return createBlock('core/column', columnAttributes, [block]);
+            });
+            
+            wrapperBlock = createBlock('core/columns', args.wrapperAttributes || {}, columns);
+        } else {
+            // Standard wrapping for other container types
+            wrapperBlock = createBlock(
+                args.wrapperBlockType,
+                args.wrapperAttributes || {},
+                clonedBlocks
+            );
+        }
+
+        // Replace the original blocks with the wrapper containing cloned blocks
+        replaceBlocks(blockIdsToWrap, wrapperBlock);
+
+        const columnInfo = args.wrapperBlockType === 'core/columns' && args.columnWidths 
+            ? { column_widths: args.columnWidths }
+            : {};
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'blocks_wrapped',
+                    data: {
+                        original_block_ids: blockIdsToWrap,
+                        wrapper_block_id: wrapperBlock.clientId,
+                        wrapper_type: args.wrapperBlockType,
+                        wrapped_blocks_count: clonedBlocks.length,
+                        inner_blocks: clonedBlocks.map(b => ({ id: b.clientId, type: b.name })),
+                        ...columnInfo
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'wrap_block_failed',
+                    error: `Error wrapping blocks: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+/**
  * Helper function to get possible transformations for a block type
  */
 function getPossibleTransformations(blockName: string): string[] {
     try {
         const { getBlockType } = select('core/blocks') as any;
         const blockType = getBlockType(blockName);
-
-        console.log('blockType', blockType);
         
         if (!blockType || !blockType.transforms || !blockType.transforms.to) {
             return [];

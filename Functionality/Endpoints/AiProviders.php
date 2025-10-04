@@ -198,7 +198,7 @@ class AiProviders extends BaseApiEndpoints
                 $toolResults = [];
                 
                 if (isset($message['toolCallId']) && isset($message['toolName'])) {
-                    $processedMessages[] = new AssistantMessage('Calling tool ' . $message['toolName'] . ' with args ' . json_encode($message['toolArgs']), toolCalls: [
+                    $processedMessages[] = new AssistantMessage('', toolCalls: [
                         new ToolCall(
                             id: $message['toolCallId'],
                             name: $message['toolName'],

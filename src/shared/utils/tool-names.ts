@@ -33,7 +33,7 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'search_media': __('Search media library', 'suggerence'),
     'get_media_details': __('Get media details', 'suggerence'),
     'search_openverse': __('Search Openverse', 'suggerence'),
-    'insert_openverse_image': __('Insert Openverse image', 'suggerence'),
+    'upload_openverse_to_media': __('Upload Openverse to media', 'suggerence'),
 
     // Document tools
     'get_document_structure': __('Get document structure', 'suggerence'),

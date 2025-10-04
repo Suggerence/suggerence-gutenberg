@@ -27,7 +27,7 @@ import {
 import {
     searchMediaTool, searchMedia,
     getOpenerseImagesTool, searchOpenverse,
-    insertOpenerseImageTool, insertOpenverseImage
+    uploadOpenverseToMediaTool, uploadOpenverseToMedia
 } from '@/shared/mcps/tools/media-library';
 import {
     updatePostTitleTool, updatePostTitle,
@@ -73,7 +73,7 @@ export class GutenbergMCPServer {
         redoTool,
         searchMediaTool,
         getOpenerseImagesTool,
-        insertOpenerseImageTool,
+        uploadOpenverseToMediaTool,
         updatePostTitleTool,
         updatePostExcerptTool,
         setFeaturedImageTool,
@@ -169,8 +169,8 @@ export class GutenbergMCPServer {
                 case 'search_openverse':
                     return searchOpenverse(args.query, args.perPage, args.license);
                 
-                case 'insert_openverse_image':
-                    return insertOpenverseImage(args as {
+                case 'upload_openverse_to_media':
+                    return uploadOpenverseToMedia(args as {
                         imageId: string;
                         imageUrl: string;
                         title: string;
@@ -178,8 +178,6 @@ export class GutenbergMCPServer {
                         creatorUrl?: string;
                         license?: string;
                         licenseUrl?: string;
-                        position?: string;
-                        targetBlockId?: string;
                     });
                 
                 case 'update_post_title':

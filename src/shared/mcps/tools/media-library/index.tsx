@@ -66,20 +66,20 @@ export const getOpenerseImagesTool: SuggerenceMCPResponseTool = {
     }
 };
 
-export const insertOpenerseImageTool: SuggerenceMCPResponseTool = {
-    name: 'insert_openverse_image',
-    description: 'Downloads an image from Openverse, uploads it to the WordPress media library, and inserts it as an image block in the editor. This is a complete workflow tool that handles the entire process of importing free stock images. The image will be properly attributed according to its license requirements. Pass all the data from search_openverse results for proper attribution.',
+export const uploadOpenverseToMediaTool: SuggerenceMCPResponseTool = {
+    name: 'upload_openverse_to_media',
+    description: 'Downloads an image from Openverse and uploads it to the WordPress media library with proper attribution. Returns the media ID that can then be used with other tools like add block (to insert as image block), update block (to modify existing block), or set featured image tool (to set as post thumbnail). This separation allows flexible usage - you decide what to do with the image after uploading. Pass all the data from search openverse tool results for proper attribution.',
     inputSchema: {
         type: 'object',
         properties: {
             imageId: {
                 type: 'string',
-                description: 'The Openverse image ID from search_openverse results.',
+                description: 'The Openverse image ID from search openverse tool results.',
                 required: true
             },
             imageUrl: {
                 type: 'string',
-                description: 'The direct URL to the image from search_openverse results.',
+                description: 'The direct URL to the image from search openverse tool results.',
                 required: true
             },
             title: {
@@ -102,16 +102,6 @@ export const insertOpenerseImageTool: SuggerenceMCPResponseTool = {
             licenseUrl: {
                 type: 'string',
                 description: 'URL to the license details page for attribution linking.'
-            },
-            position: {
-                type: 'string',
-                description: 'Where to insert the image block: "before", "after", or "end".',
-                enum: ['before', 'after', 'end'],
-                default: 'after'
-            },
-            targetBlockId: {
-                type: 'string',
-                description: 'The block ID to insert relative to. Uses currently selected block if not specified.'
             }
         },
         required: ['imageId', 'imageUrl', 'title']
@@ -309,7 +299,7 @@ export async function searchOpenverse(
     }
 }
 
-export async function insertOpenverseImage(args: {
+export async function uploadOpenverseToMedia(args: {
     imageId: string;
     imageUrl: string;
     title: string;
@@ -317,14 +307,9 @@ export async function insertOpenverseImage(args: {
     creatorUrl?: string;
     license?: string;
     licenseUrl?: string;
-    position?: string;
-    targetBlockId?: string;
 }): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
-        // Import addBlock dynamically to avoid circular dependency
-        const { addBlock } = await import('@/shared/mcps/tools/block-manipulation');
-        
-        // First, sideload the image from Openverse to WordPress Media Library
+        // Sideload the image from Openverse to WordPress Media Library
         const sideloadResponse: any = await apiFetch({
             path: '/suggerence-gutenberg/ai-providers/v1/openverse/sideload',
             method: 'POST',
@@ -343,56 +328,35 @@ export async function insertOpenverseImage(args: {
             throw new Error(sideloadResponse.error || 'Failed to upload Openverse image');
         }
 
-        // Now insert the image as a block using the WordPress attachment ID
-        const imageAttributes = {
-            id: sideloadResponse.attachment_id,
-            url: sideloadResponse.image_url,
-            alt: sideloadResponse.alt_text || args.title,
-            caption: sideloadResponse.caption || '',
-            sizeSlug: 'large'
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'openverse_uploaded_to_media',
+                    data: {
+                        media_id: sideloadResponse.attachment_id,
+                        url: sideloadResponse.image_url,
+                        alt_text: sideloadResponse.alt_text || args.title,
+                        caption: sideloadResponse.caption || '',
+                        title: args.title,
+                        creator: args.creator,
+                        license: args.license,
+                        attribution_html: sideloadResponse.caption,
+                        sizes: sideloadResponse.sizes || {},
+                        next_steps: 'Use this media_id with add block tool to insert as image, update block tool to modify existing block, or set featured image tool to set as post thumbnail.'
+                    }
+                }, null, 2)
+            }]
         };
-
-        // Insert the image block
-        const insertResult = await addBlock(
-            'core/image',
-            imageAttributes,
-            args.position || 'after',
-            args.targetBlockId
-        );
-
-        // Parse the result to check success
-        const resultData = JSON.parse(insertResult.content[0].text);
-
-        if (resultData.success) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        success: true,
-                        action: 'openverse_image_inserted',
-                        data: {
-                            block_id: resultData.data.block_id,
-                            attachment_id: sideloadResponse.attachment_id,
-                            image_url: sideloadResponse.image_url,
-                            title: args.title,
-                            creator: args.creator,
-                            license: args.license,
-                            caption: sideloadResponse.caption
-                        }
-                    }, null, 2)
-                }]
-            };
-        } else {
-            throw new Error('Failed to insert image block');
-        }
     } catch (error) {
         return {
             content: [{
                 type: 'text',
                 text: JSON.stringify({
                     success: false,
-                    action: 'openverse_insert_failed',
-                    error: `Error inserting Openverse image: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    action: 'openverse_upload_failed',
+                    error: `Error uploading Openverse image: ${error instanceof Error ? error.message : 'Unknown error'}`
                 })
             }]
         };

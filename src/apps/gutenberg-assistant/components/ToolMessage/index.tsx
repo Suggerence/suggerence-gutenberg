@@ -1,11 +1,12 @@
 import { __experimentalVStack as VStack, __experimentalText as Text, Panel, PanelBody, PanelRow } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { Fragment } from '@wordpress/element';
+import { getToolDisplayName } from '@/shared/utils/tool-names';
 
 export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
     const isError = message.toolResult === 'error';
     const isLoading = message.loading;
-    const toolDisplayName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName || 'Unknown Tool';
+    const toolDisplayName = getToolDisplayName(message.toolName || '');
 
     const messageDate = new Date(message.date);
     const timeString = messageDate.toLocaleTimeString([], {

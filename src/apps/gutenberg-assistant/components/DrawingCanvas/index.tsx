@@ -55,19 +55,15 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Handle text tool - use display coordinates for positioning overlay
+        // Handle text tool - use coordinates for positioning overlay
         if (drawingState.currentTool === 'text') {
-            const displayX = e.clientX - rect.left;
-            const displayY = e.clientY - rect.top;
-            setTextPosition({ x: displayX, y: displayY });
+            setTextPosition({ x, y });
             setShowTextInput(true);
             return;
         }
@@ -106,10 +102,8 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
@@ -222,13 +216,10 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Convert display coordinates to canvas coordinates
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
+        // Use text position directly (no scaling needed)
         const canvasPosition = {
-            x: textPosition.x * scaleX,
-            y: textPosition.y * scaleY
+            x: textPosition.x,
+            y: textPosition.y
         };
 
         const textSettings = drawingState.textSettings;

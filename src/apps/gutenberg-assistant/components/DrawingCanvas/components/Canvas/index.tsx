@@ -40,14 +40,12 @@ export const Canvas = ({
         if (!container || !canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-
-        // Display position (not scaled) for cursor
-        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        
+        // No scaling needed - canvas internal size matches display size
+        setMousePosition({ 
+            x: e.clientX - rect.left, 
+            y: e.clientY - rect.top
+        });
         onDraw(e);
     }, [onDraw, canvasRef]);
 
@@ -104,6 +102,48 @@ export const Canvas = ({
         onStopDrawing();
     }, [onStopDrawing]);
 
+    // Dynamically resize canvas to match container size (no scaling/zoom)
+    useEffect(() => {
+        const resizeCanvas = () => {
+            const canvas = canvasRef.current;
+            const container = containerRef.current;
+            if (!canvas || !container) return;
+
+            const rect = container.getBoundingClientRect();
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            // Save current canvas content
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Set canvas internal resolution to match display size
+            canvas.width = rect.width;
+            canvas.height = Math.min(600, rect.width * 0.5625); // 16:9 aspect ratio, max 600px height
+
+            // Restore canvas content (will be stretched/scaled to new size)
+            if (imageData.width > 0 && imageData.height > 0) {
+                ctx.putImageData(imageData, 0, 0);
+            } else {
+                // Initialize with white background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Set drawing properties
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+        };
+
+        // Initial resize
+        resizeCanvas();
+
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+        return () => window.removeEventListener('resize', resizeCanvas);
+    }, [canvasRef]);
+
     // Initialize canvas with white background when it mounts
     useEffect(() => {
         if (canvasRef.current) {
@@ -142,8 +182,6 @@ export const Canvas = ({
         >
             <canvas
                 ref={canvasRef}
-                width={800}
-                height={420}
                 onMouseDown={onStartDrawing}
                 onMouseMove={handleMouseMove}
                 onMouseUp={onStopDrawing}
@@ -155,8 +193,6 @@ export const Canvas = ({
                 onTouchCancel={handleTouchEnd}
                 style={{
                     display: 'block',
-                    width: '100%', // Make canvas responsive
-                    height: 'auto', // Maintain aspect ratio
                     touchAction: 'none' // Prevent default touch behaviors
                 }}
             />

@@ -295,6 +295,22 @@ ${currentStateSection}
 
 ${contextsSection}
 
+## FEATURED IMAGE WORKFLOW
+
+When generating or adding images that should represent the post:
+• After generate_image succeeds, consider setting it as featured image with set_featured_image
+• Use the image_id (attachment_id) from generate_image response
+• Featured images appear in post listings, social shares, and themes
+• Example: "Generate hero image" → generate image tool → set featured image tool with returned ID
+
+## OPENVERSE WORKFLOW
+
+For free stock images from Openverse:
+• search openverse tool returns image results with all metadata (url, creator, license, etc.)
+• insert openverse image tool downloads, uploads to WP, and inserts as image block
+• Attribution is automatically added to image caption
+• Example: search openverse tool → get result → insert openverse image tool with all result fields
+
 ## TOOL EXECUTION WORKFLOW
 
 When you receive tool results:
@@ -306,6 +322,11 @@ Example - User says "Add a heading and paragraph":
 1. Call add_block for heading → receive result
 2. Immediately call add_block for paragraph → receive result  
 3. Now respond: "✓ Added heading and paragraph"
+
+Example - User says "Create a featured image of a sunset":
+1. Call generate image tool with prompt: "sunset..." → receive result with image_id
+2. Call set featured image tool with mediaId: image_id → receive result
+3. Now respond: "✓ Generated and set featured image"
 
 ## RESPONSE FORMAT
 

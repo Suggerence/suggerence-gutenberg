@@ -24,6 +24,17 @@ import {
     SearchPatternTool, searchPattern,
     insertPatternTool, insertPattern
 } from '@/shared/mcps/tools/patterns-layouts';
+import {
+    searchMediaTool, searchMedia,
+    getOpenerseImagesTool, searchOpenverse,
+    insertOpenerseImageTool, insertOpenverseImage
+} from '@/shared/mcps/tools/media-library';
+import {
+    updatePostTitleTool, updatePostTitle,
+    updatePostExcerptTool, updatePostExcerpt,
+    setFeaturedImageTool, setFeaturedImage,
+    removeFeaturedImageTool, removeFeaturedImage
+} from '@/shared/mcps/tools/document-tools';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -59,7 +70,14 @@ export class GutenbergMCPServer {
         getBlockSchemaTool,
         getAvailableBlocksTool,
         undoTool,
-        redoTool
+        redoTool,
+        searchMediaTool,
+        getOpenerseImagesTool,
+        insertOpenerseImageTool,
+        updatePostTitleTool,
+        updatePostExcerptTool,
+        setFeaturedImageTool,
+        removeFeaturedImageTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -144,7 +162,37 @@ export class GutenbergMCPServer {
                 
                 case 'redo':
                     return redo();
-    
+                
+                case 'search_media':
+                    return searchMedia(args.search, args.mediaType, args.perPage);
+                
+                case 'search_openverse':
+                    return searchOpenverse(args.query, args.perPage, args.license);
+                
+                case 'insert_openverse_image':
+                    return insertOpenverseImage(args as {
+                        imageId: string;
+                        imageUrl: string;
+                        title: string;
+                        creator?: string;
+                        creatorUrl?: string;
+                        license?: string;
+                        licenseUrl?: string;
+                        position?: string;
+                        targetBlockId?: string;
+                    });
+                
+                case 'update_post_title':
+                    return updatePostTitle(args.title);
+                
+                case 'update_post_excerpt':
+                    return updatePostExcerpt(args.excerpt);
+                
+                case 'set_featured_image':
+                    return setFeaturedImage(args.mediaId);
+                
+                case 'remove_featured_image':
+                    return removeFeaturedImage();
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

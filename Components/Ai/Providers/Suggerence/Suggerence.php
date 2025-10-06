@@ -54,9 +54,11 @@ class Suggerence extends Provider
     
     protected function client($options = [], $retry = [], $baseUrl = null)
     {
+        $defaultOptions = array_merge(['timeout' => 120], $options);
+        
         return $this->baseClient()
             ->withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
-            ->withOptions($options)
+            ->withOptions($defaultOptions)
             ->when($retry !== [], fn ($client) => $client->retry(...$retry))
             ->baseUrl($baseUrl ?? self::BASE_URL);
     }

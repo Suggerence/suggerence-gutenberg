@@ -43,10 +43,25 @@ trait CallsTools
 
     protected function resolveTool($name, $tools)
     {
+        $toolsCollection = Functions::collect($tools);
+        
         try {
-            return Functions::collect($tools)
-                ->sole(fn ($tool) => $tool->name() === $name);
+            // First, try exact match
+            return $toolsCollection->sole(fn ($tool) => $tool->name() === $name);
         } catch (Throwable $e) {
+            // If exact match fails, try with known prefixes
+            $knownPrefixes = ['gutenberg___', 'frontend___', 'mcp___'];
+            
+            foreach ($knownPrefixes as $prefix) {
+                try {
+                    return $toolsCollection->sole(fn ($tool) => $tool->name() === $prefix . $name);
+                } catch (Throwable $prefixException) {
+                    // Continue to next prefix
+                    continue;
+                }
+            }
+            
+            // If all attempts fail, throw original exception
             throw Exception::toolNotFound($name, $e);
         }
     }

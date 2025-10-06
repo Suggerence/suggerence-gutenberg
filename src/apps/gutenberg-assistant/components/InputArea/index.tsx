@@ -208,7 +208,7 @@ export const InputArea = () => {
         const drawingContext = {
             id: `drawing-${Date.now()}`,
             type: 'drawing',
-            label: description || 'Layout design',
+            label: description || 'Canvas',
             data: imageData,
             timestamp: new Date().toISOString()
         };
@@ -219,7 +219,7 @@ export const InputArea = () => {
         // Then, send a message to generate the page based on the layout
         const userMessage: MCPClientMessage = {
             role: 'user',
-            content: 'Based on the layout design provided in the drawing, create a page with all the blocks, sections, and content shown in the layout. Generate appropriate content for text areas, find or generate suitable images, and recreate the exact structure and design.',
+            content: 'Generate the complete page layout from the drawing.',
             date: new Date().toISOString()
         };
 

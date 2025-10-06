@@ -148,16 +148,84 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             requestBody.tools = tools;
         }
 
-        const response = await apiFetch({
-            path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            method: "POST",
-            body: JSON.stringify(requestBody),
-        });
+        // Retry configuration
+        const MAX_RETRIES = 3;
+        const INITIAL_DELAY = 1000; // 1 second
+        let lastError: any = null;
 
-        return response as MCPClientMessage;
+        // Retry loop with exponential backoff
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+                console.log(`AI request attempt ${attempt + 1}/${MAX_RETRIES}`);
+                
+                const response = await apiFetch({
+                    path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    method: "POST",
+                    body: JSON.stringify(requestBody),
+                }) as any;
+
+                // Check if response has empty content (treat as error)
+                const hasEmptyContent = 
+                    (!response.content || response.content.trim() === '') && 
+                    !response.toolName;
+                
+                if (hasEmptyContent) {
+                    const isLastAttempt = attempt === MAX_RETRIES - 1;
+                    console.warn(`AI request attempt ${attempt + 1} returned empty content`);
+                    
+                    if (isLastAttempt) {
+                        console.error('AI returned empty content after all retries');
+                        // Return the empty response on last attempt
+                        return response as MCPClientMessage;
+                    }
+                    
+                    // Calculate delay with exponential backoff
+                    const delay = INITIAL_DELAY * Math.pow(2, attempt);
+                    console.log(`Retrying in ${delay}ms due to empty content...`);
+                    
+                    // Wait before retrying
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue; // Retry
+                }
+
+                // Success - return response with content
+                return response as MCPClientMessage;
+                
+            } catch (error: any) {
+                lastError = error;
+                const isLastAttempt = attempt === MAX_RETRIES - 1;
+                
+                // Check if error is retryable (network errors or 5xx server errors)
+                const isRetryable = 
+                    !error.code || // Network errors often don't have a code
+                    error.code === 'fetch_error' ||
+                    (error.code >= 500 && error.code < 600) ||
+                    error.message?.includes('NetworkError') ||
+                    error.message?.includes('Failed to fetch');
+                
+                // Log the error
+                console.warn(`AI request attempt ${attempt + 1} failed:`, error.message || error);
+                
+                // If this is the last attempt or error is not retryable, throw
+                if (isLastAttempt || !isRetryable) {
+                    console.error('AI request failed after all retries or non-retryable error');
+                    throw error;
+                }
+                
+                // Calculate delay with exponential backoff
+                const delay = INITIAL_DELAY * Math.pow(2, attempt);
+                console.log(`Retrying in ${delay}ms...`);
+                
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        // This should never be reached, but TypeScript needs it
+        throw lastError || new Error('Failed to get AI response after retries');
     };
 
     const parseAIResponse = (response: any): MCPClientAIResponse => {

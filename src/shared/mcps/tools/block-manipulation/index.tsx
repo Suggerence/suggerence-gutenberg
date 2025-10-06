@@ -16,7 +16,7 @@ function getAvailableBlockTypes(): string[] {
 
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
-    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content. Supports creating complex nested layouts like columns with specific widths and content. IMPORTANT: For complex blocks (tables, galleries, embeds, etc.) or blocks you are unfamiliar with, ALWAYS call get schema tool first to understand the correct attribute structure before calling this tool.',
+    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content. Supports creating complex nested layouts like columns with specific widths and content inside each column. For multi-column layouts, use blockType "core/columns" with innerBlocks containing "core/column" blocks, each with their own innerBlocks for content. Set width attributes on columns (e.g., "50%", "33.33%", "66.66%"). IMPORTANT: For complex blocks (tables, galleries, embeds, etc.) or blocks you are unfamiliar with, ALWAYS call the get block schema tool first to understand the correct attribute structure before calling this tool.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -32,7 +32,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
             },
             innerBlocks: {
                 type: 'array',
-                description: 'Array of child blocks for container blocks like columns, groups, buttons, etc. Each inner block has same structure: {blockType, attributes, innerBlocks}. Example for 33/66 columns: [{"blockType": "core/column", "attributes": {"width": "33.33%"}, "innerBlocks": [{"blockType": "core/paragraph", "attributes": {"content": "Left"}}]}, {"blockType": "core/column", "attributes": {"width": "66.66%"}, "innerBlocks": [{"blockType": "core/list", "attributes": {"values": "<li>Item 1</li>"}}]}]',
+                description: 'Array of child blocks for container blocks like columns, groups, buttons, etc. Each inner block has same structure: {blockType, attributes, innerBlocks}. COLUMNS EXAMPLE - For 2-column 50/50 layout with image left and text right: [{"blockType": "core/column", "attributes": {"width": "50%"}, "innerBlocks": [{"blockType": "core/image", "attributes": {"id": 123, "url": "...", "alt": "..."}}]}, {"blockType": "core/column", "attributes": {"width": "50%"}, "innerBlocks": [{"blockType": "core/heading", "attributes": {"content": "Title", "level": 2}}, {"blockType": "core/paragraph", "attributes": {"content": "Description"}}]}]. For 3 equal columns use three core/column blocks each with "width": "33.33%".',
                 items: {
                     type: 'object',
                     properties: {

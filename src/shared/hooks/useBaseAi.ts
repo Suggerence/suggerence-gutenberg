@@ -13,9 +13,13 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
         const systemPrompt = config.getSystemPrompt(siteContext);
 
         // Check if we have visual contexts for the current conversation
-        const visualContexts = siteContext.selectedContexts?.filter((ctx: any) =>
-            ctx.type === 'drawing' || ctx.type === 'image'
-        ) || [];
+        const visualContexts = siteContext.selectedContexts?.filter((ctx: any) => {
+            const isDrawing = ctx.type === 'drawing';
+            const isImage = ctx.type === 'image';
+            const isImageBlock = ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover');
+            
+            return isDrawing || isImage || isImageBlock;
+        }) || [];
 
         let convertedMessages;
         if (visualContexts.length > 0) {
@@ -45,7 +49,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                             };
                         } else if (ctx.type === 'image') {
                             // Handle media library images (URLs)
-
                             return {
                                 type: 'image',
                                 source: {
@@ -53,7 +56,20 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                     url: ctx.data.url
                                 }
                             };
+                        } else if (ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover')) {
+                            // Handle image blocks - extract URL from block attributes
+                            const imageUrl = ctx.data?.attributes?.url;
+                            if (imageUrl) {
+                                return {
+                                    type: 'image',
+                                    source: {
+                                        type: 'url',
+                                        url: imageUrl
+                                    }
+                                };
+                            }
                         }
+                        return null;
                     }).filter(Boolean);
 
                     if (imageAttachments.length > 0) {

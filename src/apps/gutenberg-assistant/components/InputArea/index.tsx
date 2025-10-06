@@ -134,7 +134,6 @@ export const InputArea = () => {
             };
 
             addMessage(errorMessage);
-        } finally {
             setIsLoading(false);
         }
     };
@@ -158,7 +157,6 @@ export const InputArea = () => {
             };
 
             addMessage(errorMessage);
-        } finally {
             setIsLoading(false);
         }
     }, [isLoading, messages, addMessage, setInputValue, setIsLoading, handleNewMessage]);
@@ -174,11 +172,21 @@ export const InputArea = () => {
         const lastMessage = messages[messages.length - 1];
 
         if (!lastMessage) return;
-        if (lastMessage.role === 'assistant') return;
+        
+        // If the last message is an assistant message, the conversation is done
+        if (lastMessage.role === 'assistant') {
+            setIsLoading(false);
+            return;
+        }
+        
+        // If tool is still loading, wait
         if (lastMessage.role === 'tool' && lastMessage.loading) return;
 
+        // If tool finished, continue the conversation
         if (lastMessage.role === 'tool' && !lastMessage.loading) {
-            handleNewMessage().catch(console.error);
+            setIsLoading(true);
+            handleNewMessage()
+                .catch(console.error);
         }
     }, [messages]);
 
@@ -229,7 +237,6 @@ export const InputArea = () => {
             };
 
             addMessage(errorMessage);
-        } finally {
             setIsLoading(false);
         }
     }, [addContext, setIsCanvasOpen, addMessage, setIsLoading, handleNewMessage, messages]);

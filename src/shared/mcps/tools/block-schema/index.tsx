@@ -63,6 +63,8 @@ export function getAvailableBlocks(includeInactive: boolean = false, category?: 
             content: [{
                 type: 'text',
                 text: JSON.stringify({
+                    success: true,
+                    action: 'get_available_blocks_success',
                     totalBlocks: filteredBlocks.length,
                     blocks: filteredBlocks
                 }, null, 2)
@@ -131,7 +133,11 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
         return {
             content: [{
                 type: 'text',
-                text: JSON.stringify(schema, null, 2)
+                text: JSON.stringify({
+                    success: true,
+                    action: 'get_block_schema_success',
+                    schema: schema
+                }, null, 2)
             }]
         };
     } catch (error) {

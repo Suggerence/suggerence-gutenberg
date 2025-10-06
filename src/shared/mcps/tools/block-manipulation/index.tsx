@@ -390,7 +390,16 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
     const sourceBlockId = blockId || getSelectedBlockClientId();
 
     if (!sourceBlockId) {
-        throw new Error('No block selected and no blockId provided');
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_move_failed',
+                    error: 'No block selected and no blockId provided'
+                })
+            }]
+        };
     }
 
     const blocks = getBlocks();
@@ -440,7 +449,16 @@ export function duplicateBlock(blockId?: string, position?: number): { content: 
     const targetBlockId = blockId || getSelectedBlockClientId();
 
     if (!targetBlockId) {
-        throw new Error('No block selected and no blockId provided');
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_duplicate_failed',
+                    error: 'No block selected and no blockId provided'
+                })
+            }]
+        };
     }
 
     const blockToClone = getBlock(targetBlockId);
@@ -504,7 +522,16 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
     const targetBlockId = blockId || getSelectedBlockClientId();
 
     if (!targetBlockId) {
-        throw new Error('No block selected and no blockId provided');
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_delete_failed',
+                    error: 'No block selected and no blockId provided'
+                })
+            }]
+        };
     }
 
     const block = getBlock(targetBlockId);
@@ -572,7 +599,16 @@ function updateBlockContent(blockId: string | undefined, content: string): { con
     const targetBlockId = blockId || getSelectedBlockClientId();
 
     if (!targetBlockId) {
-        throw new Error('No block selected and no blockId provided');
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_content_update_failed',
+                    error: 'No block selected and no blockId provided'
+                })
+            }]
+        };
     }
 
     const block = getBlock(targetBlockId);
@@ -1041,7 +1077,16 @@ export function insertBlockAfter(blockType: string, afterBlockId?: string): { co
     const targetBlockId = afterBlockId || getSelectedBlockClientId();
 
     if (!targetBlockId) {
-        throw new Error('No block selected and no afterBlockId provided');
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_insert_after_failed',
+                    error: 'No block selected and no afterBlockId provided'
+                })
+            }]
+        };
     }
 
     const newBlock = createBlock(blockType);

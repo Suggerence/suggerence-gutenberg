@@ -82,13 +82,26 @@ export class GenericBlockMCPServer {
                     if (name.startsWith('modify_')) {
                         return this.handleDynamicTool(name, args);
                     }
-                    throw new Error(`Unknown tool: ${name}`);
+                    return {
+                        content: [{
+                            type: 'text',
+                            text: JSON.stringify({
+                                success: false,
+                                action: 'unknown_tool',
+                                error: `Unknown tool: ${name}`
+                            })
+                        }]
+                    };
             }
         } catch (error) {
             return {
                 content: [{
                     type: 'text',
-                    text: `Error executing ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    text: JSON.stringify({
+                        success: false,
+                        action: `${name}_execution_failed`,
+                        error: `Error executing ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    })
                 }]
             };
         }
@@ -108,7 +121,11 @@ export class GenericBlockMCPServer {
             return {
                 content: [{
                     type: 'text',
-                    text: 'No block selected or specified'
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'block_not_found',
+                        error: 'No block selected or specified'
+                    })
                 }]
             };
         }
@@ -118,7 +135,11 @@ export class GenericBlockMCPServer {
             return {
                 content: [{
                     type: 'text',
-                    text: `Block with ID ${targetBlockId} not found`
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'block_not_found',
+                        error: `Block with ID ${targetBlockId} not found`
+                    })
                 }]
             };
         }
@@ -159,7 +180,14 @@ export class GenericBlockMCPServer {
         return {
             content: [{
                 type: 'text',
-                text: `Updated ${currentBlock.name} block. Changed: ${changedProps.join(', ')}`
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_updated',
+                    data: {
+                        block_name: currentBlock.name,
+                        changed_props: changedProps
+                    }
+                })
             }]
         };
     }

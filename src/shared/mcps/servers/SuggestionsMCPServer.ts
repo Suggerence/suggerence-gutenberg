@@ -89,11 +89,14 @@ export class SuggestionsMCPServer {
                     };
             }
         } catch (error) {
-            console.error(`Error executing tool ${toolName}:`, error);
             return {
                 content: [{
                     type: 'text',
-                    text: `Error executing ${toolName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    text: JSON.stringify({
+                        success: false,
+                        action: `${toolName}_execution_failed`,
+                        error: `Error executing ${toolName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    })
                 }]
             };
         }
@@ -251,6 +254,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                 content: [{
                     type: 'text',
                     text: JSON.stringify({
+                        success: false,
+                        action: 'ai_service_not_available',
                         suggestedHeading: 'AI service not available',
                         seoScore: 0,
                         reasoning: 'AI service not configured'
@@ -310,6 +315,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                             content: [{
                                 type: 'text',
                                 text: JSON.stringify({
+                                    success: true,
+                                    action: 'heading_suggestion_success',
                                     suggestedHeading: aiResponse.suggestedHeading,
                                     seoScore: aiResponse.seoScore || 85,
                                     reasoning: aiResponse.reasoning || `Generated heading level ${level || 2} with SEO optimization based on content analysis`
@@ -329,6 +336,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                     content: [{
                         type: 'text',
                         text: JSON.stringify({
+                            success: true,
+                            action: 'heading_suggestion_success',
                             suggestedHeading,
                             seoScore: 85,
                             reasoning: `Generated heading level ${level || 2} with SEO optimization based on content analysis`
@@ -341,6 +350,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                 content: [{
                     type: 'text',
                     text: JSON.stringify({
+                        success: false,
+                        action: 'heading_suggestion_failed',
                         suggestedHeading: 'Unable to generate heading',
                         seoScore: 0,
                         reasoning: 'No response from AI service'
@@ -352,6 +363,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                 content: [{
                     type: 'text',
                     text: JSON.stringify({
+                        success: false,
+                        action: 'heading_suggestion_failed',
                         suggestedHeading: 'Error generating heading',
                         seoScore: 0,
                         reasoning: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -372,6 +385,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                 content: [{
                     type: 'text',
                     text: JSON.stringify({
+                        success: false,
+                        action: 'ai_service_not_available',
                         suggestedContent: 'AI service not available',
                         improvementScore: 0,
                         reasoning: 'AI service not configured'
@@ -431,6 +446,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                             content: [{
                                 type: 'text',
                                 text: JSON.stringify({
+                                    success: true,
+                                    action: 'content_suggestion_success',
                                     suggestedContent: aiResponse.suggestedContent,
                                     improvementScore: aiResponse.improvementScore || 80,
                                     reasoning: aiResponse.reasoning || `Generated ${suggestionType || 'general'} improvement based on content analysis`
@@ -450,6 +467,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                     content: [{
                         type: 'text',
                         text: JSON.stringify({
+                            success: true,
+                            action: 'content_suggestion_success',
                             suggestedContent,
                             improvementScore: 80,
                             reasoning: `Generated ${suggestionType || 'general'} improvement based on content analysis`
@@ -462,6 +481,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                 content: [{
                     type: 'text',
                     text: JSON.stringify({
+                        success: false,
+                        action: 'content_suggestion_failed',
                         suggestedContent: 'Unable to generate content',
                         improvementScore: 0,
                         reasoning: 'No response from AI service'
@@ -473,6 +494,8 @@ RESPOND WITH ONLY THIS JSON OBJECT - NO OTHER TEXT:
                 content: [{
                     type: 'text',
                     text: JSON.stringify({
+                        success: false,
+                        action: 'content_suggestion_failed',
                         suggestedContent: 'Error generating content',
                         improvementScore: 0,
                         reasoning: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`

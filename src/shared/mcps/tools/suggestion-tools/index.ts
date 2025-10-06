@@ -222,14 +222,22 @@ export async function generateAltTextSuggestion(
         return {
             content: [{
                 type: 'text',
-                text: JSON.stringify(suggestion, null, 2)
+                text: JSON.stringify({
+                    success: true,
+                    action: 'alt_text_suggestion_success',
+                    suggestion: suggestion
+                }, null, 2)
             }]
         };
     } catch (error) {
         return {
             content: [{
                 type: 'text',
-                text: `Error generating alt text suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'alt_text_suggestion_failed',
+                    error: `Error generating alt text suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
             }]
         };
     }
@@ -269,14 +277,22 @@ export async function generateHeadingSuggestion(
         return {
             content: [{
                 type: 'text',
-                text: JSON.stringify(suggestion, null, 2)
+                text: JSON.stringify({
+                    success: true,
+                    action: 'heading_suggestion_success',
+                    suggestion: suggestion
+                }, null, 2)
             }]
         };
     } catch (error) {
         return {
             content: [{
                 type: 'text',
-                text: `Error generating heading suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'heading_suggestion_failed',
+                    error: `Error generating heading suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
             }]
         };
     }
@@ -316,14 +332,22 @@ export async function generateContentSuggestion(
         return {
             content: [{
                 type: 'text',
-                text: JSON.stringify(suggestion, null, 2)
+                text: JSON.stringify({
+                    success: true,
+                    action: 'content_suggestion_success',
+                    suggestion: suggestion
+                }, null, 2)
             }]
         };
     } catch (error) {
         return {
             content: [{
                 type: 'text',
-                text: `Error generating content suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'content_suggestion_failed',
+                    error: `Error generating content suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
             }]
         };
     }
@@ -356,7 +380,11 @@ export async function applySuggestion(
             return {
                 content: [{
                     type: 'text',
-                    text: 'No suggested value provided'
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'suggestion_failed',
+                        error: 'No suggested value provided'
+                    })
                 }]
             };
         }
@@ -404,7 +432,11 @@ export async function applySuggestion(
         return {
             content: [{
                 type: 'text',
-                text: `Error applying suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: JSON.stringify({
+                    success: false,
+                    action: 'suggestion_failed',
+                    error: `Error applying suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
             }]
         };
     }

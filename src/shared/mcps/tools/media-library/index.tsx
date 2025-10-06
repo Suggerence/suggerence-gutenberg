@@ -249,7 +249,16 @@ export async function searchOpenverse(
         });
 
         if (!response.ok) {
-            throw new Error(`Openverse API error: ${response.statusText}`);
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'openverse_search_failed',
+                        error: `Openverse API error: ${response.statusText}`
+                    })
+                }]
+            };
         }
 
         const data = await response.json();
@@ -325,7 +334,16 @@ export async function uploadOpenverseToMedia(args: {
         });
 
         if (!sideloadResponse.success) {
-            throw new Error(sideloadResponse.error || 'Failed to upload Openverse image');
+           return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'openverse_upload_failed',
+                        error: sideloadResponse.error || 'Failed to upload Openverse image'
+                    })
+                }]
+            };
         }
 
         return {

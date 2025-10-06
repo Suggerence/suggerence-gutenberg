@@ -73,7 +73,16 @@ export async function generateImage(
         const imageResponse = await generateImageWithAI(prompt, inputImages, editImageUrl);
 
         if (!imageResponse.success) {
-            throw new Error(imageResponse.error || 'Failed to generate image');
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'image_generation_failed',
+                        error: imageResponse.error || 'Failed to generate image'
+                    })
+                }]
+            };
         }
 
         const result = {
@@ -96,7 +105,16 @@ export async function generateImage(
             }]
         };
     } catch (error) {
-        throw new Error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'image_generation_failed',
+                    error: `Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
     }
 }
 

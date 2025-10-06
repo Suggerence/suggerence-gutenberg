@@ -192,7 +192,11 @@ export class GutenbergMCPServer {
             return {
                 content: [{
                     type: 'text',
-                    text: `Error executing ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    text: JSON.stringify({
+                        success: false,
+                        action: `${name}_execution_failed`,
+                        error: `Error executing ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    })
                 }]
             };
         }

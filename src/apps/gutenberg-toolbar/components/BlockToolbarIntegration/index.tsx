@@ -14,6 +14,7 @@ import { SuggerenceIcon } from '@/components/SuggerenceIcon';
 import { CommandBox } from '@/apps/gutenberg-toolbar/components/CommandBox';
 import { QuickActionsText } from '@/apps/gutenberg-toolbar/components/QuickActionsText';
 import { QuickActionsImage } from '@/apps/gutenberg-toolbar/components/QuickActionsImage';
+import { QuickActionsCode } from '@/apps/gutenberg-toolbar/components/QuickActionsCode';
 import { generateEditedImage } from '@/shared/mcps/tools/image-generation';
 import type { BlockEditProps } from '@wordpress/blocks';
 
@@ -29,11 +30,12 @@ const withToolbarButton = createHigherOrderComponent(
 				return <BlockEdit {...props} />;
 			}
 
-			const isText = props.name === 'core/paragraph' || props.name === 'core/heading' || props.name === 'core/quote' || props.name === 'core/preformatted' || props.name === 'core/verse' || props.name === 'core/list-item';
-			const isImage = props.name === 'core/image' || props.name === 'core/cover';
-			const blockContent = props.attributes?.content || '';
-			const imageUrl = props.attributes?.url;
-			const imageId = props.attributes?.id;
+		const isText = props.name === 'core/paragraph' || props.name === 'core/heading' || props.name === 'core/quote' || props.name === 'core/preformatted' || props.name === 'core/verse' || props.name === 'core/list-item';
+		const isImage = props.name === 'core/image' || props.name === 'core/cover';
+		const isCode = props.name === 'core/code';
+		const blockContent = props.attributes?.content || '';
+		const imageUrl = props.attributes?.url;
+		const imageId = props.attributes?.id;
 
 			// Get the block wrapper props to add custom class
 			const blockProps = props.wrapperProps || {};
@@ -73,9 +75,9 @@ const withToolbarButton = createHigherOrderComponent(
 				}
 			};
 
-			if(!isText && !isImage) {
-				return <BlockEdit {...mergedProps} />;
-			}
+		if(!isText && !isImage && !isCode) {
+			return <BlockEdit {...mergedProps} />;
+		}
 
 			return (
 				<>
@@ -159,6 +161,16 @@ const withToolbarButton = createHigherOrderComponent(
 														setCommandBoxMode('image-edit');
 														setShowCommandBox(true);
 													}}
+												/>
+											)}
+
+											{isCode && (
+												<QuickActionsCode
+													blockContent={blockContent}
+													clientId={props.clientId}
+													onClose={onClose}
+													isProcessing={isProcessing}
+													setIsProcessing={setIsProcessing}
 												/>
 											)}
 										</>

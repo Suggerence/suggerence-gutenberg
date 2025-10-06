@@ -8,7 +8,6 @@ import { __ } from '@wordpress/i18n';
 import { chevronRight } from '@wordpress/icons';
 import { useDispatch } from '@wordpress/data';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
-import type { AIModel } from '@/shared/types';
 
 const TONES = [
 	{ label: __('Professional', 'suggerence'), value: 'professional' },

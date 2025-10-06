@@ -195,6 +195,45 @@ export const InputArea = () => {
         setIsCanvasOpen(false);
     };
 
+    const handleGeneratePage = useCallback(async (imageData: string, description?: string) => {
+        // First, add the drawing to context
+        const drawingContext = {
+            id: `drawing-${Date.now()}`,
+            type: 'drawing',
+            label: description || 'Layout design',
+            data: imageData,
+            timestamp: new Date().toISOString()
+        };
+
+        addContext(drawingContext);
+        setIsCanvasOpen(false);
+
+        // Then, send a message to generate the page based on the layout
+        const userMessage: MCPClientMessage = {
+            role: 'user',
+            content: 'Based on the layout design provided in the drawing, create a page with all the blocks, sections, and content shown in the layout. Generate appropriate content for text areas, find or generate suitable images, and recreate the exact structure and design.',
+            date: new Date().toISOString()
+        };
+
+        addMessage(userMessage);
+        setIsLoading(true);
+
+        try {
+            await handleNewMessage([...messages, userMessage]);
+        } catch (error) {
+            console.error('Generate page error:', error);
+            const errorMessage: MCPClientMessage = {
+                role: 'assistant',
+                content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                date: new Date().toISOString()
+            };
+
+            addMessage(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [addContext, setIsCanvasOpen, addMessage, setIsLoading, handleNewMessage, messages]);
+
     const handleMediaSelect = (imageData: any, description?: string) => {
         const imageContext = {
             id: `image-${imageData.id}`,
@@ -298,6 +337,7 @@ export const InputArea = () => {
                 isOpen={isCanvasOpen}
                 onClose={() => setIsCanvasOpen(false)}
                 onSave={handleCanvasSave}
+                onGeneratePage={handleGeneratePage}
             />
 
             <MediaSelector

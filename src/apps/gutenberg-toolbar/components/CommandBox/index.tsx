@@ -28,18 +28,6 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
         return getSelectedBlock?.();
     }, []);
 
-    // Focus textarea when component mounts
-    useEffect(() => {
-        // Use timeout to ensure the textarea is rendered
-        const timeout = setTimeout(() => {
-            if (textareaRef.current) {
-                textareaRef.current.focus();
-            }
-        }, 100);
-
-        return () => clearTimeout(timeout);
-    }, []);
-
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!inputValue.trim() || isLoading) return;
@@ -73,6 +61,18 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
     };
 
     const isLoading = isExecuting || mcpLoading;
+
+    // Focus textarea when component mounts
+    useEffect(() => {
+        // Use timeout to ensure the textarea is rendered
+        const timeout = setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+            }
+        }, 100);
+
+        return () => clearTimeout(timeout);
+    }, []);
 
     const handleAudioMessage = async (audioMessage: any) => {
         try {

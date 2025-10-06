@@ -25,6 +25,7 @@ interface DrawingCanvasProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (imageData: string, description?: string) => void;
+    onGeneratePage?: (imageData: string, description?: string) => void;
 }
 
 interface CanvasProps {

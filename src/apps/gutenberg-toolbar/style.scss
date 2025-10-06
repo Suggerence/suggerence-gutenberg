@@ -1,0 +1,30 @@
+/* Suggerence AI Thinking Animation */
+@keyframes suggerence-pulse {
+    0% {
+      outline-color: rgba(210, 33, 120, 0.8);
+      box-shadow: 0 0 0 0 rgba(210, 33, 120, 0.6);
+    }
+    50% {
+      outline-color: rgba(210, 33, 120, 1);
+      box-shadow: 0 0 0 8px rgba(210, 33, 120, 0);
+    }
+    100% {
+      outline-color: rgba(210, 33, 120, 0.8);
+      box-shadow: 0 0 0 0 rgba(210, 33, 120, 0);
+    }
+  }
+
+  p.block-editor-rich-text__editable.suggerence-thinking,
+  .block-editor-rich-text__editable.suggerence-thinking,
+  p.suggerence-thinking,
+  .suggerence-thinking,
+  [id^="block-"].suggerence-thinking {
+    position: relative !important;
+    animation-name: suggerence-pulse !important;
+    animation-duration: 1.5s !important;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1) !important;
+    animation-iteration-count: infinite !important;
+    outline: 3px solid #d22178 !important;
+    outline-offset: 2px !important;
+    border-radius: 2px !important;
+  }

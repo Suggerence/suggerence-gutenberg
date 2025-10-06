@@ -20,7 +20,7 @@ import { useDrawingCanvasStore } from '@/apps/gutenberg-assistant/components/Dra
 import { toolRegistry } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/ToolRegistry';
 import { DrawingContext } from '@/apps/gutenberg-assistant/components/DrawingCanvas/tools/base';
 
-export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) => {
+export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: DrawingCanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Use Zustand store
@@ -193,6 +193,17 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
         onSave(imageData, 'Drawing');
         onClose();
     }, [onSave, onClose]);
+
+    const handleGeneratePage = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const imageData = canvas.toDataURL('image/png');
+        if (onGeneratePage) {
+            onGeneratePage(imageData, 'Layout design');
+        }
+        onClose();
+    }, [onGeneratePage, onClose]);
 
     const handleToolChange = useCallback((tool: DrawingTool) => {
         setCurrentTool(tool);
@@ -519,11 +530,20 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave }: DrawingCanvasProps) =
                     </Button>
 
                     <Button
-                        variant="primary"
+                        variant="secondary"
                         onClick={handleSave}
                     >
                         {__('Add to Context', 'suggerence')}
                     </Button>
+
+                    {onGeneratePage && (
+                        <Button
+                            variant="primary"
+                            onClick={handleGeneratePage}
+                        >
+                            {__('Generate Page', 'suggerence')}
+                        </Button>
+                    )}
                 </HStack>
             </VStack>
         </Modal>

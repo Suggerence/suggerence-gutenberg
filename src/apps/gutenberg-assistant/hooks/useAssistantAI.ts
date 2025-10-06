@@ -148,16 +148,17 @@ export const useAssistantAI = (): UseAITools => {
         switch (context.type) {
             case 'drawing':
                 return `${info}
-  🎨 **USER DRAWING PROVIDED** - Analyze for:
-  → Layout structure: headers, text areas, buttons, columns
-  → Intent: "create blocks" = generate_blocks_from_canvas
-  → Intent: "generate image" = generate_image`;
+  🎨 **USER DRAWING PROVIDED** - Analyze the drawing and create the content directly:
+  → Use add block tool for text content (headings, paragraphs, buttons, etc.)
+  → Use generate image tool for any images shown in the drawing
+  → Use insert pattern tool if the drawing matches a known pattern (hero, CTA, etc.)
+  → Build layouts using add block tool with core/columns for multi-column layouts`;
 
             case 'image':
                 return `${info}
   🖼️ **IMAGE PROVIDED** - User selected an image
-  → For "based on this": Use generate_image with description
-  → For editing: Use generate_edited_image`;
+  → For "based on this": Use generate image tool with description
+  → For editing: Use generate edited image tool`;
 
             case 'post':
             case 'page':
@@ -244,9 +245,14 @@ You are a direct-action AI that executes WordPress Gutenberg operations immediat
 
 When user provides drawings/images, determine intent:
 
-### → BLOCK GENERATION (generate_blocks_from_canvas)
+### → BLOCK GENERATION FROM DRAWINGS
 Triggers: "create blocks from", "build layout", "make this page", wireframe sketches
-Output: WordPress block structure matching the drawing
+Workflow: Directly create blocks by analyzing the drawing:
+  1. Identify all elements: headings, text, images, buttons, layout structure
+  2. Generate any images first using generate image tool or search in media or openverse
+  3. Create blocks using add block tool in the correct order
+  4. For layouts, use core/columns or insert pattern tool if it matches a known pattern
+Output: WordPress blocks matching the drawing layout
 
 ### → IMAGE CREATION (generate_image)  
 Triggers: "create an image", "generate picture of [subject]"

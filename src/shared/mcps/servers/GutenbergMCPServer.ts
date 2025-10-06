@@ -14,9 +14,6 @@ import {
     generateEditedImageTool, generateEditedImage
 } from '@/shared/mcps/tools/image-generation';
 import {
-    generateBlocksFromCanvasTool, generateBlocksFromCanvas
-} from '@/shared/mcps/tools/canvas-to-blocks';
-import {
     getAvailableBlocksTool, getAvailableBlocks,
     getBlockSchemaTool, getBlockSchema    
 } from '@/shared/mcps/tools/block-schema';
@@ -65,7 +62,6 @@ export class GutenbergMCPServer {
         wrapBlockTool,
         generateImageTool,
         generateEditedImageTool,
-        generateBlocksFromCanvasTool,
         insertPatternTool,
         getBlockSchemaTool,
         getAvailableBlocksTool,
@@ -134,9 +130,6 @@ export class GutenbergMCPServer {
                         wrapperAttributes: args.wrapperAttributes,
                         columnWidths: args.columnWidths
                     });
-
-                case 'generate_blocks_from_canvas':
-                    return generateBlocksFromCanvas(args.blockStructure, args.analysis, args.replaceExisting, args.targetPosition);
 
                 case 'search_pattern':
                     return searchPattern({

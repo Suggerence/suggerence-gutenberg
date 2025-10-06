@@ -23,7 +23,6 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     // Image generation tools
     'generate_image': __('Generate image', 'suggerence'),
     'generate_edited_image': __('Edit image', 'suggerence'),
-    'generate_blocks_from_canvas': __('Generate blocks from canvas', 'suggerence'),
 
     // Pattern tools
     'search_pattern': __('Search patterns', 'suggerence'),

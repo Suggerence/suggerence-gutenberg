@@ -7,7 +7,12 @@ import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/useGutenbergAI';
 import { AudioButton } from '@/shared/components/AudioButton';
 
-export const CommandBox = ({ onClose }: CommandBoxProps) => {
+export const CommandBox = ({
+    onClose,
+    onExecute,
+    placeholder,
+    mode = 'default'
+}: CommandBoxProps) => {
     const {
         isExecuting,
         error,
@@ -16,9 +21,12 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
         setError
     } = useCommandStore();
 
-    const { executeCommand, isLoading: mcpLoading } = useGutenbergAI();
+    const { executeCommand: defaultExecuteCommand, isLoading: mcpLoading } = useGutenbergAI();
     const [inputValue, setInputValue] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Use custom execute function if provided, otherwise use default
+    const executeCommand = onExecute || defaultExecuteCommand;
 
     // Get selected block information
     const selectedBlock = useSelect((select) => {
@@ -129,7 +137,7 @@ export const CommandBox = ({ onClose }: CommandBoxProps) => {
                         value={inputValue}
                         onChange={(value: string) => setInputValue(value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={__('"Ask me to modify the content of the block"', 'suggerence')}
+                        placeholder={placeholder || __('"Ask me to modify the content of the block"', 'suggerence')}
                         disabled={isLoading}
                         rows={2}
                         ref={textareaRef}

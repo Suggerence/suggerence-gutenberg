@@ -7,6 +7,21 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
     const isError = message.toolResult === 'error';
     const isLoading = message.loading;
     const toolDisplayName = getToolDisplayName(message.toolName || '');
+    
+    // Check if tool result has success: false
+    let parsedResult = null;
+    let isToolFailure = false;
+    
+    if (message.toolResult && typeof message.toolResult === 'string') {
+        try {
+            parsedResult = JSON.parse(message.toolResult);
+            isToolFailure = parsedResult && parsedResult.success === false;
+        } catch (e) {
+            // If parsing fails, treat as regular string result
+        }
+    } else if (message.toolResult && typeof message.toolResult === 'object') {
+        isToolFailure = message.toolResult.success === false;
+    }
 
     const messageDate = new Date(message.date);
     const timeString = messageDate.toLocaleTimeString([], {
@@ -23,7 +38,7 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
                             title={
                                 isLoading ? (
                                     `Executing ${toolDisplayName}`
-                                ) : isError ? (
+                                ) : isError || isToolFailure ? (
                                     `❌ ${toolDisplayName}`
                                 ) : (
                                     `✅ ${toolDisplayName}`
@@ -59,12 +74,12 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
                                     {!isLoading && (
                                         <div>
                                             <Text size="12" weight="600" style={{ color: '#666', marginBottom: '4px' }}>
-                                                {isError ? __("Error:", "suggerence") : __("Result:", "suggerence")}
+                                                {isError || isToolFailure ? __("Error:", "suggerence") : __("Result:", "suggerence")}
                                             </Text>
                                             <div
                                                 style={{
-                                                    backgroundColor: isError ? '#f8f9fa' : '#f0f8ff',
-                                                    border: `1px solid ${isError ? '#f44336' : '#2196f3'}`,
+                                                    backgroundColor: isError || isToolFailure ? '#f8f9fa' : '#f0f8ff',
+                                                    border: `1px solid ${isError || isToolFailure ? '#f44336' : '#2196f3'}`,
                                                     borderRadius: '4px',
                                                     padding: '8px',
                                                     fontSize: '11px',
@@ -72,10 +87,10 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
                                                     whiteSpace: 'pre-wrap',
                                                     overflow: 'auto',
                                                     maxHeight: '200px',
-                                                    color: isError ? '#d32f2f' : '#1976d2'
+                                                    color: isError || isToolFailure ? '#d32f2f' : '#1976d2'
                                                 }}
                                             >
-                                                {typeof message.toolResult === 'string' ? message.toolResult : JSON.stringify(message.toolResult, null, 2)}
+                                                {parsedResult ? JSON.stringify(parsedResult, null, 2) : (typeof message.toolResult === 'string' ? message.toolResult : JSON.stringify(message.toolResult, null, 2))}
                                             </div>
                                         </div>
                                     )}

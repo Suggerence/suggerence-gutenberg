@@ -83,6 +83,36 @@ export const useAssistantAI = (): UseAITools => {
             // Get available block types
             const availableBlockTypes = getAvailableBlockTypes();
 
+            // Auto-add selected image blocks as visual context
+            let contextsWithAutoImageBlock = [...(selectedContexts || [])];
+            
+            // Check if the selected block is an image block
+            if (selectedBlock && (selectedBlock.name === 'core/image' || selectedBlock.name === 'core/cover')) {
+                const imageUrl = selectedBlock.attributes?.url;
+                
+                // Only add if there's an image URL and it's not already in the contexts
+                if (imageUrl) {
+                    const imageBlockContextId = `auto-image-block-${selectedBlockId}`;
+                    const alreadyExists = contextsWithAutoImageBlock.some(ctx => 
+                        ctx.id === imageBlockContextId || 
+                        (ctx.type === 'block' && ctx.data?.id === selectedBlockId)
+                    );
+                    
+                    if (!alreadyExists) {
+                        contextsWithAutoImageBlock.push({
+                            id: imageBlockContextId,
+                            type: 'block',
+                            label: `Selected ${selectedBlock.name === 'core/cover' ? 'Cover' : 'Image'} Block`,
+                            data: {
+                                id: selectedBlockId,
+                                name: selectedBlock.name,
+                                attributes: selectedBlock.attributes
+                            }
+                        });
+                    }
+                }
+            }
+
             return {
                 ...baseContext,
                 gutenberg: {
@@ -95,7 +125,7 @@ export const useAssistantAI = (): UseAITools => {
                     availableBlockTypes: availableBlockTypes,
                     lastUpdated: new Date().toISOString()
                 },
-                selectedContexts: selectedContexts || []
+                selectedContexts: contextsWithAutoImageBlock
             };
         } catch (gutenbergError) {
             console.warn('Suggerence: Could not retrieve Gutenberg context', gutenbergError);

@@ -1,4 +1,5 @@
 import apiFetch from "@wordpress/api-fetch";
+import { convertImageUrlToBase64 } from "../utils/image-utils";
 
 export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
     const callAI = async (
@@ -32,10 +33,10 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                 }
             }
 
-            convertedMessages = messages.map((message, index) => {
+            convertedMessages = await Promise.all(messages.map(async (message, index) => {
                 if (index === latestUserMessageIndex) {
                     // Convert the latest user message to include images from all visual contexts
-                    const imageAttachments = visualContexts.map((ctx: any) => {
+                    const imageAttachments = await Promise.all(visualContexts.map(async (ctx: any) => {
 
                         if (ctx.type === 'drawing') {
                             // Handle drawings (base64 data)
@@ -48,31 +49,47 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                 }
                             };
                         } else if (ctx.type === 'image') {
-                            // Handle media library images (URLs)
-                            return {
-                                type: 'image',
-                                source: {
-                                    type: 'url',
-                                    url: ctx.data.url
-                                }
-                            };
-                        } else if (ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover')) {
-                            // Handle image blocks - extract URL from block attributes
-                            const imageUrl = ctx.data?.attributes?.url;
-                            if (imageUrl) {
+                            // Handle media library images - convert URL to base64
+                            try {
+                                const { data, media_type } = await convertImageUrlToBase64(ctx.data.url);
                                 return {
                                     type: 'image',
                                     source: {
-                                        type: 'url',
-                                        url: imageUrl
+                                        type: 'base64',
+                                        media_type: media_type,
+                                        data: data
                                     }
                                 };
+                            } catch (error) {
+                                console.error('Error converting media library image to base64:', error);
+                                return null;
+                            }
+                        } else if (ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover')) {
+                            // Handle image blocks - convert URL to base64
+                            const imageUrl = ctx.data?.attributes?.url;
+                            if (imageUrl) {
+                                try {
+                                    const { data, media_type } = await convertImageUrlToBase64(imageUrl);
+                                    return {
+                                        type: 'image',
+                                        source: {
+                                            type: 'base64',
+                                            media_type: media_type,
+                                            data: data
+                                        }
+                                    };
+                                } catch (error) {
+                                    console.error('Error converting image block to base64:', error);
+                                    return null;
+                                }
                             }
                         }
                         return null;
-                    }).filter(Boolean);
+                    }));
+                    
+                    const validImageAttachments = imageAttachments.filter(Boolean);
 
-                    if (imageAttachments.length > 0) {
+                    if (validImageAttachments.length > 0) {
                         return {
                             role: message.role,
                             content: [
@@ -80,7 +97,7 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                     type: 'text',
                                     text: message.content
                                 },
-                                ...imageAttachments
+                                ...validImageAttachments
                             ]
                         };
                     }
@@ -100,7 +117,7 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                 }
 
                 return baseMessage;
-            });
+            }));
         } else {
             // No visual contexts, just convert normally
             const messagesWithAssistant: any[] = [];

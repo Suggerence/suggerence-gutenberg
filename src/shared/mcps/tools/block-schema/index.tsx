@@ -6,7 +6,7 @@ export const getAvailableBlocksTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            includeInactive: {
+            include_inactive: {
                 type: 'boolean',
                 description: 'If true, includes deprecated and private block types in the results. If false (default), returns only active, user-facing blocks. Set to true only when you need a complete technical inventory including deprecated blocks. Most use cases should keep this false to avoid suggesting obsolete block types.'
             },
@@ -24,13 +24,13 @@ export const getBlockSchemaTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockType: {
+            block_type: {
                 type: 'string',
                 description: 'The exact block type identifier to query. Must be a fully qualified block name including namespace, typically "core/block-name" for WordPress core blocks (e.g., "core/paragraph", "core/heading", "core/image", "core/button", "core/columns"). Custom blocks use their registered namespace (e.g., "my-plugin/custom-block"). Use get_available_blocks first if you\'re unsure of the exact identifier.',
                 required: true
             }
         },
-        required: ['blockType']
+        required: ['block_type']
     }
 };
 

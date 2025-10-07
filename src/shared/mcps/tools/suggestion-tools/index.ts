@@ -7,11 +7,11 @@ export const generateAltTextSuggestionTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'Block client ID (optional, uses selected block if not provided)'
             },
-            imageUrl: {
+            image_url: {
                 type: 'string',
                 description: 'URL of the image to generate alt text for (optional, will use block attributes if not provided)'
             },
@@ -24,7 +24,7 @@ export const generateAltTextSuggestionTool: SuggerenceMCPResponseTool = {
     outputSchema: {
         type: 'object',
         properties: {
-            suggestedAltText: {
+            suggested_alt_text: {
                 type: 'string',
                 description: 'The AI-generated alt text suggestion'
             },
@@ -47,7 +47,7 @@ export const generateHeadingSuggestionTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'Block client ID (optional, uses selected block if not provided)'
             },
@@ -70,11 +70,11 @@ export const generateHeadingSuggestionTool: SuggerenceMCPResponseTool = {
     outputSchema: {
         type: 'object',
         properties: {
-            suggestedHeading: {
+            suggested_heading: {
                 type: 'string',
                 description: 'The AI-generated heading suggestion'
             },
-            seoScore: {
+            seo_score: {
                 type: 'number',
                 description: 'SEO score for the heading (0-100)'
             },
@@ -93,15 +93,15 @@ export const generateContentSuggestionTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'Block client ID (optional, uses selected block if not provided)'
             },
-            currentContent: {
+            current_content: {
                 type: 'string',
                 description: 'Current content to improve (optional)'
             },
-            suggestionType: {
+            suggestion_type: {
                 type: 'string',
                 description: 'Type of suggestion to generate',
                 enum: ['readability', 'seo', 'accessibility', 'engagement', 'clarity']
@@ -111,16 +111,16 @@ export const generateContentSuggestionTool: SuggerenceMCPResponseTool = {
                 description: 'Additional context about the content or goals (optional)'
             }
         },
-        required: ['suggestionType']
+        required: ['suggestion_type']
     },
     outputSchema: {
         type: 'object',
         properties: {
-            suggestedContent: {
+            suggested_content: {
                 type: 'string',
                 description: 'The AI-generated content suggestion'
             },
-            improvementScore: {
+            improvement_score: {
                 type: 'number',
                 description: 'Score indicating how much the suggestion improves the content (0-100)'
             },
@@ -139,25 +139,25 @@ export const applySuggestionTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'Block client ID (optional, uses selected block if not provided)'
             },
-            suggestionType: {
+            suggestion_type: {
                 type: 'string',
                 description: 'Type of suggestion being applied',
                 enum: ['alt-text', 'heading', 'content', 'title', 'description']
             },
-            suggestedValue: {
+            suggested_value: {
                 type: 'string',
                 description: 'The suggested value to apply'
             },
-            attributeName: {
+            attribute_name: {
                 type: 'string',
                 description: 'Specific attribute name to update (optional, will be inferred from suggestionType if not provided)'
             }
         },
-        required: ['suggestionType', 'suggestedValue']
+        required: ['suggestion_type', 'suggested_value']
     },
     outputSchema: {
         type: 'object',
@@ -170,7 +170,7 @@ export const applySuggestionTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'Status message about the application'
             },
-            updatedValue: {
+            updated_value: {
                 type: 'string',
                 description: 'The actual value that was applied'
             }

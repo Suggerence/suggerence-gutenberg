@@ -66,7 +66,7 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            patternName: {
+            pattern_name: {
                 type: 'string',
                 description: 'The exact name/slug of the pattern to insert (e.g., "core/query-standard-posts", "twentytwentyfour/hero", "theme/pricing-table"). Use the search pattern tool to find available pattern names.',
                 required: true
@@ -76,12 +76,12 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
                 description: 'Where to insert the pattern. "before" inserts above the selected block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after".',
                 enum: ['before', 'after', 'end']
             },
-            targetBlockId: {
+            target_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor.'
             }
         },
-        required: ['patternName']
+        required: ['pattern_name']
     }
 };
 

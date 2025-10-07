@@ -20,7 +20,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockType: {
+            block_type: {
                 type: 'string',
                 description: 'The WordPress block type identifier to create. Must be a valid registered block type (e.g., "core/paragraph" for text, "core/heading" for titles, "core/image" for images, "core/button" for buttons). Use get available blocks tool to see all valid block types if unsure.',
                 enum: getAvailableBlockTypes()
@@ -30,13 +30,13 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                 description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. For tables, use get block schema tool first - structure is complex: {"body": [{"cells": [{"content": "text", "tag": "td"}]}]}. Use get block schema tool to see all available attributes for any block type.',
                 additionalProperties: true
             },
-            innerBlocks: {
+            inner_blocks: {
                 type: 'array',
-                description: 'Array of child blocks for container blocks like columns, groups, buttons, etc. Each inner block has same structure: {blockType, attributes, innerBlocks}. COLUMNS EXAMPLE - For 2-column 50/50 layout with image left and text right: [{"blockType": "core/column", "attributes": {"width": "50%"}, "innerBlocks": [{"blockType": "core/image", "attributes": {"id": 123, "url": "...", "alt": "..."}}]}, {"blockType": "core/column", "attributes": {"width": "50%"}, "innerBlocks": [{"blockType": "core/heading", "attributes": {"content": "Title", "level": 2}}, {"blockType": "core/paragraph", "attributes": {"content": "Description"}}]}]. For 3 equal columns use three core/column blocks each with "width": "33.33%".',
+                description: 'Array of child blocks for container blocks like columns, groups, buttons, etc. Each inner block has same structure: {blockType, attributes, innerBlocks}. COLUMNS EXAMPLE - For 2-column 50/50 layout with image left and text right: [{"block_type": "core/column", "attributes": {"width": "50%"}, "inner_blocks": [{"block_type": "core/image", "attributes": {"id": 123, "url": "...", "alt": "..."}}]}, {"block_type": "core/column", "attributes": {"width": "50%"}, "inner_blocks": [{"block_type": "core/heading", "attributes": {"content": "Title", "level": 2}}, {"block_type": "core/paragraph", "attributes": {"content": "Description"}}]}]. For 3 equal columns use three core/column blocks each with "width": "33.33%".',
                 items: {
                     type: 'object',
                     properties: {
-                        blockType: {
+                        block_type: {
                             type: 'string',
                             description: 'Block type for this inner block'
                         },
@@ -45,7 +45,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                             description: 'Attributes for this inner block',
                             additionalProperties: true
                         },
-                        innerBlocks: {
+                        inner_blocks: {
                             type: 'array',
                             description: 'Nested inner blocks (supports unlimited nesting)',
                             items: {
@@ -53,7 +53,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                             }
                         }
                     },
-                    required: ['blockType']
+                    required: ['block_type']
                 }
             },
             position: {
@@ -61,31 +61,36 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                 description: 'Insertion position relative to the target block. "before" inserts above the target block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after" if not specified.',
                 enum: ['before', 'after', 'end']
             },
-            targetBlockId: {
+            target_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor. Only needed when inserting relative to a specific block that is not currently selected.'
             }
         },
-        required: ['blockType']
+        required: ['block_type']
     }
 };
 
 export const moveBlockTool: SuggerenceMCPResponseTool = {
     name: 'move_block',
-    description: 'Relocates an existing block to a different position in the document. Use this when the user wants to reorder content, move a paragraph up or down, or reorganize sections. The tool maintains the block\'s content and attributes while changing only its position in the document structure.',
+    description: 'Relocates an existing block to a different position relative to another block. Use this when the user wants to reorder content, move a paragraph up or down, reorganize sections, or move blocks inside groups, columns, or other container blocks. Works with nested blocks and maintains the block\'s content and attributes while changing only its position.',
     inputSchema: {
         type: 'object',
         properties: {
-            position: {
-                type: 'number',
-                description: 'The destination index in the document where the block should be moved (0-based, where 0 is the first position). The position is automatically clamped to valid bounds - values beyond the document length will move the block to the end. Example: position 0 moves to top, position 5 moves to the 6th position.'
-            },
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'The client ID of the block to relocate. If omitted, moves the currently selected block in the editor. Use this parameter when moving a specific block that is not currently selected.'
+            },
+            target_block_id: {
+                type: 'string',
+                description: 'The client ID of the reference block for positioning. The block will be moved relative to this target block. Required to specify where to move the block.'
+            },
+            position: {
+                type: 'string',
+                description: 'Position relative to the target block. "before" inserts above the target block, "after" inserts below it. This allows precise positioning even within nested structures like columns or groups.',
+                enum: ['before', 'after']
             }
         },
-        required: ['position']
+        required: ['target_block_id', 'position']
     }
 };
 
@@ -95,7 +100,7 @@ export const duplicateBlockTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'The client ID of the block to clone. If not provided, duplicates the currently selected block in the editor. This parameter is useful when duplicating a specific block that is not currently selected.'
             },
@@ -113,7 +118,7 @@ export const deleteBlockTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'The client ID of the block to remove from the document. If not provided, deletes the currently selected block in the editor. Use this parameter to delete a specific block that is not currently selected.'
             }
@@ -127,7 +132,7 @@ export const updateBlockTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'The client ID of the block to modify. If omitted, updates the currently selected block in the editor. Use this when updating a specific block that is not selected.'
             },
@@ -151,17 +156,17 @@ export const transformBlockTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'The client ID of the block to transform. If omitted, transforms the currently selected block in the editor. Use this parameter when transforming a specific block that is not currently selected.'
             },
-            targetBlockType: {
+            target_block_type: {
                 type: 'string',
                 description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.',
                 required: true
             }
         },
-        required: ['targetBlockType']
+        required: ['target_block_type']
     }
 };
 
@@ -171,28 +176,28 @@ export const wrapBlockTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            blockId: {
+            block_id: {
                 type: 'string',
                 description: 'The client ID of the block to wrap. If omitted, wraps the currently selected block in the editor. To wrap multiple blocks, use blockIds instead.'
             },
-            blockIds: {
+            block_ids: {
                 type: 'array',
                 description: 'Array of block client IDs to wrap together in the container. Use this to wrap multiple blocks at once. If provided, blockId is ignored. For columns, blocks are distributed left-to-right according to columnWidths.',
                 items: {
                     type: 'string'
                 }
             },
-            wrapperBlockType: {
+            wrapper_block_type: {
                 type: 'string',
                 description: 'The container block type to wrap with. Must be a valid WordPress container block like "core/group" (generic container with background/padding), "core/columns" (creates a columns layout), "core/column" (single column), "core/cover" (image/color overlay container), or "core/buttons" (button group container).',
                 required: true
             },
-            wrapperAttributes: {
+            wrapper_attributes: {
                 type: 'object',
                 description: 'Optional attributes for the wrapper block (e.g., background color, padding). Different containers support different attributes - use get block schema tool on the wrapper type to see available options.',
                 additionalProperties: true
             },
-            columnWidths: {
+            column_widths: {
                 type: 'array',
                 description: 'For columns wrapper only: Array of width percentages for each column (e.g., ["33.33%", "66.66%"] for 33/66 layout, ["25%", "75%"] for 25/75, or ["50%", "50%"] for 50/50). Must match number of blocks being wrapped. First block goes in first column, second in second column, etc. If omitted, columns are equal width.',
                 items: {
@@ -200,7 +205,7 @@ export const wrapBlockTool: SuggerenceMCPResponseTool = {
                 }
             }
         },
-        required: ['wrapperBlockType']
+        required: ['wrapper_block_type']
     }
 };
 
@@ -383,11 +388,15 @@ export function addBlock(
     };
 }
 
-export function moveBlock(position: number, blockId?: string): { content: Array<{ type: string, text: string }> } {
+export function moveBlock(args: {
+    targetBlockId: string;
+    position: string;
+    blockId?: string;
+}): { content: Array<{ type: string, text: string }> } {
     const { moveBlocksToPosition } = dispatch('core/block-editor') as any;
-    const { getSelectedBlockClientId, getBlockIndex, getBlocks, getBlockRootClientId } = select('core/block-editor') as any;
+    const { getSelectedBlockClientId, getBlockIndex, getBlock, getBlockRootClientId } = select('core/block-editor') as any;
 
-    const sourceBlockId = blockId || getSelectedBlockClientId();
+    const sourceBlockId = args.blockId || getSelectedBlockClientId();
 
     if (!sourceBlockId) {
         return {
@@ -402,12 +411,71 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
         };
     }
 
-    const blocks = getBlocks();
-    const currentIndex = getBlockIndex(sourceBlockId);
-    const maxIndex = blocks.length - 1;
-    const targetIndex = Math.max(0, Math.min(position, maxIndex));
+    // Validate target block exists
+    const targetBlock = getBlock(args.targetBlockId);
+    if (!targetBlock) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_move_failed',
+                    error: `Target block with ID ${args.targetBlockId} not found`
+                })
+            }]
+        };
+    }
 
-    if (currentIndex === targetIndex) {
+    // Validate source block exists
+    const sourceBlock = getBlock(sourceBlockId);
+    if (!sourceBlock) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_move_failed',
+                    error: `Source block with ID ${sourceBlockId} not found`
+                })
+            }]
+        };
+    }
+
+    // Get the parent (root) of the target block - this is where we'll move the source block to
+    const targetRootClientId = getBlockRootClientId(args.targetBlockId);
+    const sourceRootClientId = getBlockRootClientId(sourceBlockId);
+    
+    // Get the index of the target block within its parent
+    const targetIndex = getBlockIndex(args.targetBlockId, targetRootClientId);
+    const currentIndex = getBlockIndex(sourceBlockId, sourceRootClientId);
+
+    // Calculate the destination index based on position
+    let destinationIndex: number;
+    if (args.position.toLowerCase() === 'before') {
+        destinationIndex = targetIndex;
+    } else if (args.position.toLowerCase() === 'after') {
+        destinationIndex = targetIndex + 1;
+    } else {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_move_failed',
+                    error: `Invalid position "${args.position}". Must be "before" or "after".`
+                })
+            }]
+        };
+    }
+
+    // If moving within the same parent and the source is before the target,
+    // we need to adjust the index because removing the source will shift indices
+    if (sourceRootClientId === targetRootClientId && currentIndex < destinationIndex) {
+        destinationIndex--;
+    }
+
+    // Check if block is already at the target position
+    if (sourceRootClientId === targetRootClientId && currentIndex === destinationIndex) {
         return {
             content: [{
                 type: 'text',
@@ -416,30 +484,56 @@ export function moveBlock(position: number, blockId?: string): { content: Array<
                     action: 'block_already_at_position',
                     data: {
                         block_id: sourceBlockId,
-                        position: targetIndex
+                        target_block_id: args.targetBlockId,
+                        position: args.position
                     }
                 })
             }]
         };
     }
 
-    const rootClientId = getBlockRootClientId(sourceBlockId);
-    moveBlocksToPosition([sourceBlockId], rootClientId, rootClientId, targetIndex);
+    try {
+        // Move the block from its current parent to the target parent at the calculated index
+        moveBlocksToPosition(
+            [sourceBlockId],
+            sourceRootClientId,
+            targetRootClientId,
+            destinationIndex
+        );
 
-    return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                success: true,
-                action: 'block_moved',
-                data: {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'block_moved',
+                    data: {
+                        block_id: sourceBlockId,
+                        block_type: sourceBlock.name,
+                        target_block_id: args.targetBlockId,
+                        position: args.position,
+                        from_parent: sourceRootClientId || 'root',
+                        to_parent: targetRootClientId || 'root',
+                        from_index: currentIndex,
+                        to_index: destinationIndex
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_move_failed',
+                    error: `Error moving block: ${error instanceof Error ? error.message : 'Unknown error'}`,
                     block_id: sourceBlockId,
-                    from_position: currentIndex,
-                    to_position: targetIndex
-                }
-            })
-        }]
-    };
+                    target_block_id: args.targetBlockId
+                })
+            }]
+        };
+    }
 }
 
 export function duplicateBlock(blockId?: string, position?: number): { content: Array<{ type: string, text: string }> } {

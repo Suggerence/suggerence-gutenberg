@@ -91,16 +91,20 @@ export class GutenbergMCPServer {
         try {
             switch (name) {
                 case 'add_block':
-                    return addBlock(args.blockType, args.attributes, args.position, args.targetBlockId, args.innerBlocks);
+                    return addBlock(args.block_type, args.attributes, args.position, args.target_block_id, args.inner_blocks);
 
                 case 'move_block':
-                    return moveBlock(args.position, args.blockId);
+                    return moveBlock({
+                        targetBlockId: args.target_block_id,
+                        position: args.position,
+                        blockId: args.block_id
+                    });
 
                 case 'duplicate_block':
-                    return duplicateBlock(args.blockId, args.position);
+                    return duplicateBlock(args.block_id, args.position);
 
                 case 'delete_block':
-                    return deleteBlock(args.blockId);
+                    return deleteBlock(args.block_id);
 
                 case 'generate_image':
                     return generateImage(args.prompt, args.alt_text);
@@ -110,7 +114,7 @@ export class GutenbergMCPServer {
 
                 case 'update_block':
                     return updateBlock({
-                        blockId: args.blockId,
+                        blockId: args.block_id,
                         attributes: args.attributes,
                         style: args.style,
                         content: args.content
@@ -118,17 +122,17 @@ export class GutenbergMCPServer {
 
                 case 'transform_block':
                     return transformBlock({
-                        blockId: args.blockId,
-                        targetBlockType: args.targetBlockType
+                        blockId: args.block_id,
+                        targetBlockType: args.target_block_type
                     });
 
                 case 'wrap_block':
                     return wrapBlock({
-                        blockId: args.blockId,
-                        blockIds: args.blockIds,
-                        wrapperBlockType: args.wrapperBlockType,
-                        wrapperAttributes: args.wrapperAttributes,
-                        columnWidths: args.columnWidths
+                        blockId: args.block_id,
+                        blockIds: args.block_ids,
+                        wrapperBlockType: args.wrapper_block_type,
+                        wrapperAttributes: args.wrapper_attributes,
+                        columnWidths: args.column_widths
                     });
 
                 case 'search_pattern':
@@ -139,16 +143,16 @@ export class GutenbergMCPServer {
 
                 case 'insert_pattern':
                     return insertPattern({
-                        patternName: args.patternName,
+                        patternName: args.pattern_name,
                         position: args.position,
-                        targetBlockId: args.targetBlockId
+                        targetBlockId: args.target_block_id
                     });
 
                 case 'get_available_blocks':
-                     return getAvailableBlocks(args.includeInactive, args.category);
+                     return getAvailableBlocks(args.include_inactive, args.category);
 
                 case 'get_block_schema':
-                    return getBlockSchema(args.blockType);
+                    return getBlockSchema(args.block_type);
                 
                 case 'undo':
                     return undo();
@@ -157,21 +161,21 @@ export class GutenbergMCPServer {
                     return redo();
                 
                 case 'search_media':
-                    return searchMedia(args.search, args.mediaType, args.perPage);
+                    return searchMedia(args.search, args.media_type, args.per_page);
                 
                 case 'search_openverse':
-                    return searchOpenverse(args.query, args.perPage, args.license);
+                    return searchOpenverse(args.query, args.per_page, args.license);
                 
                 case 'upload_openverse_to_media':
-                    return uploadOpenverseToMedia(args as {
-                        imageId: string;
-                        imageUrl: string;
-                        title: string;
-                        creator?: string;
-                        creatorUrl?: string;
-                        license?: string;
-                        licenseUrl?: string;
-                    });
+                    return uploadOpenverseToMedia(
+                        args.image_id,
+                        args.image_url,
+                        args.title,
+                        args.creator,
+                        args.creator_url,
+                        args.license,
+                        args.license_url
+                    );
                 
                 case 'update_post_title':
                     return updatePostTitle(args.title);
@@ -180,7 +184,7 @@ export class GutenbergMCPServer {
                     return updatePostExcerpt(args.excerpt);
                 
                 case 'set_featured_image':
-                    return setFeaturedImage(args.mediaId);
+                    return setFeaturedImage(args.media_id);
                 
                 case 'remove_featured_image':
                     return removeFeaturedImage();

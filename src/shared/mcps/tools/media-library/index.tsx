@@ -10,12 +10,12 @@ export const searchMediaTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'Search query to find media by filename, title, caption, or alt text. Leave empty to get recent media items.'
             },
-            mediaType: {
+            media_type: {
                 type: 'string',
                 description: 'Filter by media type: "image", "video", "audio", or "application" (for documents). Leave empty to search all types.',
                 enum: ['image', 'video', 'audio', 'application', '']
             },
-            perPage: {
+            per_page: {
                 type: 'number',
                 description: 'Number of results to return (1-100). Defaults to 10.',
                 default: 10
@@ -30,13 +30,13 @@ export const getMediaDetailsTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            mediaId: {
+            media_id: {
                 type: 'number',
                 description: 'The WordPress media library ID of the item to retrieve.',
                 required: true
             }
         },
-        required: ['mediaId']
+        required: ['media_id']
     }
 };
 
@@ -51,7 +51,7 @@ export const getOpenerseImagesTool: SuggerenceMCPResponseTool = {
                 description: 'Search query describing the desired image (e.g., "sunset beach", "business meeting", "cat playing").',
                 required: true
             },
-            perPage: {
+            per_page: {
                 type: 'number',
                 description: 'Number of results to return (1-20). Defaults to 10.',
                 default: 10
@@ -68,16 +68,16 @@ export const getOpenerseImagesTool: SuggerenceMCPResponseTool = {
 
 export const uploadOpenverseToMediaTool: SuggerenceMCPResponseTool = {
     name: 'upload_openverse_to_media',
-    description: 'Downloads an image from Openverse and uploads it to the WordPress media library with proper attribution. Returns the media ID that can then be used with other tools like add block (to insert as image block), update block (to modify existing block), or set featured image tool (to set as post thumbnail). This separation allows flexible usage - you decide what to do with the image after uploading. Pass all the data from search openverse tool results for proper attribution.',
+    description: 'Downloads an image from Openverse and uploads it to the WordPress media library with proper attribution. Returns the media ID that can then be used with other tools like add block (to insert as image block), update block (to modify existing block), or set featured image tool (to set as post thumbnail). This separation allows flexible usage - you decide what to do with the image after uploading. IMPORTANT: You must provide imageId, imageUrl, and title from the search openverse results.',
     inputSchema: {
         type: 'object',
         properties: {
-            imageId: {
+            image_id: {
                 type: 'string',
                 description: 'The Openverse image ID from search openverse tool results.',
                 required: true
             },
-            imageUrl: {
+            image_url: {
                 type: 'string',
                 description: 'The direct URL to the image from search openverse tool results.',
                 required: true
@@ -91,7 +91,7 @@ export const uploadOpenverseToMediaTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'The creator/photographer name for attribution.'
             },
-            creatorUrl: {
+            creator_url: {
                 type: 'string',
                 description: 'URL to the creator\'s profile or website for attribution linking.'
             },
@@ -99,12 +99,12 @@ export const uploadOpenverseToMediaTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'The license type (e.g., "CC0", "CC BY").'
             },
-            licenseUrl: {
+            license_url: {
                 type: 'string',
                 description: 'URL to the license details page for attribution linking.'
             }
         },
-        required: ['imageId', 'imageUrl', 'title']
+        required: ['image_id', 'image_url', 'title']
     }
 };
 
@@ -308,28 +308,41 @@ export async function searchOpenverse(
     }
 }
 
-export async function uploadOpenverseToMedia(args: {
-    imageId: string;
-    imageUrl: string;
-    title: string;
-    creator?: string;
-    creatorUrl?: string;
-    license?: string;
-    licenseUrl?: string;
-}): Promise<{ content: Array<{ type: string, text: string }> }> {
+export async function uploadOpenverseToMedia(
+    imageId: string,
+    imageUrl: string,
+    title: string,
+    creator?: string,
+    creatorUrl?: string,
+    license?: string,
+    licenseUrl?: string
+): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
+        if(!imageUrl) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'openverse_upload_failed',
+                        error: 'Missing required parameter: imageUrl'
+                    })
+                }]
+            };
+        }
+        
         // Sideload the image from Openverse to WordPress Media Library
         const sideloadResponse: any = await apiFetch({
             path: '/suggerence-gutenberg/ai-providers/v1/openverse/sideload',
             method: 'POST',
             data: {
-                image_url: args.imageUrl,
-                title: args.title,
-                alt_text: args.title, // Use title as alt text
-                creator: args.creator,
-                creator_url: args.creatorUrl || '',
-                license: args.license,
-                license_url: args.licenseUrl || ''
+                image_url: imageUrl,
+                title: title,
+                alt_text: title,
+                creator: creator,
+                creator_url: creatorUrl || '',
+                license: license,
+                license_url: licenseUrl || ''
             }
         });
 
@@ -355,11 +368,11 @@ export async function uploadOpenverseToMedia(args: {
                     data: {
                         media_id: sideloadResponse.attachment_id,
                         url: sideloadResponse.image_url,
-                        alt_text: sideloadResponse.alt_text || args.title,
+                        alt_text: sideloadResponse.alt_text || title,
                         caption: sideloadResponse.caption || '',
-                        title: args.title,
-                        creator: args.creator,
-                        license: args.license,
+                        title: title,
+                        creator: creator,
+                        license: license,
                         attribution_html: sideloadResponse.caption,
                         sizes: sideloadResponse.sizes || {},
                         next_steps: 'Use this media_id with add block tool to insert as image, update block tool to modify existing block, or set featured image tool to set as post thumbnail.'

@@ -51,14 +51,14 @@ export class SuggestionsMCPServer {
             switch (toolName) {
                 case 'generate_alt_text_suggestion':
                     return await this.generateAltTextWithAI(
-                        args.blockId,
-                        args.imageUrl,
+                        args.block_id,
+                        args.image_url,
                         args.context
                     );
 
                 case 'generate_heading_suggestion':
                     return await this.generateHeadingWithAI(
-                        args.blockId,
+                        args.block_id,
                         args.content,
                         args.level,
                         args.context
@@ -66,18 +66,18 @@ export class SuggestionsMCPServer {
 
                 case 'generate_content_suggestion':
                     return await this.generateContentWithAI(
-                        args.blockId,
-                        args.currentContent,
-                        args.suggestionType,
+                        args.block_id,
+                        args.current_content,
+                        args.suggestion_type,
                         args.context
                     );
 
                 case 'apply_suggestion':
                     return await applySuggestion(
-                        args.blockId,
-                        args.suggestionType,
-                        args.suggestedValue,
-                        args.attributeName
+                        args.block_id,
+                        args.suggestion_type,
+                        args.suggested_value,
+                        args.attribute_name
                     );
 
                 default:

@@ -1,5 +1,4 @@
 import { select, dispatch } from '@wordpress/data';
-import apiFetch from '@wordpress/api-fetch';
 
 export const getDocumentStructureTool: SuggerenceMCPResponseTool = {
     name: 'get_document_structure',
@@ -7,12 +6,12 @@ export const getDocumentStructureTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            includeContent: {
+            include_content: {
                 type: 'boolean',
                 description: 'Whether to include content previews for text blocks. Set to true for full context, false for faster response with just block structure.',
                 default: true
             },
-            maxContentLength: {
+            max_content_length: {
                 type: 'number',
                 description: 'Maximum characters of content to include per block (only if includeContent is true). Defaults to 100.',
                 default: 100
@@ -27,22 +26,22 @@ export const searchBlocksByContentTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            searchQuery: {
+            search_query: {
                 type: 'string',
                 description: 'The text to search for within block content. Can be exact phrase or partial match.',
                 required: true
             },
-            blockType: {
+            block_type: {
                 type: 'string',
                 description: 'Optional: filter results to specific block type (e.g., "core/paragraph", "core/heading"). Leave empty to search all blocks.'
             },
-            caseSensitive: {
+            case_sensitive: {
                 type: 'boolean',
                 description: 'Whether the search should be case-sensitive. Defaults to false.',
                 default: false
             }
         },
-        required: ['searchQuery']
+        required: ['search_query']
     }
 };
 
@@ -93,13 +92,13 @@ export const setFeaturedImageTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {
-            mediaId: {
+            media_id: {
                 type: 'number',
                 description: 'The WordPress media library ID of the image to set as featured. Get this from search_media results or from the generate_image response (image_id field).',
                 required: true
             }
         },
-        required: ['mediaId']
+        required: ['media_id']
     }
 };
 

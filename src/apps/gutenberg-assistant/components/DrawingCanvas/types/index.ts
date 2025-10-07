@@ -34,6 +34,7 @@ interface CanvasProps {
     onStartDrawing: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     onDraw: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     onStopDrawing: () => void;
+    onCanvasReady?: () => void;
 }
 
 interface ToolbarProps {

@@ -6,7 +6,8 @@ export const Canvas = ({
     drawingState,
     onStartDrawing,
     onDraw,
-    onStopDrawing
+    onStopDrawing,
+    onCanvasReady
 }: CanvasProps) => {
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [showCursor, setShowCursor] = useState(false);
@@ -113,12 +114,24 @@ export const Canvas = ({
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
 
+            // Ensure we have valid dimensions
+            if (rect.width === 0) return;
+
             // Save current canvas content
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             
+            // Calculate dimensions (subtract 2px for the 1px border on each side)
+            const borderWidth = 2; // 1px left + 1px right
+            const width = rect.width - borderWidth;
+            const height = Math.min(600, width * 0.5625); // 16:9 aspect ratio, max 600px height
+            
             // Set canvas internal resolution to match display size
-            canvas.width = rect.width;
-            canvas.height = Math.min(600, rect.width * 0.5625); // 16:9 aspect ratio, max 600px height
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Set canvas CSS dimensions to match internal dimensions exactly
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
 
             // Restore canvas content (will be stretched/scaled to new size)
             if (imageData.width > 0 && imageData.height > 0) {
@@ -136,12 +149,48 @@ export const Canvas = ({
             ctx.imageSmoothingQuality = 'high';
         };
 
-        // Initial resize
-        resizeCanvas();
+        const container = containerRef.current;
+        if (!container) return;
 
-        // Handle window resize
+        // Use ResizeObserver to detect when container size changes
+        const resizeObserver = new ResizeObserver(() => {
+            // Use requestAnimationFrame to ensure layout is complete
+            requestAnimationFrame(() => {
+                resizeCanvas();
+            });
+        });
+
+        resizeObserver.observe(container);
+
+        // Multiple resize attempts to handle modal rendering delays
+        const attemptResize = () => {
+            requestAnimationFrame(() => {
+                resizeCanvas();
+            });
+        };
+
+        // Try multiple times with increasing delays to catch modal layout
+        attemptResize();
+        const timer1 = setTimeout(attemptResize, 0);
+        const timer2 = setTimeout(attemptResize, 100);
+        const timer3 = setTimeout(() => {
+            attemptResize();
+            // Notify parent that canvas is ready after final resize
+            if (onCanvasReady) {
+                setTimeout(() => onCanvasReady(), 50);
+            }
+        }, 250);
+
+        // Also listen to window resize as fallback
         window.addEventListener('resize', resizeCanvas);
-        return () => window.removeEventListener('resize', resizeCanvas);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', resizeCanvas);
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+            clearTimeout(timer3);
+        };
     }, [canvasRef]);
 
     // Initialize canvas with white background when it mounts

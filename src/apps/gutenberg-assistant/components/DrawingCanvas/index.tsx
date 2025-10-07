@@ -46,7 +46,9 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: Drawi
         setTextPosition,
         addTextToCanvas,
         resetDrawingState,
-        getToolSettings
+        getToolSettings,
+        loadPersistedCanvas,
+        persistCanvas
     } = useDrawingCanvasStore();
 
 
@@ -156,7 +158,10 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: Drawi
         setStartPoint(undefined);
         // Clear temporary canvas state after shape is finalized
         clearTemporaryState();
-    }, [drawingState, getToolSettings, setIsDrawing, setStartPoint, clearTemporaryState, canvasRef]);
+        
+        // Persist canvas after drawing completes
+        persistCanvas(canvasRef);
+    }, [drawingState, getToolSettings, setIsDrawing, setStartPoint, clearTemporaryState, persistCanvas, canvasRef]);
 
     const clearCanvas = useCallback(() => {
         const canvas = canvasRef.current;
@@ -173,7 +178,10 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: Drawi
         // Set white background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }, [saveStateToHistory]);
+        
+        // Persist canvas after clearing
+        persistCanvas(canvasRef);
+    }, [saveStateToHistory, persistCanvas]);
 
     const downloadCanvas = useCallback(() => {
         const canvas = canvasRef.current;
@@ -247,27 +255,26 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: Drawi
         };
 
         addTextToCanvas(canvasRef, textInput, style, canvasPosition);
-    }, [textInput, textPosition, drawingState.textSettings, addTextToCanvas]);
+        
+        // Persist canvas after adding text
+        persistCanvas(canvasRef);
+    }, [textInput, textPosition, drawingState.textSettings, addTextToCanvas, persistCanvas]);
 
 
-    // Initialize canvas with white background
-    useEffect(() => {
-        if (isOpen && canvasRef.current) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+    // Callback when canvas is ready
+    const handleCanvasReady = useCallback(() => {
+        if (canvasRef.current) {
+            loadPersistedCanvas(canvasRef);
         }
-    }, [isOpen]);
+    }, [loadPersistedCanvas]);
 
-    // Reset state when modal closes
-    useEffect(() => {
-        if (!isOpen) {
-            resetDrawingState();
-        }
-    }, [isOpen, resetDrawingState]);
+    // useEffect(() => {
+    //     if (!isOpen) {
+    //         resetDrawingState();
+    //     }
+    // }, [isOpen, resetDrawingState]);
+
+
 
     // Keyboard shortcuts for undo/redo
     useEffect(() => {
@@ -317,6 +324,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: Drawi
                         onStartDrawing={startDrawing}
                         onDraw={draw}
                         onStopDrawing={stopDrawing}
+                        onCanvasReady={isOpen ? handleCanvasReady : undefined}
                     />
 
                     {showTextInput && textPosition && (

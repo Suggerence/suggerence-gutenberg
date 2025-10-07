@@ -73,6 +73,8 @@ interface DrawingCanvasStore {
     undo: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
     redo: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
     clearHistory: () => void;
+    loadPersistedCanvas: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
+    persistCanvas: (canvasRef: React.RefObject<HTMLCanvasElement>) => void;
 
     // Utility actions
     resetDrawingState: () => void;
@@ -302,6 +304,68 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
             canUndo: false,
             canRedo: false
         });
+    },
+
+    loadPersistedCanvas: (canvasRef) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        try {
+            const canvasData = localStorage.getItem('suggerence-drawing-canvas');
+            if (canvasData) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Clear canvas and draw the loaded image scaled to current canvas size
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Draw the image scaled to fit the current canvas dimensions
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // Save this state to undo history
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        set({
+                            undoStack: [imageData],
+                            redoStack: [],
+                            canUndo: true,
+                            canRedo: false
+                        });
+                    };
+                    img.src = canvasData;
+                }
+            } else {
+                // No persisted data, set white background
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load canvas data from localStorage:', error);
+            // Set white background on error
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+    },
+
+    persistCanvas: (canvasRef) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        try {
+            console.log('Persisting current canvas state');
+            const canvasData = canvas.toDataURL('image/png');
+            localStorage.setItem('suggerence-drawing-canvas', canvasData);
+        } catch (error) {
+            console.warn('Failed to persist canvas data to localStorage:', error);
+        }
     },
 
     resetDrawingState: () =>

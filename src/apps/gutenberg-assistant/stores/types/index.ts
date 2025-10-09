@@ -1,6 +1,8 @@
 interface ChatInterfaceStore {
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
+    abortController: AbortController | null;
+    setAbortController: (abortController: AbortController | null) => void;
 }
 
 interface SelectedContext {

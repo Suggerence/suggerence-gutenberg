@@ -1,4 +1,5 @@
 import { select, dispatch } from '@wordpress/data';
+import apiFetch from '@wordpress/api-fetch';
 
 export const getDocumentStructureTool: SuggerenceMCPResponseTool = {
     name: 'get_document_structure',
@@ -108,6 +109,28 @@ export const removeFeaturedImageTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {}
+    }
+};
+
+export const getPostContentTool: SuggerenceMCPResponseTool = {
+    name: 'get_post_content',
+    description: 'Fetches the complete content and metadata of any WordPress post or page by its ID. Returns the post title, content (in HTML and blocks format), excerpt, status, author, categories, tags, featured image, and other metadata. Use this when you need to reference, analyze, or copy content from other posts/pages in the site. Essential for content migration, referencing related posts, or when the user mentions a specific post ID.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            post_id: {
+                type: 'number',
+                description: 'The WordPress post or page ID to fetch. Must be a valid post ID from this WordPress site.',
+                required: true
+            },
+            context: {
+                type: 'string',
+                description: 'Context for the request: "view" for public content (default) or "edit" for full editor content including blocks. Use "edit" when you need to work with the block structure.',
+                enum: ['view', 'edit'],
+                default: 'view'
+            }
+        },
+        required: ['post_id']
     }
 };
 
@@ -443,7 +466,7 @@ export function setFeaturedImage(mediaId: number): { content: Array<{ type: stri
 export function removeFeaturedImage(): { content: Array<{ type: string, text: string }> } {
     try {
         const { editPost } = dispatch('core/editor') as any;
-        
+
         // Remove the featured media by setting it to 0
         editPost({ featured_media: 0 });
 
@@ -467,6 +490,74 @@ export function removeFeaturedImage(): { content: Array<{ type: string, text: st
                     success: false,
                     action: 'featured_image_remove_failed',
                     error: `Error removing featured image: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function getPostContent(
+    postId: number,
+    context: 'view' | 'edit' = 'view'
+): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const post: any = await apiFetch({
+            path: `/wp/v2/posts/${postId}?context=${context}`,
+        });
+
+        if (!post) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'post_content_fetch_failed',
+                        error: `Post with ID ${postId} not found.`
+                    })
+                }]
+            };
+        }
+
+        const responseData: any = {
+            id: post.id,
+            title: post.title?.rendered || post.title,
+            content: post.content?.rendered || post.content,
+            excerpt: post.excerpt?.rendered || post.excerpt,
+            status: post.status,
+            type: post.type,
+            slug: post.slug,
+            date: post.date,
+            modified: post.modified,
+            author: post.author,
+            featured_media: post.featured_media,
+            categories: post.categories,
+            tags: post.tags,
+            permalink: post.link,
+        };
+
+        // Include blocks if context is 'edit'
+        if (context === 'edit' && post.blocks) {
+            responseData.blocks = post.blocks;
+        }
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'post_content_fetched',
+                    data: responseData
+                }, null, 2)
+            }]
+        };
+    } catch (error: any) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'post_content_fetch_failed',
+                    error: `Error fetching post content: ${error?.message || 'Unknown error'}. Make sure the post ID is valid and you have permission to access it.`
                 })
             }]
         };

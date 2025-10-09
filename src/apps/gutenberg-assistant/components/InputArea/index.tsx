@@ -13,6 +13,7 @@ import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanv
 import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelector';
 import { image, brush } from '@wordpress/icons';
 import { AudioButton } from '@/shared/components/AudioButton';
+import { X } from 'lucide-react';
 
 export const InputArea = () => {
 
@@ -21,7 +22,7 @@ export const InputArea = () => {
     const [inputValue, setInputValue] = useState('');
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const [isMediaOpen, setIsMediaOpen] = useState(false);
-    const { isLoading, setIsLoading } = useChatInterfaceStore();
+    const { isLoading, setIsLoading, abortController, setAbortController } = useChatInterfaceStore();
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { addContext } = useContextStore();
 
@@ -43,10 +44,15 @@ export const InputArea = () => {
         inputRef.current?.focus();
     }, []);
 
-    const handleNewMessage = useCallback(async (currentMessages: MCPClientMessage[] = messages) => {
+    const handleNewMessage = useCallback(async (currentMessages: MCPClientMessage[] = messages, signal?: AbortSignal) => {
         if (!isServerReadyRef.current) {
             console.error('Server not ready!', { isGutenbergServerReady: isServerReadyRef.current });
             throw new Error('Gutenberg MCP server not ready');
+        }
+
+        // Check if aborted before getting tools
+        if (signal?.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
         }
 
         const tools = await getGutenbergTools();
@@ -60,8 +66,13 @@ export const InputArea = () => {
             capabilities: ['text-generation', 'tool-calling']
         };
 
-        const response = await callAI(currentMessages, defaultModel, tools);
+        const response = await callAI(currentMessages, defaultModel, tools, signal);
         const aiResponse = parseAIResponse(response);
+
+        // Check if aborted after AI call
+        if (signal?.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
+        }
 
         if (aiResponse.type === 'tool') {
             // Add the tool execution message
@@ -75,8 +86,27 @@ export const InputArea = () => {
                 loading: true
             });
 
+            // Check if aborted before executing tool
+            if (signal?.aborted) {
+                setLastMessage({
+                    role: 'tool',
+                    content: 'Stopped by user',
+                    date: new Date().toISOString(),
+                    toolCallId: response.toolCallId,
+                    toolName: aiResponse.toolName as string,
+                    toolArgs: aiResponse.toolArgs as Record<string, any>,
+                    toolResult: 'Stopped by user',
+                    loading: false
+                } as any);
+                throw new DOMException('Aborted', 'AbortError');
+            }
+
             try {
-                const toolResult = await callGutenbergTool(aiResponse.toolName as string, aiResponse.toolArgs as Record<string, any>);
+                const toolResult = await callGutenbergTool(
+                    aiResponse.toolName as string,
+                    aiResponse.toolArgs as Record<string, any>,
+                    signal
+                );
 
                 setLastMessage({
                     role: 'tool',
@@ -89,6 +119,21 @@ export const InputArea = () => {
                     loading: false
                 } as any);
             } catch (toolError) {
+                // If it's an abort error, mark as stopped and propagate
+                if (toolError instanceof DOMException && toolError.name === 'AbortError') {
+                    setLastMessage({
+                        role: 'tool',
+                        content: 'Stopped by user',
+                        date: new Date().toISOString(),
+                        toolCallId: response.toolCallId,
+                        toolName: aiResponse.toolName as string,
+                        toolArgs: aiResponse.toolArgs as Record<string, any>,
+                        toolResult: 'Stopped by user',
+                        loading: false
+                    } as any);
+                    throw toolError;
+                }
+
                 setLastMessage({
                     role: 'tool',
                     content: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
@@ -121,19 +166,41 @@ export const InputArea = () => {
 
         addMessage(userMessage);
         setInputValue('');
+
+        // Create a new AbortController for this request
+        const controller = new AbortController();
+        setAbortController(controller);
         setIsLoading(true);
 
         try {
-            await handleNewMessage([...messages, userMessage]);
+            await handleNewMessage([...messages, userMessage], controller.signal);
         } catch (error) {
-            console.error('Send message error:', error);
-            const errorMessage: MCPClientMessage = {
-                role: 'assistant',
-                content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-                date: new Date().toISOString()
-            };
+            // Check if the error was due to abortion
+            if (error instanceof Error && error.name === 'AbortError') {
+                const abortMessage: MCPClientMessage = {
+                    role: 'assistant',
+                    content: 'Request stopped by user.',
+                    date: new Date().toISOString()
+                };
+                addMessage(abortMessage);
+            } else {
+                console.error('Send message error:', error);
+                const errorMessage: MCPClientMessage = {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                    date: new Date().toISOString()
+                };
+                addMessage(errorMessage);
+            }
+            setIsLoading(false);
+            setAbortController(null);
+        }
+    };
 
-            addMessage(errorMessage);
+    const handleStop = () => {
+        if (abortController) {
+            abortController.abort();
+            setAbortController(null);
             setIsLoading(false);
         }
     };
@@ -144,22 +211,36 @@ export const InputArea = () => {
 
         addMessage(audioMessage);
         setInputValue('');
+
+        // Create a new AbortController for this request
+        const controller = new AbortController();
+        setAbortController(controller);
         setIsLoading(true);
 
         try {
-            await handleNewMessage([...messages, audioMessage]);
+            await handleNewMessage([...messages, audioMessage], controller.signal);
         } catch (error) {
-            console.error('Audio message error:', error);
-            const errorMessage: MCPClientMessage = {
-                role: 'assistant',
-                content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-                date: new Date().toISOString()
-            };
-
-            addMessage(errorMessage);
+            // Check if the error was due to abortion
+            if (error instanceof Error && error.name === 'AbortError') {
+                const abortMessage: MCPClientMessage = {
+                    role: 'assistant',
+                    content: 'Request stopped by user.',
+                    date: new Date().toISOString()
+                };
+                addMessage(abortMessage);
+            } else {
+                console.error('Audio message error:', error);
+                const errorMessage: MCPClientMessage = {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                    date: new Date().toISOString()
+                };
+                addMessage(errorMessage);
+            }
             setIsLoading(false);
+            setAbortController(null);
         }
-    }, [isLoading, messages, addMessage, setInputValue, setIsLoading, handleNewMessage]);
+    }, [isLoading, messages, addMessage, setInputValue, setIsLoading, setAbortController, handleNewMessage]);
 
     const handleKeyPress = (event: React.KeyboardEvent) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -172,21 +253,38 @@ export const InputArea = () => {
         const lastMessage = messages[messages.length - 1];
 
         if (!lastMessage) return;
-        
+
         // If the last message is an assistant message, the conversation is done
         if (lastMessage.role === 'assistant') {
             setIsLoading(false);
+            setAbortController(null);
             return;
         }
-        
+
         // If tool is still loading, wait
         if (lastMessage.role === 'tool' && lastMessage.loading) return;
 
-        // If tool finished, continue the conversation
+        // If tool finished, check if it was stopped by user
         if (lastMessage.role === 'tool' && !lastMessage.loading) {
+            // Don't continue if the tool was stopped by user
+            if (lastMessage.content === 'Stopped by user' || lastMessage.toolResult === 'Stopped by user') {
+                setIsLoading(false);
+                setAbortController(null);
+                return;
+            }
+
+            // Create a new AbortController for continuing the conversation
+            const controller = new AbortController();
+            setAbortController(controller);
             setIsLoading(true);
-            handleNewMessage()
-                .catch(console.error);
+            handleNewMessage(messages, controller.signal)
+                .catch((error) => {
+                    if (error?.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                    setIsLoading(false);
+                    setAbortController(null);
+                });
         }
     }, [messages]);
 
@@ -324,20 +422,28 @@ export const InputArea = () => {
                     size="compact"
                 />
 
-                <Button
-                    onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isLoading}
-                    isBusy={isLoading}
-                    aria-label={__("Send", "suggerence")}
-                    variant="primary"
-                    size="compact"
-                >
-                    {isLoading ? (
-                        __("Sending", "suggerence")
-                    ) : (
-                        __("Send", "suggerence")
-                    )}
-                </Button>
+{isLoading ? (
+                    <Button
+                        onClick={handleStop}
+                        aria-label={__("Stop", "suggerence")}
+                        variant="secondary"
+                        size="compact"
+                        icon={<X size={16} />}
+                        style={{ color: '#d63638' }}
+                    >
+                        {__("Stop", "suggerence")}
+                    </Button>
+                ) : (
+                    <Button
+                        onClick={handleSendMessage}
+                        disabled={!inputValue.trim()}
+                        aria-label={__("Send", "suggerence")}
+                        variant="primary"
+                        size="compact"
+                    >
+                        {__("Send", "suggerence")}
+                    </Button>
+                )}
             </HStack>
 
             <DrawingCanvas

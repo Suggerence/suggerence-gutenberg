@@ -20,7 +20,7 @@ export const getAvailableBlocksTool: SuggerenceMCPResponseTool = {
 
 export const getBlockSchemaTool: SuggerenceMCPResponseTool = {
     name: 'get_block_schema',
-    description: 'Fetches the complete technical schema and configuration for a specific WordPress block type, including all available attributes, supported features, styling capabilities, and block relationships. MANDATORY: Use this tool BEFORE creating complex blocks like tables, galleries, embeds, or any block type you are unfamiliar with. Essential for understanding block capabilities, valid attribute names and types, attribute structure (especially for complex blocks), supported styling properties, and proper block configuration. Returns comprehensive metadata including attributes schema with default values, types, and structure that you MUST follow when calling creation tool.',
+    description: 'Fetches the complete technical schema for a WordPress block type, including attributes, supports (for styling like duotone, borders, spacing, typography), and usage examples. MANDATORY: Call this BEFORE every add_block or update_block operation to see: 1) All available attributes (content, URLs, IDs) 2) All supported style properties (duotone filters, border radius, padding, colors) 3) Usage examples for complex features 4) Correct data types and structure. The schema response includes a usageGuide with examples for advanced features like duotone filters, circular borders, and spacing. Without calling this first, you cannot know what style properties are available for that block.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -103,6 +103,9 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
             };
         }
 
+        const supports = blockDefinition.supports || {};
+
+        // Build enhanced schema with usage examples
         const schema = {
             name: blockDefinition.name,
             title: blockDefinition.title,
@@ -110,7 +113,7 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
             category: blockDefinition.category,
             icon: typeof blockDefinition.icon === 'string' ? blockDefinition.icon : blockDefinition.icon?.src || '',
             keywords: blockDefinition.keywords || [],
-            supports: blockDefinition.supports || {},
+            supports: supports,
             attributes: blockDefinition.attributes || {},
             example: blockDefinition.example || null,
             variations: blockDefinition.variations || [],
@@ -130,13 +133,33 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
             edit: !!blockDefinition.edit
         };
 
+        // Add helpful usage guide for complex features
+        const usageGuide: string[] = [];
+
+        if (supports.color?.duotone !== false) {
+            usageGuide.push('DUOTONE FILTER: Use style.color.duotone with array of 2 colors ["#highlightColor", "#shadowColor"]. Example: style: {color: {duotone: ["#8c4bff", "#000000"]}}');
+        }
+
+        if (supports.border?.radius !== false) {
+            usageGuide.push('BORDER RADIUS: Use style.border.radius with CSS value. Examples: "50%" for circle, "10px" for rounded corners, "0" for square');
+        }
+
+        if (supports.spacing?.padding !== false || supports.spacing?.margin !== false) {
+            usageGuide.push('SPACING: Use style.spacing.padding or style.spacing.margin with object {top, right, bottom, left}. Example: style: {spacing: {padding: {top: "20px", left: "10px"}}}');
+        }
+
+        if (supports.typography) {
+            usageGuide.push('TYPOGRAPHY: Use style.typography with properties like fontSize, fontWeight, lineHeight. Example: style: {typography: {fontSize: "18px", fontWeight: "bold"}}');
+        }
+
         return {
             content: [{
                 type: 'text',
                 text: JSON.stringify({
                     success: true,
                     action: 'get_block_schema_success',
-                    schema: schema
+                    schema: schema,
+                    usageGuide: usageGuide.length > 0 ? usageGuide : undefined
                 }, null, 2)
             }]
         };

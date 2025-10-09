@@ -12,6 +12,7 @@ import { __ } from '@wordpress/i18n';
 import { PanelHeader } from '@/apps/gutenberg-assistant/components/PanelHeader';
 import { UserMessage } from '@/apps/gutenberg-assistant/components/UserMessage';
 import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
+import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
 import { AssistantMessage } from '@/apps/gutenberg-assistant/components/AssistantMessage';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
@@ -60,6 +61,49 @@ export const ChatInterface = () => {
                             }
 
                             if (message.role === 'tool') {
+                                // Get clean tool name
+                                const cleanToolName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName;
+
+                                // Define tools that should show as thinking messages
+                                const thinkingTools: Record<string, { thinking: string; completed: string }> = {
+                                    'get_block_schema': {
+                                        thinking: __('Checking the available block settings...', 'suggerence'),
+                                        completed: __('Checked the available block settings', 'suggerence')
+                                    },
+                                    'get_available_blocks': {
+                                        thinking: __('Looking up available blocks...', 'suggerence'),
+                                        completed: __('Retrieved available blocks', 'suggerence')
+                                    },
+                                    // 'search_pattern': {
+                                    //     thinking: __('Searching for patterns...', 'suggerence'),
+                                    //     completed: __('Found patterns', 'suggerence')
+                                    // },
+                                    // 'search_media': {
+                                    //     thinking: __('Searching media library...', 'suggerence'),
+                                    //     completed: __('Searched media library', 'suggerence')
+                                    // },
+                                    // 'search_openverse': {
+                                    //     thinking: __('Searching Openverse...', 'suggerence'),
+                                    //     completed: __('Searched Openverse', 'suggerence')
+                                    // },
+                                    'get_document_structure': {
+                                        thinking: __('Analyzing document structure...', 'suggerence'),
+                                        completed: __('Analyzed document structure', 'suggerence')
+                                    }
+                                };
+
+                                // Use ThinkingMessage for certain tools, ToolMessage for others
+                                if (cleanToolName != undefined && thinkingTools[cleanToolName]) {
+                                    return (
+                                        <ThinkingMessage
+                                            key={`${message.role}-${index}-${message.date}`}
+                                            message={message}
+                                            thinkingText={thinkingTools[cleanToolName].thinking}
+                                            completedText={thinkingTools[cleanToolName].completed}
+                                        />
+                                    );
+                                }
+
                                 return (
                                     <ToolMessage key={`${message.role}-${index}-${message.date}`} message={message} />
                                 );
@@ -70,16 +114,33 @@ export const ChatInterface = () => {
                             );
                         })}
 
-                        {isLoading && (
-                            <HStack justify="start" spacing={2}>
-                                <Spinner/>
+                        {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && (
+                            <div style={{ paddingRight: '2rem', maxWidth: '85%' }}>
+                                <HStack justify="start" spacing={2} alignment="center">
+                                    <Spinner style={{ color: '#64748b' }} />
 
-                                <div style={{ padding: '8px 12px', backgroundColor: '#f7f7f7', border: '1px solid #ddd' }}>
-                                    <Text variant="muted" style={{ fontStyle: 'italic' }}>
-                                        {__("Processing your request...", "suggerence")}
-                                    </Text>
-                                </div>
-                            </HStack>
+                                    <div
+                                        style={{
+                                            padding: '10px 14px',
+                                            backgroundColor: '#f8fafc',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '12px 12px 12px 4px',
+                                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                                        }}
+                                    >
+                                        <Text
+                                            variant="muted"
+                                            style={{
+                                                fontStyle: 'italic',
+                                                color: '#64748b',
+                                                fontSize: '14px'
+                                            }}
+                                        >
+                                            {__("Processing your request...", "suggerence")}
+                                        </Text>
+                                    </div>
+                                </HStack>
+                            </div>
                         )}
 
                         <div ref={callbackRef} />

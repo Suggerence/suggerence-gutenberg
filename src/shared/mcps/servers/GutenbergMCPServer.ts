@@ -30,7 +30,8 @@ import {
     updatePostTitleTool, updatePostTitle,
     updatePostExcerptTool, updatePostExcerpt,
     setFeaturedImageTool, setFeaturedImage,
-    removeFeaturedImageTool, removeFeaturedImage
+    removeFeaturedImageTool, removeFeaturedImage,
+    getPostContentTool, getPostContent
 } from '@/shared/mcps/tools/document-tools';
 
 export class GutenbergMCPServer {
@@ -56,7 +57,6 @@ export class GutenbergMCPServer {
         addBlockTool,
         moveBlockTool,
         duplicateBlockTool,
-        deleteBlockTool,
         updateBlockTool,
         transformBlockTool,
         wrapBlockTool,
@@ -73,14 +73,16 @@ export class GutenbergMCPServer {
         updatePostTitleTool,
         updatePostExcerptTool,
         setFeaturedImageTool,
-        removeFeaturedImageTool
+        removeFeaturedImageTool,
+        getPostContentTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
         return {
             tools: [
                 ...this.staticTools,
-                SearchPatternTool() // Generate with dynamic categories
+                SearchPatternTool(),
+                deleteBlockTool()
             ]
         };
     }
@@ -91,7 +93,7 @@ export class GutenbergMCPServer {
         try {
             switch (name) {
                 case 'add_block':
-                    return addBlock(args.block_type, args.attributes, args.position, args.target_block_id, args.inner_blocks);
+                    return addBlock(args.block_type, args.attributes, args.position, args.target_block_id, args.inner_blocks, args.style);
 
                 case 'move_block':
                     return moveBlock({
@@ -104,7 +106,7 @@ export class GutenbergMCPServer {
                     return duplicateBlock(args.block_id, args.position);
 
                 case 'delete_block':
-                    return deleteBlock(args.block_id);
+                    return deleteBlock(args.client_id || args.block_id);
 
                 case 'generate_image':
                     return generateImage(args.prompt, args.alt_text);
@@ -188,6 +190,9 @@ export class GutenbergMCPServer {
                 
                 case 'remove_featured_image':
                     return removeFeaturedImage();
+
+                case 'get_post_content':
+                    return getPostContent(args.post_id, args.context);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

@@ -5,7 +5,8 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
     const callAI = async (
         messages: MCPClientMessage[],
         model: AIModel | null,
-        tools: SuggerenceMCPResponseTool[]
+        tools: SuggerenceMCPResponseTool[],
+        abortSignal?: AbortSignal
     ): Promise<MCPClientMessage> => {
         // Get comprehensive site context using the provided function
         const siteContext = config.getSiteContext();
@@ -182,6 +183,7 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                     },
                     method: "POST",
                     body: JSON.stringify(requestBody),
+                    signal: abortSignal,
                 }) as any;
 
                 // Check if response has empty content (treat as error)

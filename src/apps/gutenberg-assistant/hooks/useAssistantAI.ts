@@ -83,35 +83,35 @@ export const useAssistantAI = (): UseAITools => {
             // Get available block types
             const availableBlockTypes = getAvailableBlockTypes();
 
-            // Auto-add selected image blocks as visual context
-            let contextsWithAutoImageBlock = [...(selectedContexts || [])];
+            // // Auto-add selected image blocks as visual context
+            // let contextsWithAutoImageBlock = [...(selectedContexts || [])];
             
-            // Check if the selected block is an image block
-            if (selectedBlock && (selectedBlock.name === 'core/image' || selectedBlock.name === 'core/cover')) {
-                const imageUrl = selectedBlock.attributes?.url;
+            // // Check if the selected block is an image block
+            // if (selectedBlock && (selectedBlock.name === 'core/image' || selectedBlock.name === 'core/cover')) {
+            //     const imageUrl = selectedBlock.attributes?.url;
                 
-                // Only add if there's an image URL and it's not already in the contexts
-                if (imageUrl) {
-                    const imageBlockContextId = `auto-image-block-${selectedBlockId}`;
-                    const alreadyExists = contextsWithAutoImageBlock.some(ctx => 
-                        ctx.id === imageBlockContextId || 
-                        (ctx.type === 'block' && ctx.data?.id === selectedBlockId)
-                    );
+            //     // Only add if there's an image URL and it's not already in the contexts
+            //     if (imageUrl) {
+            //         const imageBlockContextId = `auto-image-block-${selectedBlockId}`;
+            //         const alreadyExists = contextsWithAutoImageBlock.some(ctx => 
+            //             ctx.id === imageBlockContextId || 
+            //             (ctx.type === 'block' && ctx.data?.id === selectedBlockId)
+            //         );
                     
-                    if (!alreadyExists) {
-                        contextsWithAutoImageBlock.push({
-                            id: imageBlockContextId,
-                            type: 'block',
-                            label: `Selected ${selectedBlock.name === 'core/cover' ? 'Cover' : 'Image'} Block`,
-                            data: {
-                                id: selectedBlockId,
-                                name: selectedBlock.name,
-                                attributes: selectedBlock.attributes
-                            }
-                        });
-                    }
-                }
-            }
+            //         if (!alreadyExists) {
+            //             contextsWithAutoImageBlock.push({
+            //                 id: imageBlockContextId,
+            //                 type: 'block',
+            //                 label: `Selected ${selectedBlock.name === 'core/cover' ? 'Cover' : 'Image'} Block`,
+            //                 data: {
+            //                     id: selectedBlockId,
+            //                     name: selectedBlock.name,
+            //                     attributes: selectedBlock.attributes
+            //                 }
+            //             });
+            //         }
+            //     }
+            // }
 
             return {
                 ...baseContext,
@@ -125,7 +125,7 @@ export const useAssistantAI = (): UseAITools => {
                     availableBlockTypes: availableBlockTypes,
                     lastUpdated: new Date().toISOString()
                 },
-                selectedContexts: contextsWithAutoImageBlock
+                selectedContexts: selectedContexts
             };
         } catch (gutenbergError) {
             console.warn('Suggerence: Could not retrieve Gutenberg context', gutenbergError);
@@ -226,7 +226,7 @@ export const useAssistantAI = (): UseAITools => {
             ? `## Available Block Types (${gutenberg.availableBlockTypes.length} total)
 
 Common blocks you should know:
-${gutenberg.availableBlockTypes.slice(0, 30).map((b: any) => 
+${gutenberg.availableBlockTypes.slice(0, 50).map((b: any) => 
     `• ${b.name}: ${b.title}`
 ).join('\n')}
 
@@ -239,7 +239,7 @@ Use get_available_blocks tool for complete list or get_block_schema for details.
 
 Post: "${gutenberg.post?.title || 'Untitled'}" | ${gutenberg.post?.totalBlocks || 0} blocks
 Selected: ${gutenberg.selectedBlock 
-    ? `${gutenberg.selectedBlock.name} (pos ${gutenberg.selectedBlock.position})` 
+    ? `${gutenberg.selectedBlock.id}` 
     : 'None'}
 
 ### Block Structure (use these IDs for targeting):
@@ -326,36 +326,46 @@ Action: Call generate_edited_image({prompt: "changes", image_url: "...", alt_tex
 
 ## BLOCK CREATION GUIDELINES
 
-**CRITICAL: Use The get block schema tool BEFORE creating unfamiliar or complex blocks (tables, galleries, embeds, etc.)**
+**🚨 MANDATORY TWO-STEP PROCESS FOR EVERY BLOCK OPERATION:**
 
-When creating blocks:
+YOU MUST ALWAYS FOLLOW THIS EXACT SEQUENCE:
 
-**Common Blocks (schema known):**
-• core/heading - Titles (level: 1-6, content: "text")
-• core/paragraph - Body text (content: "text")  
-• core/button - CTAs (text: "label", url: "#")
-• core/list - Bullet points (values: "<li>item</li>")
-• core/image - Pictures (id: number, url: "...", alt: "description")
-• core/group - Container sections (with innerBlocks)
+**STEP 1: Call get_block_schema**
+- BEFORE any block insertion or update call
+- Get the exact attribute structure for that block type
+- Example: get_block_schema({block_type: "core/table"})
 
-**Complex Blocks (MUST check schema first):**
-• core/table - Call schema tool to see correct structure
-• core/gallery - Call schema tool to see image array format
-• core/embed - Call schema tool to see provider options
-• Any block you're uncertain about
+**STEP 2: Call add_block or update_block**
+- AFTER receiving the schema response
+- Use the EXACT attribute structure shown in the schema
+- Example: add_block({block_type: "core/table", attributes: {body: [{cells: [...]}]}})
 
-**Workflow for Complex Blocks:**
-1. Call schema tool with the block type
-2. Review the attributes schema in response
-3. Format your attributes to match the schema
-4. Call block creation tool with properly structured attributes
+**THIS IS NON-NEGOTIABLE. YOU CANNOT SKIP STEP 1.**
 
-**Required Attributes:**
-- Always include content/text for text blocks
-- Use descriptive alt text for images
-- Set appropriate heading levels (h1-h6)
-- Include innerBlocks for container types
-- Set width percentages for column blocks
+**Correct sequence examples:**
+
+User requests a table:
+→ First tool call: get_block_schema({block_type: "core/table"})
+→ Wait for response with attributes schema
+→ Second tool call: add_block with correctly structured attributes
+
+User requests a gallery:
+→ First tool call: get_block_schema({block_type: "core/gallery"})
+→ Wait for response
+→ Second tool call: add_block with images array in correct format
+
+User requests to update a column:
+→ First tool call: get_block_schema({block_type: "core/column"})
+→ Wait for response
+→ Second tool call: update_block with width attribute in correct format
+
+**Why this matters:**
+- Every block has different attribute structures
+- Wrong attributes = blocks fail to render or corrupt
+- Schema shows exact nested object/array structures
+- You cannot guess the structure - you must fetch it first
+
+**NEVER call add_block or update_block without calling get_block_schema first in the same conversation turn.**
 
 ${blockTypesSection}
 

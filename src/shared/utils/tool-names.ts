@@ -42,6 +42,7 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'update_post_excerpt': __('Update post excerpt', 'suggerence'),
     'set_featured_image': __('Set featured image', 'suggerence'),
     'remove_featured_image': __('Remove featured image', 'suggerence'),
+    'get_post_content': __('Get post content', 'suggerence'),
 });
 
 /**

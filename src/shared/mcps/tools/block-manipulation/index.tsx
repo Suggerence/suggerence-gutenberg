@@ -1,6 +1,34 @@
 import { dispatch, select } from '@wordpress/data';
 import { createBlock, cloneBlock, switchToBlockType } from '@wordpress/blocks';
 
+/**
+ * Recursively collect all block client IDs from the document
+ */
+function getAllBlockIds(): string[] {
+    try {
+        const { getBlocks } = select('core/block-editor') as any;
+        const blocks = getBlocks();
+
+        const collectIds = (blocks: any[]): string[] => {
+            const ids: string[] = [];
+            blocks.forEach((block: any) => {
+                if (block.clientId) {
+                    ids.push(block.clientId);
+                }
+                if (block.innerBlocks && block.innerBlocks.length > 0) {
+                    ids.push(...collectIds(block.innerBlocks));
+                }
+            });
+            return ids;
+        };
+
+        return collectIds(blocks);
+    } catch (error) {
+        console.error('Error getting block IDs:', error);
+        return [];
+    }
+}
+
 function getAvailableBlockTypes(): string[] {
     try {
         const { getBlockTypes } = select('core/blocks') as any;
@@ -16,7 +44,7 @@ function getAvailableBlockTypes(): string[] {
 
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
-    description: 'Creates and inserts a new Gutenberg block into the WordPress editor at a specified position. Use this when the user requests to add content like headings, paragraphs, images, buttons, lists, or any other WordPress block type. This is the primary tool for building page content. Supports creating complex nested layouts like columns with specific widths and content inside each column. For multi-column layouts, use blockType "core/columns" with innerBlocks containing "core/column" blocks, each with their own innerBlocks for content. Set width attributes on columns (e.g., "50%", "33.33%", "66.66%"). IMPORTANT: For complex blocks (tables, galleries, embeds, etc.) or blocks you are unfamiliar with, ALWAYS call the get block schema tool first to understand the correct attribute structure before calling this tool.',
+    description: '⚠️ PREREQUISITE: Call get_block_schema FIRST to see correct attribute structure and supported styling. Creates and inserts new blocks with FULL styling support: duotone filters, border radius (circular images with "50%"), spacing, typography, colors, and all block-specific attributes. Schema provides usage examples for complex features. Supports nested layouts (columns with innerBlocks). Use "attributes" for content/functional properties, use "style" for visual properties like duotone, borders, colors. Combined with schema, this tool can create blocks with ANY WordPress styling feature.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -27,7 +55,12 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
             },
             attributes: {
                 type: 'object',
-                description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. For tables, use get block schema tool first - structure is complex: {"body": [{"cells": [{"content": "text", "tag": "td"}]}]}. Use get block schema tool to see all available attributes for any block type.',
+                description: 'Block-specific configuration and content properties. Each block type has different attributes. Common examples: {"content": "Your text here"} for paragraphs, {"content": "Title", "level": 2} for headings, {"url": "https://...", "alt": "description"} for images. Use get_block_schema to see all available attributes for any block type. This is for content/functional properties, NOT visual styling.',
+                additionalProperties: true
+            },
+            style: {
+                type: 'object',
+                description: 'WordPress style object for visual styling when creating the block. Supports duotone filters (color.duotone), border radius (border.radius: "50%" for circles), spacing (spacing.padding/margin), typography (typography.fontSize, fontWeight), colors (color.text, color.background). Use get_block_schema to see which style properties are supported for this block type and get usage examples.',
                 additionalProperties: true
             },
             inner_blocks: {
@@ -112,23 +145,54 @@ export const duplicateBlockTool: SuggerenceMCPResponseTool = {
     }
 };
 
-export const deleteBlockTool: SuggerenceMCPResponseTool = {
-    name: 'delete_block',
-    description: 'Permanently removes a block and all its content from the document. Use this when the user wants to remove unwanted content, clear sections, or delete specific blocks. WARNING: This action is destructive and removes the block completely. The deletion can be undone using the undo tool if needed.',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            block_id: {
-                type: 'string',
-                description: 'The client ID of the block to remove from the document. If not provided, deletes the currently selected block in the editor. Use this parameter to delete a specific block that is not currently selected.'
+export function deleteBlockTool(): SuggerenceMCPResponseTool {
+    let availableClientIds = getAllBlockIds();
+
+    // Check if we only have one empty paragraph block
+    if (availableClientIds.length === 1) {
+        try {
+            const { getBlock } = select('core/block-editor') as any;
+            const block = getBlock(availableClientIds[0]);
+            
+            // If it's a paragraph block with no content (or only whitespace), hide it
+            if (block && 
+                block.name === 'core/paragraph' && 
+                (!block.attributes?.content || block.attributes.content.trim() === '')) {
+                availableClientIds = [];
             }
+        } catch (error) {
+            console.error('Error checking block content:', error);
         }
     }
-};
+
+    const hasAvailableBlocks = availableClientIds.length > 0;
+    const description = hasAvailableBlocks 
+        ? 'Permanently removes a block and all its content from the document. Use this when the user wants to remove unwanted content, clear sections, or delete specific blocks. WARNING: This action is destructive and removes the block completely. The deletion can be undone using the undo tool if needed.'
+        : 'No blocks are currently available to delete. The document only contains an empty paragraph block which cannot be deleted.';
+
+    return {
+        name: 'delete_block',
+        description: description,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                client_id: {
+                    type: 'string',
+                    description: hasAvailableBlocks 
+                        ? `The clientId of the block to remove. Valid values: ${availableClientIds.join(', ')}. MUST be one of these - do not invent new IDs.`
+                        : 'No blocks available to delete.',
+                    enum: availableClientIds.length > 0 ? availableClientIds : undefined,
+                    required: true
+                }
+            },
+            required: ['client_id']
+        }
+    };
+}
 
 export const updateBlockTool: SuggerenceMCPResponseTool = {
     name: 'update_block',
-    description: 'Modifies an existing block\'s properties, content, and styling. Use this tool to change text content, update attributes, or apply visual styling (colors, spacing, typography, borders). Supports all WordPress block types and styling features. For changing a block to a different type, use the transformation tool instead.',
+    description: '⚠️ PREREQUISITE: Call get_block_schema FIRST to see available attributes and supported style properties. Modifies existing blocks including ALL advanced features: duotone filters (style.color.duotone), border radius for circular images (style.border.radius: "50%"), spacing (style.spacing.padding/margin), typography (style.typography), colors, and all block-specific properties. The schema shows which style properties are supported and provides usage examples. Use "attributes" for content (url, alt, content), use "style" for visual properties. Supports every WordPress styling capability when combined with schema.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -143,7 +207,7 @@ export const updateBlockTool: SuggerenceMCPResponseTool = {
             },
             style: {
                 type: 'object',
-                description: 'WordPress theme.json-compatible style object for visual appearance. Used for colors, spacing, borders, and typography. Structure: {"color": {"text": "#000000", "background": "#ffffff"}, "spacing": {"padding": {"top": "20px", "left": "10px"}}, "typography": {"fontSize": "18px", "fontWeight": "bold"}, "border": {"radius": "5px", "width": "2px"}}. Styles are deeply merged with existing styles, so you can update individual properties without affecting others.',
+                description: 'WordPress theme.json-compatible style object for visual appearance. Supports ALL block styling features including: duotone filters (color.duotone: ["#highlight", "#shadow"]), border radius (border.radius: "50%" for circles), spacing (spacing.padding/margin with {top, right, bottom, left}), typography (typography.fontSize, fontWeight, lineHeight), colors (color.text, color.background). Structure depends on block supports - use get_block_schema to see available properties and examples. Styles are deeply merged, so you can update individual properties without affecting others.',
                 additionalProperties: true
             }
         }
@@ -247,17 +311,26 @@ function createBlockFromDefinition(blockDef: {
 }
 
 export function addBlock(
-    blockType: string, 
-    attributes: Record<string, any> = {}, 
-    position: string = 'after', 
+    blockType: string,
+    attributes: Record<string, any> = {},
+    position: string = 'after',
     targetBlockId?: string,
-    innerBlocks?: any[]
+    innerBlocks?: any[],
+    style?: Record<string, any>
 ): { content: Array<{ type: string, text: string }> } {
     const { insertBlock } = dispatch('core/block-editor') as any;
     const { getSelectedBlockClientId, getBlockIndex } = select('core/block-editor') as any;
 
+    // Merge style into attributes if provided (WordPress way)
+    if (style && Object.keys(style).length > 0) {
+        attributes = {
+            ...attributes,
+            style: style
+        };
+    }
+
     // Create inner blocks recursively if provided
-    const processedInnerBlocks = innerBlocks?.map(innerBlockDef => 
+    const processedInnerBlocks = innerBlocks?.map(innerBlockDef =>
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];
 
@@ -609,27 +682,27 @@ export function duplicateBlock(blockId?: string, position?: number): { content: 
     }
 }
 
-export function deleteBlock(blockId?: string): { content: Array<{ type: string, text: string }> } {
+export function deleteBlock(clientId?: string): { content: Array<{ type: string, text: string }> } {
     const { removeBlocks } = dispatch('core/block-editor') as any;
     const { getSelectedBlockClientId, getBlock } = select('core/block-editor') as any;
 
-    const targetBlockId = blockId || getSelectedBlockClientId();
+    const targetClientId = clientId || getSelectedBlockClientId();
 
-    if (!targetBlockId) {
+    if (!targetClientId) {
         return {
             content: [{
                 type: 'text',
                 text: JSON.stringify({
                     success: false,
                     action: 'block_delete_failed',
-                    error: 'No block selected and no blockId provided'
+                    error: 'No block selected and no client_id provided'
                 })
             }]
         };
     }
 
-    const block = getBlock(targetBlockId);
-    
+    const block = getBlock(targetClientId);
+
     if (!block) {
         return {
             content: [{
@@ -637,7 +710,7 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
                 text: JSON.stringify({
                     success: false,
                     action: 'block_delete_failed',
-                    error: `Block with ID ${targetBlockId} not found or already deleted`
+                    error: `Block with clientId "${targetClientId}" not found. This clientId is invalid or does not exist in the current document.`
                 })
             }]
         };
@@ -650,11 +723,11 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
             // Filter out any null/undefined entries that might cause issues
             const validInnerBlocks = block.innerBlocks.filter((innerBlock: any) => innerBlock != null);
             if (validInnerBlocks.length !== block.innerBlocks.length) {
-                console.warn(`Block ${targetBlockId} has ${block.innerBlocks.length - validInnerBlocks.length} invalid inner blocks`);
+                console.warn(`Block ${targetClientId} has ${block.innerBlocks.length - validInnerBlocks.length} invalid inner blocks`);
             }
         }
-        
-        removeBlocks([targetBlockId]);
+
+        removeBlocks([targetClientId]);
 
         return {
             content: [{
@@ -663,7 +736,7 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
                     success: true,
                     action: 'block_deleted',
                     data: {
-                        block_id: targetBlockId,
+                        client_id: targetClientId,
                         block_type: block.name || 'unknown',
                         had_inner_blocks: block.innerBlocks?.length > 0
                     }
@@ -678,7 +751,7 @@ export function deleteBlock(blockId?: string): { content: Array<{ type: string, 
                     success: false,
                     action: 'block_delete_failed',
                     error: `Error deleting block: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    block_id: targetBlockId,
+                    client_id: targetClientId,
                     block_type: block.name || 'unknown'
                 })
             }]

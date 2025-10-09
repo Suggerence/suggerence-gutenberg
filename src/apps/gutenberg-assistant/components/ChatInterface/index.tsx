@@ -1,4 +1,4 @@
-import { useRef, useEffect } from '@wordpress/element';
+import { useRef, useEffect, useCallback } from '@wordpress/element';
 import {
     PanelBody,
     Spinner,
@@ -14,16 +14,98 @@ import { UserMessage } from '@/apps/gutenberg-assistant/components/UserMessage';
 import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
 import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
 import { AssistantMessage } from '@/apps/gutenberg-assistant/components/AssistantMessage';
+import { ToolConfirmationMessage } from '@/apps/gutenberg-assistant/components/ToolConfirmationMessage';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
+import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
 
 export const ChatInterface = () => {
-    const { isGutenbergServerReady } = useGutenbergMCP();
-    const { messages } = useGutenbergAssistantMessagesStore();
-    const { isLoading } = useChatInterfaceStore();
+    const { isGutenbergServerReady, callGutenbergTool } = useGutenbergMCP();
+    const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
+    const { isLoading, setIsLoading, setAbortController } = useChatInterfaceStore();
+    const { pendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+    const handleToolConfirmAccept = useCallback(async () => {
+        if (!pendingToolCall) return;
+
+        const toolCall = { ...pendingToolCall };
+        clearPendingToolCall();
+
+        // Replace confirmation message with tool execution message
+        setLastMessage({
+            role: 'tool',
+            content: `Calling ${toolCall.toolName} with args ${JSON.stringify(toolCall.toolArgs)}...`,
+            date: new Date().toISOString(),
+            toolCallId: toolCall.toolCallId,
+            toolName: toolCall.toolName,
+            toolArgs: toolCall.toolArgs,
+            loading: true
+        });
+
+        // Execute the tool (follow the same flow as non-dangerous tools)
+        const controller = new AbortController();
+        setAbortController(controller);
+        setIsLoading(true);
+
+        try {
+            const toolResult = await callGutenbergTool(
+                toolCall.toolName,
+                toolCall.toolArgs,
+                controller.signal
+            );
+
+            setLastMessage({
+                role: 'tool',
+                content: toolResult.response,
+                date: new Date().toISOString(),
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                toolArgs: toolCall.toolArgs,
+                toolResult: toolResult.response,
+                loading: false
+            } as any);
+        } catch (toolError) {
+            if (toolError instanceof DOMException && toolError.name === 'AbortError') {
+                setLastMessage({
+                    role: 'tool',
+                    content: 'Stopped by user',
+                    date: new Date().toISOString(),
+                    toolCallId: toolCall.toolCallId,
+                    toolName: toolCall.toolName,
+                    toolArgs: toolCall.toolArgs,
+                    toolResult: 'Stopped by user',
+                    loading: false
+                } as any);
+            } else {
+                setLastMessage({
+                    role: 'tool',
+                    content: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
+                    date: new Date().toISOString(),
+                    toolCallId: toolCall.toolCallId,
+                    toolName: toolCall.toolName,
+                    toolArgs: toolCall.toolArgs,
+                    toolResult: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
+                    loading: false
+                });
+            }
+            setIsLoading(false);
+            setAbortController(null);
+        }
+    }, [pendingToolCall, clearPendingToolCall, setLastMessage, callGutenbergTool, setAbortController, setIsLoading]);
+
+    const handleToolConfirmReject = useCallback(() => {
+        clearPendingToolCall();
+
+        // Replace confirmation message with cancellation message
+        setLastMessage({
+            role: 'assistant',
+            content: 'Tool execution cancelled.',
+            date: new Date().toISOString()
+        });
+    }, [clearPendingToolCall, setLastMessage]);
 
     const callbackRef = (node: HTMLDivElement | null) => {
         messagesEndRef.current = node;
@@ -57,6 +139,17 @@ export const ChatInterface = () => {
                             if (message.role === 'user') {
                                 return (
                                     <UserMessage key={`${message.role}-${index}-${message.date}`} message={message} />
+                                );
+                            }
+
+                            if (message.role === 'tool_confirmation') {
+                                return (
+                                    <ToolConfirmationMessage
+                                        key={`${message.role}-${index}-${message.date}`}
+                                        message={message}
+                                        onAccept={handleToolConfirmAccept}
+                                        onReject={handleToolConfirmReject}
+                                    />
                                 );
                             }
 

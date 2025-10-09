@@ -1,10 +1,10 @@
-import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack, Notice } from '@wordpress/components';
+import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useState, useRef, useEffect, useCallback } from '@wordpress/element';
-import { useSelect } from '@wordpress/data';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
+import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
 import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI';
 import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
@@ -25,6 +25,8 @@ export const InputArea = () => {
     const { isLoading, setIsLoading, abortController, setAbortController } = useChatInterfaceStore();
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { addContext } = useContextStore();
+    const { pendingToolCall, setPendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
+    const [availableTools, setAvailableTools] = useState<SuggerenceMCPResponseTool[]>([]);
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const isServerReadyRef = useRef(isGutenbergServerReady);
@@ -56,6 +58,7 @@ export const InputArea = () => {
         }
 
         const tools = await getGutenbergTools();
+        setAvailableTools(tools);
 
         const defaultModel: AIModel = {
             id: 'suggerence-v1',
@@ -66,7 +69,7 @@ export const InputArea = () => {
             capabilities: ['text-generation', 'tool-calling']
         };
 
-        const response = await callAI(currentMessages, defaultModel, tools, signal);
+        const response = await callAI(currentMessages, defaultModel, tools);
         const aiResponse = parseAIResponse(response);
 
         // Check if aborted after AI call
@@ -75,6 +78,36 @@ export const InputArea = () => {
         }
 
         if (aiResponse.type === 'tool') {
+            // Check if this is a dangerous tool
+            const tool = tools.find(t => t.name === aiResponse.toolName);
+            const isDangerous = tool?.dangerous === true;
+
+            if (isDangerous) {
+                // Store the pending tool call and add a confirmation message
+                const pendingTool = {
+                    toolCallId: response.toolCallId || '',
+                    toolName: aiResponse.toolName as string,
+                    toolArgs: aiResponse.toolArgs as Record<string, any>,
+                    timestamp: new Date().toISOString()
+                };
+
+                setPendingToolCall(pendingTool);
+
+                // Add a tool confirmation message with action buttons
+                addMessage({
+                    role: 'tool_confirmation',
+                    content: '', // Content will be rendered by the UI component
+                    date: new Date().toISOString(),
+                    toolCallId: pendingTool.toolCallId,
+                    toolName: pendingTool.toolName,
+                    toolArgs: pendingTool.toolArgs
+                } as any);
+
+                // Stop loading state as we're waiting for user action
+                setIsLoading(false);
+                setAbortController(null);
+                return;
+            }
             // Add the tool execution message
             addMessage({
                 role: 'tool',
@@ -164,7 +197,13 @@ export const InputArea = () => {
             date: new Date().toISOString()
         };
 
-        addMessage(userMessage);
+        // If there's a pending tool confirmation, clear it and replace the confirmation message
+        if (pendingToolCall) {
+            clearPendingToolCall();
+            setLastMessage(userMessage);
+        } else {
+            addMessage(userMessage);
+        }
         setInputValue('');
 
         // Create a new AbortController for this request
@@ -339,7 +378,7 @@ export const InputArea = () => {
         }
     }, [addContext, setIsCanvasOpen, addMessage, setIsLoading, handleNewMessage, messages]);
 
-    const handleMediaSelect = (imageData: any, description?: string) => {
+    const handleMediaSelect = (imageData: any) => {
         const imageContext = {
             id: `image-${imageData.id}`,
             type: 'image',

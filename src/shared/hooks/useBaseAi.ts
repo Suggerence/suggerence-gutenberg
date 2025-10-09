@@ -122,8 +122,13 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
         } else {
             // No visual contexts, just convert normally
             const messagesWithAssistant: any[] = [];
-            
+
             messages.forEach((message) => {
+                // Skip tool_confirmation messages - they're UI only
+                if (message.role === 'tool_confirmation') {
+                    return;
+                }
+
                 // If this is a tool message with assistant response data, inject assistant message first
                 if (message.role === 'tool' && (message as any)._assistantResponse) {
                     const assistantMsg = (message as any)._assistantResponse;

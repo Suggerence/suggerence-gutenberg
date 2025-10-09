@@ -40,6 +40,7 @@ interface SuggerenceMCPResponseTool {
     outputSchema?: Record<string, any>;
     metadata?: Record<string, any>;
     annotations?: Record<string, any>;
+    dangerous?: boolean; // Flag to mark tools that require user confirmation
 }
 
 interface MCPClientSession {
@@ -48,7 +49,7 @@ interface MCPClientSession {
     messages: MCPClientMessage[];
 }
 
-type MCPClientMessageRole = 'user' | 'assistant' | 'tool';
+type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation';
 
 interface MCPClientMessage {
     role: MCPClientMessageRole;
@@ -67,9 +68,18 @@ interface MCPClientMessage {
 
 interface MCPClientAIResponse {
     type: 'text' | 'tool';
-    
+
     content?: string;
 
     toolName?: string;
     toolArgs?: Record<string, any>;
+}
+
+type ToolConfirmationAction = 'accept' | 'reject' | 'message';
+
+interface PendingToolCall {
+    toolCallId: string;
+    toolName: string;
+    toolArgs: Record<string, any>;
+    timestamp: string;
 }

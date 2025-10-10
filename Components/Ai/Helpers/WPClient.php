@@ -33,6 +33,13 @@ class WPClient
         return $this;
     }
 
+    public function withToken($token)
+    {
+        return $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token
+        ]);
+    }
+
     public function throw($shouldThrow = true)
     {
         $this->shouldThrow = $shouldThrow;

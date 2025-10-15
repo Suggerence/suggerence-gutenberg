@@ -285,6 +285,8 @@ ${taskList}
 2. **Execute the next pending task** by calling the appropriate tools
 3. **Continue executing** until all tasks are completed
 4. **Provide a final summary** to the user when all tasks are done
+   - If you generated/edited images, include them in your response using markdown: ![alt text](image_url)
+   - Extract image_url from tool results and show the images to the user
 5. You can call multiple tools in sequence for efficiency
 
 **Start executing NOW - call the tools needed for the next pending task.**`;
@@ -448,7 +450,24 @@ ${contextsSection}
 • Chain tool calls - don't wait for permission
 • If tool succeeds, immediately call next needed tool
 • Only respond to user after ALL work is complete
-• Response: [explanation of what was accomplished in markdown format]`;
+• Response format: [explanation of what was accomplished in markdown format]
+
+### Image Generation Response Format
+
+When you use generate_image or generate_edited_image tools, the response MUST include the generated image:
+
+**Example response after image generation:**
+I've created the image for you:
+
+![Generated image description](image_url_from_tool_result)
+
+[Optional: Additional explanation about the image]
+
+**Important:**
+- Always extract the image_url from the tool result
+- Include it as a markdown image in your final response
+- Use proper alt text in the image markdown
+- The user should be able to see the image directly in the chat`;
 
         // Construct and return the final prompt
         return `You are a direct-action AI that executes WordPress Gutenberg operations immediately without confirmation.

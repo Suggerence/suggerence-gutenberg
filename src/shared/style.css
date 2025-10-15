@@ -3,6 +3,7 @@
 @plugin "@tailwindcss/typography";
 
 @source: "@";
+@source "../../node_modules/streamdown/dist/index.js";
 
 /* UI Components */
 @import "./ui/Input/style.css";

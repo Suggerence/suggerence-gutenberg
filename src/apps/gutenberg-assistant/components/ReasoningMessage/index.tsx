@@ -70,10 +70,7 @@ export const ReasoningMessage = ({ message }: ReasoningMessageProps) => {
                         <Text
                             size="13"
                             weight="500"
-                            style={{
-                                margin: 0,
-                                color: '#64748b'
-                            }}
+                            className="!text-gray-600 !m-0"
                         >
                             {__('Plan', 'suggerence')}
                             {/* {totalTasks > 0 && (

@@ -77,6 +77,21 @@ export const InputArea = () => {
             throw new DOMException('Aborted', 'AbortError');
         }
 
+        if (aiResponse.type === 'reasoning') {
+            // Add the reasoning message
+            addMessage({
+                role: 'reasoning',
+                content: '', // Content is in the reasoning object
+                date: new Date().toISOString(),
+                reasoning: aiResponse.reasoning,
+                aiModel: defaultModel.id
+            });
+
+            // After showing reasoning, automatically continue to execute the plan
+            // The AI will be called again and should now execute the tasks
+            return;
+        }
+
         if (aiResponse.type === 'tool') {
             // Check if this is a dangerous tool
             const tool = tools.find(t => t.name === aiResponse.toolName);
@@ -297,6 +312,23 @@ export const InputArea = () => {
         if (lastMessage.role === 'assistant') {
             setIsLoading(false);
             setAbortController(null);
+            return;
+        }
+
+        // If the last message is a reasoning message, continue to execute the plan
+        if (lastMessage.role === 'reasoning') {
+            // Create a new AbortController for continuing the conversation
+            const controller = new AbortController();
+            setAbortController(controller);
+            setIsLoading(true);
+            handleNewMessage(messages, controller.signal)
+                .catch((error) => {
+                    if (error?.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                    setIsLoading(false);
+                    setAbortController(null);
+                });
             return;
         }
 

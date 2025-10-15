@@ -12,7 +12,7 @@ interface MCPServerConnection {
 interface UseBaseMCPReturn {
     isServerReady: boolean;
     getTools: () => Promise<SuggerenceMCPResponseTool[]>;
-    callTool: (toolName: string, args: Record<string, any>) => Promise<any>;
+    callTool: (toolName: string, args: Record<string, any>, signal?: AbortSignal) => Promise<any>;
 }
 
 interface UseBaseAIConfig {

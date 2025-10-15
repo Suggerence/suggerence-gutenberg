@@ -14,12 +14,15 @@ import { UserMessage } from '@/apps/gutenberg-assistant/components/UserMessage';
 import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
 import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
 import { AssistantMessage } from '@/apps/gutenberg-assistant/components/AssistantMessage';
+import { ReasoningMessage } from '@/apps/gutenberg-assistant/components/ReasoningMessage';
 import { ToolConfirmationMessage } from '@/apps/gutenberg-assistant/components/ToolConfirmationMessage';
 import { AssistantMessageGroup } from '@/apps/gutenberg-assistant/components/AssistantMessageGroup';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
 import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
+import { Loader2 } from 'lucide-react';
+import { Response } from '@/components/ai-elements/response';
 
 export const ChatInterface = () => {
     const { isGutenbergServerReady, callGutenbergTool } = useGutenbergMCP();
@@ -188,6 +191,15 @@ export const ChatInterface = () => {
                                             );
                                         }
 
+                                        if (message.role === 'reasoning') {
+                                            return (
+                                                <ReasoningMessage
+                                                    key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                                    message={message}
+                                                />
+                                            );
+                                        }
+
                                         if (message.role === 'tool') {
                                             // Get clean tool name
                                             const cleanToolName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName;
@@ -240,33 +252,38 @@ export const ChatInterface = () => {
                         })}
 
                         {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && (
-                            <div style={{ paddingRight: '2rem', maxWidth: '85%' }}>
-                                <HStack justify="start" spacing={2} alignment="center">
-                                    <Spinner style={{ color: '#64748b' }} />
-
-                                    <div
-                                        style={{
-                                            padding: '10px 14px',
-                                            backgroundColor: '#f8fafc',
-                                            border: '1px solid #e2e8f0',
-                                            borderRadius: '12px 12px 12px 4px',
-                                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-                                        }}
-                                    >
-                                        <Text
-                                            variant="muted"
+                            <>
+                                <HStack justify="start" alignment="center">
+                                    {isLoading && (
+                                        <Loader2
+                                            size={16}
                                             style={{
-                                                fontStyle: 'italic',
+                                                animation: 'spin 1s linear infinite',
                                                 color: '#64748b',
-                                                fontSize: '14px'
+                                                flexShrink: 0
                                             }}
-                                        >
-                                            {__("Processing your request...", "suggerence")}
-                                        </Text>
-                                    </div>
+                                        />
+                                    )}
+                                  
+                                    <Response
+                                        parseIncompleteMarkdown={true}
+                                        className="text-sm leading-relaxed text-gray-600 thinking-message"
+                                    >
+                                        {__("Thinking...", "suggerence")}
+                                    </Response>
                                 </HStack>
-                            </div>
+                
+                                <style>
+                                    {`
+                                        @keyframes spin {
+                                            from { transform: rotate(0deg); }
+                                            to { transform: rotate(360deg); }
+                                        }
+                                    `}
+                                </style>
+                            </>
                         )}
+
 
                         <div ref={callbackRef} />
                     </VStack>

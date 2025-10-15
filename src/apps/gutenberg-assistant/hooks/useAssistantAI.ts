@@ -217,18 +217,14 @@ export const useAssistantAI = (): UseAITools => {
 
     /**
      * Generate the system prompt for the AI assistant
+     * @param site_context - Context including gutenberg state, selected contexts, and current reasoning
      */
     const getAssistantSystemPrompt = (site_context: any): string => {
-        const { gutenberg, selectedContexts } = site_context;
+        const { gutenberg, selectedContexts, currentReasoning } = site_context;
         
         // Build block types section
         const blockTypesSection = gutenberg?.availableBlockTypes?.length 
             ? `## Available Block Types (${gutenberg.availableBlockTypes.length} total)
-
-Common blocks you should know:
-${gutenberg.availableBlockTypes.slice(0, 50).map((b: any) => 
-    `• ${b.name}: ${b.title}`
-).join('\n')}
 
 Use get_available_blocks tool for complete list or get_block_schema for details.`
             : '';
@@ -255,18 +251,92 @@ ${selectedContexts.map(formatSelectedContext).join('\n\n')}
 ⚠️ CRITICAL: If drawing/image context exists above, user has attached visual content!`
             : '';
 
-        return `# Gutenberg Block Editor AI Assistant
+        // Check if we're in execution phase (have existing reasoning)
+        const isExecutionPhase = !!currentReasoning;
 
-You are a direct-action AI that executes WordPress Gutenberg operations immediately without confirmation.
+        // Build the mode-specific prompt section
+        let modePrompt = '';
+
+        if (isExecutionPhase) {
+            // EXECUTION MODE - We have an existing plan, execute it
+            const taskList = currentReasoning.plan?.map((task: ReasoningTask) => {
+                const statusEmoji = task.status === 'completed' ? '✅' :
+                                   task.status === 'in_progress' ? '🔄' :
+                                   task.status === 'failed' ? '❌' : '⏳';
+                return `Task ${task.order}: ${task.description}`;
+                // return `${statusEmoji} Task ${task.order}: ${task.description} [${task.status}]`;
+
+            }).join('\n') || 'No tasks defined';
+
+            modePrompt = `
+
+## EXECUTION MODE - FOLLOW YOUR EXISTING PLAN
+
+**IMPORTANT: You are in EXECUTION mode. DO NOT create another plan.**
+
+**Your Analysis:**
+${currentReasoning.analysis || 'N/A'}
+
+**Your Tasks:**
+${taskList}
+
+**Your Instructions:**
+1. **DO NOT provide another reasoning/planning response**
+2. **Execute the next pending task** by calling the appropriate tools
+3. **Continue executing** until all tasks are completed
+4. **Provide a final summary** to the user when all tasks are done
+5. You can call multiple tools in sequence for efficiency
+
+**Start executing NOW - call the tools needed for the next pending task.**`;
+        } else {
+            // PLANNING MODE - New request, create a plan first
+            modePrompt = `
+
+## PLANNING MODE - CREATE A PLAN FIRST
+
+**IMPORTANT: This is a new user request. You MUST start with a planning response.**
+
+Your FIRST response MUST be a reasoning response with this exact JSON structure:
+
+\`\`\`json
+{
+    "type": "reasoning",
+    "reasoning": {
+        "analysis": "Brief understanding of what the user wants and the current context",
+        "plan": [
+            {
+                "id": "task-1",
+                "description": "First specific action to take",
+                "status": "pending",
+                "order": 1
+            },
+            {
+                "id": "task-2",
+                "description": "Second specific action to take",
+                "status": "pending",
+                "order": 2
+            }
+        ]
+    }
+}
+\`\`\`
+
+**Rules for Planning:**
+1. **BREAK DOWN COMPLEXITY** - Create 3-10 specific, actionable tasks
+2. **BE SPECIFIC** - Each task should be concrete (e.g., "Call get_block_schema for core/table")
+3. **SEQUENTIAL THINKING** - Order tasks logically
+4. **NO EXECUTION YET** - Only plan, don't execute anything`;
+        }
+
+        const commonSections = `
 
 ## CORE DIRECTIVES
 
-1. **EXECUTE IMMEDIATELY** - Call tools directly, no permission needed
-2. **TOOLS OVER TEXT** - Use tools for actions, not explanations  
-3. **NO PREFACING** - Skip "I will...", "Let me..." statements
-4. **INFER INTENT** - Use context rather than asking questions
-5. **PERSIST** - Keep trying alternative approaches if needed
-6. **AGENTIC LOOP** - After tool execution, automatically continue with:
+1. **TOOLS OVER TEXT** - Use tools for actions, not explanations
+2. **NO PREFACING** - Skip "I will...", "Let me..." statements
+3. **INFER INTENT** - Use context rather than asking questions
+4. **PERSIST** - Keep trying alternative approaches if needed
+5. **AGENTIC LOOP** - After tool execution, automatically continue:
    a) Call more tools if needed to complete the task
    b) Format results for user ONLY when task is fully complete
    c) Never stop mid-task - finish what user requested
@@ -379,6 +449,13 @@ ${contextsSection}
 • If tool succeeds, immediately call next needed tool
 • Only respond to user after ALL work is complete
 • Response: [explanation of what was accomplished in markdown format]`;
+
+        // Construct and return the final prompt
+        return `You are a direct-action AI that executes WordPress Gutenberg operations immediately without confirmation.
+
+${modePrompt}
+
+${commonSections}`;
     };
 
     const { callAI, parseAIResponse } = useBaseAI({

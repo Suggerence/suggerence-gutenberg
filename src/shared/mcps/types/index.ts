@@ -49,7 +49,20 @@ interface MCPClientSession {
     messages: MCPClientMessage[];
 }
 
-type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation';
+type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation' | 'reasoning';
+
+interface ReasoningTask {
+    id: string;
+    description: string;
+    status: 'pending' | 'in_progress' | 'completed' | 'failed';
+    order: number;
+}
+
+interface ReasoningContent {
+    analysis?: string; // Understanding of the user's request
+    plan?: ReasoningTask[]; // List of tasks to accomplish
+    // reflection?: string; // Thoughts after tool execution
+}
 
 interface MCPClientMessage {
     role: MCPClientMessageRole;
@@ -64,15 +77,21 @@ interface MCPClientMessage {
     toolName?: string;
     toolArgs?: Record<string, any>;
     toolResult?: any;
+
+    // Reasoning fields (for 'reasoning' role messages)
+    reasoning?: ReasoningContent;
 }
 
 interface MCPClientAIResponse {
-    type: 'text' | 'tool';
+    type: 'text' | 'tool' | 'reasoning';
 
     content?: string;
 
     toolName?: string;
     toolArgs?: Record<string, any>;
+
+    // Reasoning response
+    reasoning?: ReasoningContent;
 }
 
 type ToolConfirmationAction = 'accept' | 'reject' | 'message';

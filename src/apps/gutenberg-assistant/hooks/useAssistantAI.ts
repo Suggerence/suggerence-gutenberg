@@ -378,7 +378,7 @@ ${contextsSection}
 • Chain tool calls - don't wait for permission
 • If tool succeeds, immediately call next needed tool
 • Only respond to user after ALL work is complete
-• Response format: ✓ [what was accomplished]`;
+• Response: [explanation of what was accomplished in markdown format]`;
     };
 
     const { callAI, parseAIResponse } = useBaseAI({

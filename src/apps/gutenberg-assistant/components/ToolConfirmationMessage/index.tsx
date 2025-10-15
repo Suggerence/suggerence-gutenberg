@@ -20,14 +20,12 @@ export const ToolConfirmationMessage = ({
     const cleanToolName = getToolDisplayName(message.toolName || '');
 
     return (
-        <div style={{ paddingRight: '2rem', maxWidth: '85%' }}>
             <VStack
                 spacing={3}
                 style={{
                     padding: '14px 16px',
-                    backgroundColor: '#fff8e5',
                     border: '1px solid #f0b849',
-                    borderRadius: '12px 12px 12px 4px',
+                    borderRadius: '12px',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}
             >
@@ -90,7 +88,7 @@ export const ToolConfirmationMessage = ({
                             </VStack>
                         )}
 
-                <VStack spacing={2} style={{ flexShrink: 0 }}>
+                <HStack spacing={2} style={{ flexShrink: 0, justifyContent: 'flex-end' }}>
                     <Button
                         variant="secondary"
                         size="compact"
@@ -113,8 +111,7 @@ export const ToolConfirmationMessage = ({
                     >
                         {__('Allow', 'suggerence')}
                     </Button>
-                </VStack>
+                </HStack>
             </VStack>
-        </div>
     );
 };

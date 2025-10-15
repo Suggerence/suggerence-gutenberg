@@ -15,6 +15,7 @@ import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
 import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
 import { AssistantMessage } from '@/apps/gutenberg-assistant/components/AssistantMessage';
 import { ToolConfirmationMessage } from '@/apps/gutenberg-assistant/components/ToolConfirmationMessage';
+import { AssistantMessageGroup } from '@/apps/gutenberg-assistant/components/AssistantMessageGroup';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
 import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
@@ -22,11 +23,38 @@ import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
 
 export const ChatInterface = () => {
     const { isGutenbergServerReady, callGutenbergTool } = useGutenbergMCP();
-    const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
+    const { messages, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { isLoading, setIsLoading, setAbortController } = useChatInterfaceStore();
     const { pendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+    // Group consecutive assistant messages together
+    const groupMessages = (messages: MCPClientMessage[]) => {
+        const groups: Array<{ type: 'user' | 'assistant-group', messages: MCPClientMessage[] }> = [];
+        let currentGroup: MCPClientMessage[] = [];
+        let currentType: 'user' | 'assistant-group' | null = null;
+
+        messages.forEach((message) => {
+            const messageType = message.role === 'user' ? 'user' : 'assistant-group';
+
+            if (messageType === currentType) {
+                currentGroup.push(message);
+            } else {
+                if (currentGroup.length > 0) {
+                    groups.push({ type: currentType!, messages: currentGroup });
+                }
+                currentGroup = [message];
+                currentType = messageType;
+            }
+        });
+
+        if (currentGroup.length > 0) {
+            groups.push({ type: currentType!, messages: currentGroup });
+        }
+
+        return groups;
+    };
 
     const handleToolConfirmAccept = useCallback(async () => {
         if (!pendingToolCall) return;
@@ -135,75 +163,79 @@ export const ChatInterface = () => {
             <VStack spacing={0} style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
                     <VStack spacing={4}>
-                        {messages.map((message, index) => {
-                            if (message.role === 'user') {
-                                return (
-                                    <UserMessage key={`${message.role}-${index}-${message.date}`} message={message} />
-                                );
-                            }
-
-                            if (message.role === 'tool_confirmation') {
-                                return (
-                                    <ToolConfirmationMessage
-                                        key={`${message.role}-${index}-${message.date}`}
+                        {groupMessages(messages).map((group, groupIndex) => {
+                            if (group.type === 'user') {
+                                return group.messages.map((message, index) => (
+                                    <UserMessage
+                                        key={`${message.role}-${groupIndex}-${index}-${message.date}`}
                                         message={message}
-                                        onAccept={handleToolConfirmAccept}
-                                        onReject={handleToolConfirmReject}
                                     />
-                                );
+                                ));
                             }
 
-                            if (message.role === 'tool') {
-                                // Get clean tool name
-                                const cleanToolName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName;
-
-                                // Define tools that should show as thinking messages
-                                const thinkingTools: Record<string, { thinking: string; completed: string }> = {
-                                    'get_block_schema': {
-                                        thinking: __('Checking the available block settings...', 'suggerence'),
-                                        completed: __('Checked the available block settings', 'suggerence')
-                                    },
-                                    'get_available_blocks': {
-                                        thinking: __('Looking up available blocks...', 'suggerence'),
-                                        completed: __('Retrieved available blocks', 'suggerence')
-                                    },
-                                    // 'search_pattern': {
-                                    //     thinking: __('Searching for patterns...', 'suggerence'),
-                                    //     completed: __('Found patterns', 'suggerence')
-                                    // },
-                                    // 'search_media': {
-                                    //     thinking: __('Searching media library...', 'suggerence'),
-                                    //     completed: __('Searched media library', 'suggerence')
-                                    // },
-                                    // 'search_openverse': {
-                                    //     thinking: __('Searching Openverse...', 'suggerence'),
-                                    //     completed: __('Searched Openverse', 'suggerence')
-                                    // },
-                                    'get_document_structure': {
-                                        thinking: __('Analyzing document structure...', 'suggerence'),
-                                        completed: __('Analyzed document structure', 'suggerence')
-                                    }
-                                };
-
-                                // Use ThinkingMessage for certain tools, ToolMessage for others
-                                if (cleanToolName != undefined && thinkingTools[cleanToolName]) {
-                                    return (
-                                        <ThinkingMessage
-                                            key={`${message.role}-${index}-${message.date}`}
-                                            message={message}
-                                            thinkingText={thinkingTools[cleanToolName].thinking}
-                                            completedText={thinkingTools[cleanToolName].completed}
-                                        />
-                                    );
-                                }
-
-                                return (
-                                    <ToolMessage key={`${message.role}-${index}-${message.date}`} message={message} />
-                                );
-                            }
-
+                            // Assistant group - wrap in AssistantMessageGroup with vertical line
                             return (
-                                <AssistantMessage key={`${message.role}-${index}-${message.date}`} message={message} />
+                                <AssistantMessageGroup key={`assistant-group-${groupIndex}`}>
+                                    {group.messages.map((message, index) => {
+                                        if (message.role === 'tool_confirmation') {
+                                            return (
+                                                <ToolConfirmationMessage
+                                                    key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                                    message={message}
+                                                    onAccept={handleToolConfirmAccept}
+                                                    onReject={handleToolConfirmReject}
+                                                />
+                                            );
+                                        }
+
+                                        if (message.role === 'tool') {
+                                            // Get clean tool name
+                                            const cleanToolName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName;
+
+                                            // Define tools that should show as thinking messages
+                                            const thinkingTools: Record<string, { thinking: string; completed: string }> = {
+                                                'get_block_schema': {
+                                                    thinking: __('Checking the available block settings...', 'suggerence'),
+                                                    completed: __('Checked the available block settings', 'suggerence')
+                                                },
+                                                'get_available_blocks': {
+                                                    thinking: __('Looking up available blocks...', 'suggerence'),
+                                                    completed: __('Retrieved available blocks', 'suggerence')
+                                                },
+                                                'get_document_structure': {
+                                                    thinking: __('Analyzing document structure...', 'suggerence'),
+                                                    completed: __('Analyzed document structure', 'suggerence')
+                                                }
+                                            };
+
+                                            // Use ThinkingMessage for certain tools, ToolMessage for others
+                                            if (cleanToolName != undefined && thinkingTools[cleanToolName]) {
+                                                return (
+                                                    <ThinkingMessage
+                                                        key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                                        message={message}
+                                                        thinkingText={thinkingTools[cleanToolName].thinking}
+                                                        completedText={thinkingTools[cleanToolName].completed}
+                                                    />
+                                                );
+                                            }
+
+                                            return (
+                                                <ToolMessage
+                                                    key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                                    message={message}
+                                                />
+                                            );
+                                        }
+
+                                        return (
+                                            <AssistantMessage
+                                                key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                                message={message}
+                                            />
+                                        );
+                                    })}
+                                </AssistantMessageGroup>
                             );
                         })}
 

@@ -28,37 +28,20 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
         isToolFailure = message.toolResult.success === false;
     }
 
-    const messageDate = new Date(message.date);
-    const timeString = messageDate.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
     const hasError = isError || isToolFailure;
 
     return (
         <div style={{ width: '100%' }}>
-            <VStack spacing={1} justify="start">
                 {/* Collapsible Header */}
                 <div
                     onClick={() => setIsExpanded(!isExpanded)}
                     style={{
-                        padding: '10px 12px',
-                        backgroundColor: isStopped ? '#fefce8' : (hasError ? '#fef2f2' : '#f8fafc'),
-                        border: `1px solid ${isStopped ? '#fef08a' : (hasError ? '#fecaca' : '#e2e8f0')}`,
-                        borderRadius: '8px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         userSelect: 'none'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = isStopped ? '#fef9c3' : (hasError ? '#fee2e2' : '#f1f5f9');
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = isStopped ? '#fefce8' : (hasError ? '#fef2f2' : '#f8fafc');
-                    }}
                 >
-                    <HStack justify="space-between" alignment="center">
+                    <HStack justify="start" alignment="center">
                         <HStack spacing={2} alignment="center" justify="start">
                             {/* Status Icon */}
                             {isLoading ? (
@@ -76,9 +59,9 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
                                 size="13"
                                 weight="500"
                                 style={{
-                                    color: isStopped ? '#a16207' : (hasError ? '#dc2626' : '#334155'),
                                     margin: 0
                                 }}
+                                className={isStopped ? 'text-[#a16207]' : (hasError ? 'text-[#dc2626]' : '!text-gray-600')}
                             >
                                 {toolDisplayName}
                             </Text>
@@ -175,11 +158,6 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
                         </VStack>
                     </div>
                 )}
-
-                <Text variant="muted" size="11" style={{ paddingLeft: '4px' }}>
-                    {timeString}
-                </Text>
-            </VStack>
 
             <style>
                 {`

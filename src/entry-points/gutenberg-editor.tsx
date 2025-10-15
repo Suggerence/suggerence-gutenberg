@@ -7,6 +7,7 @@ import { createRoot } from '@wordpress/element';
 
 import { GutenbergAssistant } from '@/apps/gutenberg-assistant';
 import { GutenbergToolbar } from '@/apps/gutenberg-toolbar';
+import { GutenbergAutocomplete } from '@/apps/gutenberg-autocomplete';
 // import { GutenbergSuggestions } from '@/apps/gutenberg-suggestions';
 
 registerPlugin('suggerence-gutenberg-assistant', {
@@ -27,6 +28,17 @@ domReady(() => {
 
         const toolbarRoot = createRoot(toolbarContainer);
         toolbarRoot.render(<GutenbergToolbar />);
+
+        // Create a container for the autocomplete app
+        const autocompleteContainer = document.createElement('div');
+        autocompleteContainer.id = 'suggerence-gutenberg-autocomplete';
+        autocompleteContainer.style.position = 'fixed';
+        autocompleteContainer.style.zIndex = '999998';
+        autocompleteContainer.style.pointerEvents = 'none';
+        document.body.appendChild(autocompleteContainer);
+
+        const autocompleteRoot = createRoot(autocompleteContainer);
+        autocompleteRoot.render(<GutenbergAutocomplete />);
 
         // Create a container for the suggestions app
         // const suggestionsContainer = document.createElement('div');

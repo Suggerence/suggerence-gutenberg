@@ -2,7 +2,9 @@
 /.github
 /node_modules
 /.wordpress-org
+./src
 
+.claude
 .editorconfig
 .distignore
 .eslintrc.js

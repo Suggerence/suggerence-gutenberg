@@ -321,6 +321,27 @@ export function addBlock(
 ): { content: Array<{ type: string, text: string }> } {
     const { insertBlock } = dispatch('core/block-editor') as any;
     const { getSelectedBlockClientId, getBlockIndex } = select('core/block-editor') as any;
+    const { getBlockType: getCoreBlockType } = select('core/blocks') as any;
+
+    // Handle blocks with preset modals (like Kadence blocks)
+    const blockTypeDef = getCoreBlockType(blockType);
+
+    // Set showPresets to false for blocks that have this attribute
+    if (blockTypeDef?.attributes?.showPresets && attributes.showPresets === undefined) {
+        attributes = {
+            ...attributes,
+            showPresets: false
+        };
+    }
+
+    // Generate uniqueID for blocks that require it (Kadence blocks)
+    // The preset modal is triggered when uniqueID is empty
+    if (blockTypeDef?.attributes?.uniqueID && attributes.uniqueID === undefined) {
+        attributes = {
+            ...attributes,
+            uniqueID: '_' + Math.random().toString(36).substring(2, 11)
+        };
+    }
 
     // Merge style into attributes if provided (WordPress way)
     if (style && Object.keys(style).length > 0) {

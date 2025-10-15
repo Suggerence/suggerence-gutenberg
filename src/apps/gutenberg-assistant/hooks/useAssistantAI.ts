@@ -454,7 +454,7 @@ ${contextsSection}
 
 ### Image Generation Response Format
 
-When you use generate_image or generate_edited_image tools, the response MUST include the generated image:
+After you use generate_image or generate_edited_image tools, the response MUST include the generated image if relevant:
 
 **Example response after image generation:**
 I've created the image for you:
@@ -467,7 +467,15 @@ I've created the image for you:
 - Always extract the image_url from the tool result
 - Include it as a markdown image in your final response
 - Use proper alt text in the image markdown
-- The user should be able to see the image directly in the chat`;
+- The user should be able to see the image directly in the chat
+
+Audio response format:
+
+When you have an audio, you can include it in your response using the following format if relevant:
+
+<audio src="audio_url_from_tool_result" controls></audio>
+
+[Optional: Additional explanation about the audio]`;
 
         // Construct and return the final prompt
         return `You are a direct-action AI that executes WordPress Gutenberg operations immediately without confirmation.

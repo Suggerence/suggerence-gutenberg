@@ -132,3 +132,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+.block-editor-block-list__block.is-highlighted.suggerence-block-highlight::after {
+    outline: 2px solid #d22178 !important;
+    outline-offset: 2px !important;
+    border-radius: 2px;
+}

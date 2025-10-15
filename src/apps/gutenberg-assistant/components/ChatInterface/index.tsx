@@ -23,6 +23,7 @@ import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/tool
 import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
 import { Loader2 } from 'lucide-react';
 import { Response } from '@/components/ai-elements/response';
+import { removeBlockHighlightsFromToolData } from '@/shared/utils/block-highlight';
 
 export const ChatInterface = () => {
     const { isGutenbergServerReady, callGutenbergTool } = useGutenbergMCP();
@@ -82,6 +83,9 @@ export const ChatInterface = () => {
         setIsLoading(true);
 
         try {
+            // Remove highlights from blocks that were affected by this tool operation
+            removeBlockHighlightsFromToolData(toolCall.toolArgs, undefined);
+
             const toolResult = await callGutenbergTool(
                 toolCall.toolName,
                 toolCall.toolArgs,
@@ -128,7 +132,12 @@ export const ChatInterface = () => {
     }, [pendingToolCall, clearPendingToolCall, setLastMessage, callGutenbergTool, setAbortController, setIsLoading]);
 
     const handleToolConfirmReject = useCallback(() => {
-        clearPendingToolCall();
+        if (pendingToolCall) {
+            const toolCall = { ...pendingToolCall };
+            // Remove highlights from blocks that were affected by this tool operation
+            removeBlockHighlightsFromToolData(toolCall.toolArgs, undefined);
+            clearPendingToolCall();
+        };
 
         // Replace confirmation message with cancellation message
         setLastMessage({
@@ -136,7 +145,7 @@ export const ChatInterface = () => {
             content: 'Tool execution cancelled.',
             date: new Date().toISOString()
         });
-    }, [clearPendingToolCall, setLastMessage]);
+    }, [pendingToolCall, clearPendingToolCall, setLastMessage]);
 
     const callbackRef = (node: HTMLDivElement | null) => {
         messagesEndRef.current = node;

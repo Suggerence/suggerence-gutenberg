@@ -14,6 +14,7 @@ import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelect
 import { image, brush } from '@wordpress/icons';
 import { AudioButton } from '@/shared/components/AudioButton';
 import { X } from 'lucide-react';
+import { highlightBlocksFromToolData } from '@/shared/utils/block-highlight';
 
 export const InputArea = () => {
 
@@ -117,6 +118,8 @@ export const InputArea = () => {
                     toolName: pendingTool.toolName,
                     toolArgs: pendingTool.toolArgs
                 } as any);
+
+                highlightBlocksFromToolData(aiResponse.toolArgs, undefined);
 
                 // Stop loading state as we're waiting for user action
                 setIsLoading(false);

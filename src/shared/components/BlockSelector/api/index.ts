@@ -59,23 +59,53 @@ export const getSelectedBlock = (): BlockInstance | null => {
  * Highlight/hover a block in the editor (visual feedback)
  */
 export const highlightBlock = (clientId: string): void => {
-    const { toggleBlockHighlight } = dispatch(blockEditorStore);
+	const { toggleBlockHighlight, updateBlockAttributes } = dispatch(blockEditorStore);
+	const block = select(blockEditorStore).getBlock(clientId);
 
-    if (toggleBlockHighlight) {
-        toggleBlockHighlight(clientId, true);
-        return;
-    }
+	if (!block) return;
+
+	// 1. Toggle the native highlight (so selection visuals still work)
+	toggleBlockHighlight?.(clientId, true);
+
+	// 2. Add a custom CSS class to the block’s attributes (native way)
+	const currentClasses = block.attributes.className || '';
+	const customClass = 'suggerence-block-highlight';
+
+	if (!currentClasses.includes(customClass)) {
+		updateBlockAttributes(clientId, {
+			className: `${currentClasses} ${customClass}`.trim(),
+		});
+	}
 };
 
 /**
  * Remove highlight from a block
  */
-export const removeBlockHighlight = (clientId: string): void => {
-    // Use WordPress dispatch to remove block hover state
-    const { toggleBlockHighlight } = dispatch(blockEditorStore);
+export const unhighlightBlock = (clientId: string): void => {
+	const { toggleBlockHighlight, updateBlockAttributes } = dispatch(blockEditorStore);
+	const block = select(blockEditorStore).getBlock(clientId);
 
-    if (toggleBlockHighlight) {
-        toggleBlockHighlight(clientId, false);
-        return;
+	if (!block) return;
+
+	toggleBlockHighlight?.(clientId, false);
+
+	const currentClasses = block.attributes.className || '';
+	const newClasses = currentClasses
+		.split(' ')
+		.filter((c: string) => c !== 'suggerence-block-highlight')
+		.join(' ');
+
+	updateBlockAttributes(clientId, { className: newClasses });
+};
+
+/**
+ * Flash a block with the native Gutenberg flash effect
+ * This creates a brief animation/highlight on the block
+ */
+export const flashBlock = (clientId: string): void => {
+    const { flashBlock: flashBlockAction } = dispatch(blockEditorStore) as any;
+
+    if (flashBlockAction) {
+        flashBlockAction(clientId);
     }
 };

@@ -192,7 +192,7 @@ export class GutenbergMCPServer {
                     return removeFeaturedImage();
 
                 case 'get_post_content':
-                    return getPostContent(args.post_id, args.context);
+                    return getPostContent(args.post_id, args.post_type, args.context);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

@@ -1,5 +1,5 @@
 import { select, dispatch } from '@wordpress/data';
-import apiFetch from '@wordpress/api-fetch';
+import { fetchContentById } from '@/shared/components/PostSelector/api';
 
 export const getDocumentStructureTool: SuggerenceMCPResponseTool = {
     name: 'get_document_structure',
@@ -123,6 +123,12 @@ export const getPostContentTool: SuggerenceMCPResponseTool = {
                 description: 'The WordPress post or page ID to fetch. Must be a valid post ID from this WordPress site.',
                 required: true
             },
+            post_type: {
+                type: 'string',
+                description: 'The post type to fetch: "post" for posts or "page" for pages. Defaults to "post".',
+                enum: ['post', 'page'],
+                default: 'post'
+            },
             context: {
                 type: 'string',
                 description: 'Context for the request: "view" for public content (default) or "edit" for full editor content including blocks. Use "edit" when you need to work with the block structure.',
@@ -130,7 +136,7 @@ export const getPostContentTool: SuggerenceMCPResponseTool = {
                 default: 'view'
             }
         },
-        required: ['post_id']
+        required: ['post_id', 'post_type']
     }
 };
 
@@ -498,12 +504,12 @@ export function removeFeaturedImage(): { content: Array<{ type: string, text: st
 
 export async function getPostContent(
     postId: number,
+    postType: ContentType = 'post',
     context: 'view' | 'edit' = 'view'
 ): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
-        const post: any = await apiFetch({
-            path: `/wp/v2/posts/${postId}?context=${context}`,
-        });
+        // Use the shared fetchContentById function with the provided post type
+        const post: any = await fetchContentById(postId, postType);
 
         if (!post) {
             return {

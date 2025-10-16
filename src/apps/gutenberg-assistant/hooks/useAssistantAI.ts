@@ -196,6 +196,7 @@ export const useAssistantAI = (): UseAITools => {
             case 'post':
             case 'page':
                 const data = context.data;
+                info += `\n  ID: ${data.id}`;
                 info += `\n  URL: ${data.link || 'N/A'}`;
                 info += `\n  Status: ${data.status || 'N/A'}`;
                 if (data.excerpt?.rendered) {

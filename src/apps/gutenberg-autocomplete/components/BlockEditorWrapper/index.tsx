@@ -1,6 +1,7 @@
 import { createElement, useState, useRef, useEffect } from '@wordpress/element';
 import { createHigherOrderComponent } from '@wordpress/compose';
 import { addFilter } from '@wordpress/hooks';
+import { subscribe } from '@wordpress/data';
 import { useAutocompleteAI } from '../../hooks/useAutocompleteAI';
 
 // Unique ID for the suggestion span
@@ -193,6 +194,37 @@ export const withAutocomplete = createHigherOrderComponent((BlockEdit) => {
                 document.removeEventListener('keydown', handleKeyDown, true);
             };
         }, [aiSuggestion, props.attributes.content]);
+
+        // Listen for post save to dismiss suggestions
+        useEffect(() => {
+            let previousIsSaving = false;
+
+            const unsubscribe = subscribe(() => {
+                const isSaving = wp?.data?.select('core/editor')?.isSavingPost();
+
+                // When save starts (transitions from false to true)
+                if (isSaving && !previousIsSaving && aiSuggestion) {
+                    console.log('[BlockEditorWrapper] Post is being saved, dismissing suggestion');
+
+                    // Remove the suggestion span before save
+                    const currentContent = props.attributes.content || '';
+                    const contentWithoutSuggestion = removeSuggestionSpan(currentContent);
+
+                    if (currentContent !== contentWithoutSuggestion) {
+                        props.setAttributes({ content: contentWithoutSuggestion });
+                        setAISuggestion('');
+                    }
+                }
+
+                previousIsSaving = isSaving;
+            }, 'core/editor');
+
+            return () => {
+                if (unsubscribe) {
+                    unsubscribe();
+                }
+            };
+        }, [aiSuggestion]);
 
         return createElement(BlockEdit, enhancedProps);
     };

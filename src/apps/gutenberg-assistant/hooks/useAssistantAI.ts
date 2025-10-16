@@ -177,18 +177,21 @@ export const useAssistantAI = (): UseAITools => {
 
         switch (context.type) {
             case 'drawing':
+                // Drawing data is base64 encoded, we'll pass it via the message content (not in prompt)
                 return `${info}
   🎨 **USER DRAWING PROVIDED** - Analyze the drawing and create the content directly:
-  → Use add block tool for text content (headings, paragraphs, buttons, etc.)
-  → Use generate image tool for any images shown in the drawing
-  → Use insert pattern tool if the drawing matches a known pattern (hero, CTA, etc.)
-  → Build layouts using add block tool with core/columns for multi-column layouts`;
+  → Use add_block tool for text content (headings, paragraphs, buttons, etc.)
+  → Use generate_image tool with input_images parameter for style matching if needed
+  → Use insert_pattern tool if the drawing matches a known pattern (hero, CTA, etc.)
+  → Build layouts using add_block tool with core/columns for multi-column layouts`;
 
             case 'image':
+                const imageUrl = context.data?.url;
                 return `${info}
   🖼️ **IMAGE PROVIDED** - User selected an image
-  → For "based on this": Use generate image tool with description
-  → For editing: Use generate edited image tool`;
+  ${imageUrl ? `→ Image URL: ${imageUrl}` : ''}
+  → For "based on this": Use generate_image tool with input_images parameter
+  → For editing: Use generate_edited_image tool with image_url: "${imageUrl}"`;
 
             case 'post':
             case 'page':
@@ -205,6 +208,17 @@ export const useAssistantAI = (): UseAITools => {
                 const block = context.data;
                 info += `\n  Type: ${block.name}`;
                 info += `\n  ClientID: ${block.clientId}`;
+
+                // Special handling for image blocks
+                if (block.name === 'core/image' || block.name === 'core/cover') {
+                    const blockImageUrl = block.attributes?.url;
+                    if (blockImageUrl) {
+                        info += `\n  🖼️ **IMAGE BLOCK** - Contains an image`;
+                        info += `\n  → Image URL: ${blockImageUrl}`;
+                        info += `\n  → For editing: Use generate_edited_image tool with image_url: "${blockImageUrl}"`;
+                    }
+                }
+
                 if (block.attributes) {
                     info += `\n  Attrs: ${JSON.stringify(block.attributes)}`;
                 }

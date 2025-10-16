@@ -80,9 +80,12 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                             };
                         } else if (ctx.type === 'image') {
                             // Handle media library images - convert URL to base64
+                            console.log('WE HAVE AN IMAGE');
+                            console.log('ctx.data', ctx.data);
                             try {
                                 const { data, media_type } = await convertImageUrlToBase64(ctx.data.url);
-                                return {
+                                console.log('Image converted successfully:', { media_type, dataLength: data.length });
+                                const imageAttachment = {
                                     type: 'image',
                                     source: {
                                         type: 'base64',
@@ -90,6 +93,8 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                         data: data
                                     }
                                 };
+                                console.log('Image attachment created:', imageAttachment);
+                                return imageAttachment;
                             } catch (error) {
                                 console.error('Error converting media library image to base64:', error);
                                 return null;
@@ -118,9 +123,10 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                     }));
 
                     const validImageAttachments = imageAttachments.filter(Boolean);
+                    console.log('Valid image attachments:', validImageAttachments.length);
 
                     if (validImageAttachments.length > 0) {
-                        return {
+                        const messageWithImages = {
                             role: message.role,
                             content: [
                                 {
@@ -130,6 +136,8 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                 ...validImageAttachments
                             ]
                         };
+                        console.log('Message with images:', JSON.stringify(messageWithImages, null, 2));
+                        return messageWithImages;
                     }
                 }
 
@@ -202,6 +210,8 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
         if (tools) {
             requestBody.tools = tools;
         }
+
+        console.log('Final request messages:', JSON.stringify(convertedMessages, null, 2));
 
         // Retry configuration
         const MAX_RETRIES = 3;

@@ -2,7 +2,7 @@
 /.github
 /node_modules
 /.wordpress-org
-./src
+/src
 
 .claude
 .editorconfig
@@ -19,3 +19,4 @@ package.json
 yarn.lock
 readme.md
 composer.lock
+CLAUDE.md

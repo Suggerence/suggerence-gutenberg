@@ -133,8 +133,17 @@
   }
 }
 
-.block-editor-block-list__block.is-highlighted.suggerence-block-highlight::after {
-    outline: 2px solid #d22178 !important;
-    outline-offset: 2px !important;
-    border-radius: 2px;
+
+/* Override WordPress native ::after highlight when our class is present */
+.block-editor-block-list__layout .block-editor-block-list__block.suggerence-block-highlight.is-highlighted::after,
+.block-editor-block-list__layout .block-editor-block-list__block.suggerence-block-highlight:not([contenteditable=true]):focus::after {
+    outline-color: #d22178 !important;
+    outline-width: 2px !important;
+}
+
+
+/* For iframe editor - use box-shadow since we can't rely on ::after */
+.editor-styles-wrapper .wp-block.suggerence-block-highlight,
+.editor-styles-wrapper [id^="block-"].suggerence-block-highlight {
+    box-shadow: 0 0 0 2px #d22178 !important;
 }

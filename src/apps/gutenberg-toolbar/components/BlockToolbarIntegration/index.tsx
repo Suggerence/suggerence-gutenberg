@@ -2,8 +2,7 @@ import { useEffect, useState } from '@wordpress/element';
 import {
 	ToolbarDropdownMenu,
 	ToolbarGroup,
-	MenuGroup,
-	MenuItem,
+	Animate,
 } from '@wordpress/components';
 import { BlockControls } from '@wordpress/block-editor';
 import { createHigherOrderComponent } from '@wordpress/compose';
@@ -18,6 +17,7 @@ import { QuickActionsCode } from '@/apps/gutenberg-toolbar/components/QuickActio
 import { generateEditedImage } from '@/shared/mcps/tools/image-generation';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
+import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import type { BlockEditProps } from '@wordpress/blocks';
 
 const withToolbarButton = createHigherOrderComponent(
@@ -25,9 +25,17 @@ const withToolbarButton = createHigherOrderComponent(
 		return (props : BlockEditProps<any>) => {
 			const [showCommandBox, setShowCommandBox] = useState(false);
 			const [commandBoxMode, setCommandBoxMode] = useState<'default' | 'image-edit'>('default');
-			const [isProcessing, setIsProcessing] = useState(false);
 			const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
 			const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
+			const { setBlockProcessing, processingBlocks } = useCommandStore();
+
+			// Get processing state for this block
+			const isProcessing = processingBlocks.has(props.clientId);
+
+			// Wrapper function to manage block processing state
+			const setIsProcessing = (processing: boolean) => {
+				setBlockProcessing(props.clientId, processing);
+			};
 
 			// Initialize useBaseAI hook at the top level for audio transcription
 			const { callAI } = useBaseAI({
@@ -39,32 +47,18 @@ const withToolbarButton = createHigherOrderComponent(
 				return <BlockEdit {...props} />;
 			}
 
-		const isText = props.name === 'core/paragraph' || props.name === 'core/heading' || props.name === 'core/quote' || props.name === 'core/preformatted' || props.name === 'core/verse' || props.name === 'core/list-item';
-		const isImage = props.name === 'core/image' || props.name === 'core/cover';
-		const isCode = props.name === 'core/code';
+		const isText = (props as any).name === 'core/paragraph' || (props as any).name === 'core/heading' || (props as any).name === 'core/quote' || (props as any).name === 'core/preformatted' || (props as any).name === 'core/verse' || (props as any).name === 'core/list-item';
+		const isImage = (props as any).name === 'core/image' || (props as any).name === 'core/cover';
+		const isCode = (props as any).name === 'core/code';
 		const blockContent = props.attributes?.content || '';
 		const imageUrl = props.attributes?.url;
 		const imageId = props.attributes?.id;
-
-			// Get the block wrapper props to add custom class
-			const blockProps = props.wrapperProps || {};
-			const customClassName = isProcessing ? 'suggerence-thinking' : '';
-
-			// Merge the className with existing classes
-			const mergedProps = {
-				...props,
-				wrapperProps: {
-					...blockProps,
-					className: blockProps.className
-						? `${blockProps.className} ${customClassName}`.trim()
-						: customClassName
-				}
-			};
 
 			// Image edit execute function
 			const handleImageEdit = async (command: string | MCPClientMessage) => {
 				if (!imageUrl) return false;
 
+				setIsProcessing(true);
 				try {
 					let editPrompt: string;
 
@@ -132,16 +126,18 @@ const withToolbarButton = createHigherOrderComponent(
 					createErrorSnackbar(__('An error occurred while editing the image.', 'suggerence'));
 					console.error('Error editing image:', error);
 					return false;
+				} finally {
+					setIsProcessing(false);
 				}
 			};
 
 		if(!isText && !isImage && !isCode) {
-			return <BlockEdit {...mergedProps} />;
+			return <BlockEdit {...props} />;
 		}
 
 			return (
 				<>
-					<BlockEdit {...mergedProps} />
+					<BlockEdit {...props} />
 					<BlockControls>
 						<ToolbarGroup>
 							<ToolbarDropdownMenu
@@ -221,6 +217,8 @@ const withToolbarButton = createHigherOrderComponent(
 														setCommandBoxMode('image-edit');
 														setShowCommandBox(true);
 													}}
+													isProcessing={isProcessing}
+													setIsProcessing={setIsProcessing}
 												/>
 											)}
 
@@ -246,13 +244,90 @@ const withToolbarButton = createHigherOrderComponent(
 	'withToolbarButton'
 );
 
+// HOC to add processing class and overlay to block wrapper
+const withProcessingClass = createHigherOrderComponent(
+	(BlockListBlock) => {
+		return (props: any) => {
+			const { processingBlocks } = useCommandStore();
+			const isProcessing = processingBlocks.has(props.clientId);
+
+			if (!isProcessing) {
+				return <BlockListBlock {...props} />;
+			}
+
+			return (
+				<div style={{ position: 'relative' }}>
+					<BlockListBlock
+						{...props}
+						className={`${props.className || ''} suggerence-thinking`.trim()}
+					/>
+					<Animate type="loading">
+						{({ className }) => (
+							<div
+								className={className}
+								style={{
+									position: 'absolute',
+									inset: 0,
+									background: 'rgba(255, 255, 255, 0.8)',
+									backdropFilter: 'blur(2px)',
+									borderRadius: '8px',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									pointerEvents: 'none',
+									zIndex: 10,
+								}}
+							>
+								<div
+									style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '8px',
+										padding: '8px 16px',
+										background: 'rgba(210, 33, 120, 0.1)',
+										borderRadius: '20px',
+										border: '1px solid rgba(210, 33, 120, 0.2)',
+									}}
+								>
+									<div
+										style={{
+											width: '16px',
+											height: '16px',
+											borderRadius: '50%',
+											border: '2px solid rgba(210, 33, 120, 0.3)',
+											borderTopColor: '#d22178',
+											animation: 'spin 0.8s linear infinite',
+										}}
+									/>
+									<span style={{
+										fontSize: '13px',
+										fontWeight: 500,
+										color: '#d22178'
+									}}>
+										{__('AI is processing...', 'suggerence')}
+									</span>
+								</div>
+							</div>
+						)}
+					</Animate>
+				</div>
+			);
+		};
+	},
+	'withProcessingClass'
+);
+
 export const BlockToolbarIntegration = () => {
 	useEffect(() => {
-		const hookName = 'suggerence/add-toolbar-button';
-		addFilter('editor.BlockEdit', hookName, withToolbarButton, 20);
+		const editHookName = 'suggerence/add-toolbar-button';
+		const listBlockHookName = 'suggerence/add-processing-class';
+
+		addFilter('editor.BlockEdit', editHookName, withToolbarButton, 20);
+		addFilter('editor.BlockListBlock', listBlockHookName, withProcessingClass, 20);
 
 		return () => {
-			removeFilter('editor.BlockEdit', hookName);
+			removeFilter('editor.BlockEdit', editHookName);
+			removeFilter('editor.BlockListBlock', listBlockHookName);
 		};
 	}, []);
 

@@ -1,4 +1,3 @@
-import { useState } from '@wordpress/element';
 import {
 	MenuGroup,
 	MenuItem,
@@ -15,6 +14,8 @@ interface QuickActionsImageProps {
 	clientId: string;
 	onClose: () => void;
 	onShowEditCommand: () => void;
+	isProcessing: boolean;
+	setIsProcessing: (isProcessing: boolean) => void;
 }
 
 export const QuickActionsImage = ({
@@ -22,9 +23,10 @@ export const QuickActionsImage = ({
 	imageId,
 	clientId,
 	onClose,
-	onShowEditCommand
+	onShowEditCommand,
+	isProcessing,
+	setIsProcessing
 }: QuickActionsImageProps) => {
-	const [isProcessing, setIsProcessing] = useState(false);
 	const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
 	const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
 

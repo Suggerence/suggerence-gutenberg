@@ -1,5 +1,8 @@
 import { dispatch, select } from '@wordpress/data';
 import { parse } from '@wordpress/blocks';
+import apiFetch from '@wordpress/api-fetch';
+
+declare const SuggerenceData: SuggerenceData;
 
 /**
  * Get available pattern categories from WordPress
@@ -86,50 +89,125 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
 };
 
 /**
+ * Check if Kadence Blocks is installed and fetch patterns from their API
+ */
+async function getKadencePatternsAPI(): Promise<any[] | null> {
+    console.log('Checking if Kadence Blocks is installed:', SuggerenceData?.has_kadence_blocks);
+    // Check if Kadence Blocks is installed
+    if (!(SuggerenceData?.has_kadence_blocks)) {
+        return [];
+    }
+
+    try {
+        const data = await apiFetch({
+            path: '/kb-design-library/v1/get_library?force_reload=false&library=section&library_url=&key=section&meta=slug,id,name,categories,keywords,description,image,imageW,imageH,pro,locked,requiredPlugins&_locale=user',
+            method: 'GET'
+        });
+
+        // Transform Kadence patterns to match our pattern format
+        // Kadence returns an object with pattern IDs as keys
+        if (data && typeof data === 'string') {
+            const parsedData = JSON.parse(data);
+
+            console.log('Kadence patterns:', parsedData);
+
+            return Object.entries(parsedData).map(([patternId, kadencePattern]: [string, any]) => {
+                // Extract category names from the categories object
+                const categoryNames = kadencePattern.categories
+                    ? Object.keys(kadencePattern.categories)
+                    : [];
+
+                return {
+                    name: patternId,
+                    title: kadencePattern.name || patternId,
+                    description: kadencePattern.description || '',
+                    categories: categoryNames,
+                    keywords: kadencePattern.keywords || [],
+                    viewportWidth: kadencePattern.imageW || 1200,
+                    blockTypes: [],
+                    inserter: !kadencePattern.locked,
+                    source: 'kadence-blocks',
+                    // Additional Kadence-specific metadata
+                    image: kadencePattern.image,
+                    pro: kadencePattern.pro || false,
+                    requiredPlugins: kadencePattern.requiredPlugins || {}
+                };
+            });
+        }
+
+        console.log('No Kadence patterns found');
+
+        return [];
+    } catch (error) {
+        console.warn('Failed to fetch Kadence patterns:', error);
+        return [];
+    }
+}
+
+/**
  * Search for available block patterns
  */
-export function searchPattern(args: {
+export async function searchPattern(args: {
     search?: string;
     category?: string;
-}): { content: Array<{ type: string, text: string }> } {
+}): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
         const blockEditorSelect = select('core/block-editor') as any;
 
         let patterns: any[] = [];
         let categories: any[] = [];
 
-        // Get settings first (needed for categories)
-        const settings = blockEditorSelect?.getSettings?.();
+        // Try Kadence Blocks API first
+        const kadencePatterns = await getKadencePatternsAPI();
+        if (kadencePatterns && kadencePatterns.length > 0) {
+            patterns = kadencePatterns;
 
-        // Get patterns using the same method as Gutenberg
-        if (blockEditorSelect?.__experimentalGetAllowedPatterns) {
-            try {
-                // Call with rootClientId = undefined to get all patterns (same as Gutenberg)
-                patterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined) || [];
-            } catch (e) {
-                console.warn('__experimentalGetAllowedPatterns failed:', e);
-            }
-        }
-
-        // Fallback: Get patterns from settings if the method above failed
-        if (patterns.length === 0 && settings?.__experimentalBlockPatterns) {
-            patterns = settings.__experimentalBlockPatterns || [];
-        }
-
-        // Get categories from settings (same as Gutenberg)
-        if (settings) {
-            const allCategories = [
-                ...(settings.__experimentalBlockPatternCategories || []),
-                ...(settings.__experimentalUserPatternCategories || [])
-            ];
-            // Remove duplicates by category name
-            const categoryMap = new Map();
-            allCategories.forEach(cat => {
-                if (!categoryMap.has(cat.name)) {
-                    categoryMap.set(cat.name, cat);
-                }
+            // Extract categories from Kadence patterns
+            const categorySet = new Set<string>();
+            kadencePatterns.forEach((pattern: any) => {
+                pattern.categories?.forEach((cat: string) => categorySet.add(cat));
             });
-            categories = Array.from(categoryMap.values());
+
+            categories = Array.from(categorySet).map(cat => ({
+                name: cat,
+                label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/-/g, ' '),
+                description: ''
+            }));
+        } else {
+            // Fallback to WordPress patterns
+            // Get settings first (needed for categories)
+            const settings = blockEditorSelect?.getSettings?.();
+
+            // Get patterns using the same method as Gutenberg
+            if (blockEditorSelect?.__experimentalGetAllowedPatterns) {
+                try {
+                    // Call with rootClientId = undefined to get all patterns (same as Gutenberg)
+                    patterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined) || [];
+                } catch (e) {
+                    console.warn('__experimentalGetAllowedPatterns failed:', e);
+                }
+            }
+
+            // Fallback: Get patterns from settings if the method above failed
+            if (patterns.length === 0 && settings?.__experimentalBlockPatterns) {
+                patterns = settings.__experimentalBlockPatterns || [];
+            }
+
+            // Get categories from settings (same as Gutenberg)
+            if (settings) {
+                const allCategories = [
+                    ...(settings.__experimentalBlockPatternCategories || []),
+                    ...(settings.__experimentalUserPatternCategories || [])
+                ];
+                // Remove duplicates by category name
+                const categoryMap = new Map();
+                allCategories.forEach(cat => {
+                    if (!categoryMap.has(cat.name)) {
+                        categoryMap.set(cat.name, cat);
+                    }
+                });
+                categories = Array.from(categoryMap.values());
+            }
         }
 
         if (patterns.length === 0) {
@@ -225,108 +303,189 @@ export function searchPattern(args: {
 }
 
 /**
+ * Get Kadence pattern content and process it
+ */
+async function getAndProcessKadencePattern(patternId: string): Promise<string | null> {
+    try {
+        // First, get the pattern content
+        const patternResponseStr = await apiFetch({
+            path: `/kb-design-library/v1/get_pattern_content?library=section&key=section&pattern_id=${patternId}&pattern_type=pattern&pattern_style=light&_locale=user`,
+            method: 'GET'
+        });
+
+        if (!patternResponseStr || typeof patternResponseStr !== 'string') {
+            return null;
+        }
+
+        // Parse the JSON response
+        const patternResponse = JSON.parse(patternResponseStr);
+
+        if (!patternResponse.content) {
+            return null;
+        }
+
+        // Then, process the pattern to get the final content
+        const processedResponseStr: any = await apiFetch({
+            path: '/kb-design-library/v1/process_pattern?_locale=user',
+            method: 'POST',
+            data: {
+                content: patternResponse.content,
+                image_library: {},
+                cpt_blocks: patternResponse.cpt_blocks || [],
+                style: 'light'
+            }
+        });
+
+        return processedResponseStr;
+    } catch (error) {
+        console.warn('Failed to get/process Kadence pattern:', error);
+        return null;
+    }
+}
+
+/**
  * Insert a block pattern into the editor
  * Uses WordPress's built-in pattern transformation if available, otherwise falls back to manual insertion
  */
-export function insertPattern(args: {
+export async function insertPattern(args: {
     patternName: string;
     position?: string;
     targetBlockId?: string;
-}): { content: Array<{ type: string, text: string }> } {
+}): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
         const blockEditorSelect = select('core/block-editor') as any;
         const blockEditorDispatch = dispatch('core/block-editor') as any;
-        
-        const { getSettings, getSelectedBlockClientId, getBlockIndex, getBlocks } = blockEditorSelect;
-        const { insertBlocks, replaceBlocks } = blockEditorDispatch;
-        
-        // Try multiple methods to get patterns (prefer core/blocks store)
-        let pattern: any = null;
-        let patterns: any[] = [];
 
-        // Method 1: Try core/blocks store (primary, most comprehensive)
-        const blocksSelect = select('core/blocks') as any;
-        if (blocksSelect) {
-            // Try getAllPatterns first
-            if (blocksSelect.getAllPatterns) {
-                patterns = blocksSelect.getAllPatterns() || [];
-                pattern = patterns.find((p: any) => p.name === args.patternName);
-            }
-            // Fallback to getPatterns
-            if (!pattern && blocksSelect.getPatterns) {
-                patterns = blocksSelect.getPatterns() || [];
-                pattern = patterns.find((p: any) => p.name === args.patternName);
-            }
-        }
+        const { getSettings, getSelectedBlockClientId, getBlockIndex } = blockEditorSelect;
+        const { insertBlocks } = blockEditorDispatch;
 
-        // Method 2: Try using __experimentalGetAllowedPatterns from core/block-editor
-        if (!pattern && blockEditorSelect.__experimentalGetAllowedPatterns) {
-            patterns = blockEditorSelect.__experimentalGetAllowedPatterns() || [];
-            pattern = patterns.find((p: any) => p.name === args.patternName);
-        }
+        let patternContent: string | null = null;
+        let patternTitle: string = args.patternName;
 
-        // Method 3: Get from block-editor settings
-        if (!pattern) {
-            const settings = getSettings();
-            if (settings.__experimentalBlockPatterns) {
-                patterns = settings.__experimentalBlockPatterns;
-                pattern = patterns.find((p: any) => p.name === args.patternName);
-            }
-        }
+        // Check if this is a Kadence pattern (starts with "ptn-")
+        if (args.patternName.startsWith('ptn-')) {
+            // Extract the pattern ID (remove "ptn-" prefix)
+            const patternId = args.patternName.replace('ptn-', '');
+            patternContent = await getAndProcessKadencePattern(patternId);
 
-        if (!pattern) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        success: false,
-                        action: 'insert_pattern_failed',
-                        error: `Pattern "${args.patternName}" not found.`,
-                    })
-                }]
-            };
-        }
-
-        // Validate pattern has content
-        if (!pattern.content) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        success: false,
-                        action: 'insert_pattern_failed',
-                        error: `Pattern "${args.patternName}" has no content to insert.`,
-                    })
-                }]
-            };
-        }
-
-        // Check if there's a built-in insertPattern action
-        if (blockEditorDispatch.insertPattern) {
-            // Use the built-in pattern insertion if available
-            try {
-                blockEditorDispatch.insertPattern(pattern, args.targetBlockId);
+            if (!patternContent) {
                 return {
                     content: [{
                         type: 'text',
                         text: JSON.stringify({
-                            success: true,
-                            action: 'pattern_inserted',
-                            method: 'built-in-insertPattern',
-                            data: {
-                                pattern_name: args.patternName,
-                                pattern_title: pattern.title
-                            }
+                            success: false,
+                            action: 'insert_pattern_failed',
+                            error: `Failed to get Kadence pattern "${args.patternName}".`,
                         })
                     }]
                 };
-            } catch (insertError) {
-                console.warn('Built-in insertPattern failed, falling back to manual insertion:', insertError);
+            }
+        } else {
+            // Try multiple methods to get WordPress patterns
+            let pattern: any = null;
+            let patterns: any[] = [];
+
+            // Method 1: Try core/blocks store (primary, most comprehensive)
+            const blocksSelect = select('core/blocks') as any;
+            if (blocksSelect) {
+                // Try getAllPatterns first
+                if (blocksSelect.getAllPatterns) {
+                    patterns = blocksSelect.getAllPatterns() || [];
+                    pattern = patterns.find((p: any) => p.name === args.patternName);
+                }
+                // Fallback to getPatterns
+                if (!pattern && blocksSelect.getPatterns) {
+                    patterns = blocksSelect.getPatterns() || [];
+                    pattern = patterns.find((p: any) => p.name === args.patternName);
+                }
+            }
+
+            // Method 2: Try using __experimentalGetAllowedPatterns from core/block-editor
+            if (!pattern && blockEditorSelect.__experimentalGetAllowedPatterns) {
+                patterns = blockEditorSelect.__experimentalGetAllowedPatterns() || [];
+                pattern = patterns.find((p: any) => p.name === args.patternName);
+            }
+
+            // Method 3: Get from block-editor settings
+            if (!pattern) {
+                const settings = getSettings();
+                if (settings.__experimentalBlockPatterns) {
+                    patterns = settings.__experimentalBlockPatterns;
+                    pattern = patterns.find((p: any) => p.name === args.patternName);
+                }
+            }
+
+            if (!pattern) {
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: false,
+                            action: 'insert_pattern_failed',
+                            error: `Pattern "${args.patternName}" not found.`,
+                        })
+                    }]
+                };
+            }
+
+            // Validate pattern has content
+            if (!pattern.content) {
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: false,
+                            action: 'insert_pattern_failed',
+                            error: `Pattern "${args.patternName}" has no content to insert.`,
+                        })
+                    }]
+                };
+            }
+
+            patternContent = pattern.content;
+            patternTitle = pattern.title || args.patternName;
+
+            // Check if there's a built-in insertPattern action
+            if (blockEditorDispatch.insertPattern) {
+                // Use the built-in pattern insertion if available
+                try {
+                    blockEditorDispatch.insertPattern(pattern, args.targetBlockId);
+                    return {
+                        content: [{
+                            type: 'text',
+                            text: JSON.stringify({
+                                success: true,
+                                action: 'pattern_inserted',
+                                method: 'built-in-insertPattern',
+                                data: {
+                                    pattern_name: args.patternName,
+                                    pattern_title: patternTitle
+                                }
+                            })
+                        }]
+                    };
+                } catch (insertError) {
+                    console.warn('Built-in insertPattern failed, falling back to manual insertion:', insertError);
+                }
             }
         }
 
-        // Fallback: Parse the pattern content into blocks manually
-        const blocks = parse(pattern.content);
+        // At this point we have patternContent (either from Kadence or WordPress)
+        // Parse the pattern content into blocks manually
+        if (!patternContent) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'insert_pattern_failed',
+                        error: `Pattern "${args.patternName}" has no content.`
+                    })
+                }]
+            };
+        }
+
+        const blocks = parse(patternContent);
 
         if (!blocks || blocks.length === 0) {
             return {
@@ -368,7 +527,7 @@ export function insertPattern(args: {
                     method: 'manual-parse-and-insert',
                     data: {
                         pattern_name: args.patternName,
-                        pattern_title: pattern.title,
+                        pattern_title: patternTitle,
                         blocks_inserted: blocks.length,
                         block_types: blocks.map((b: any) => b.name),
                         position: args.position || 'after',
@@ -391,4 +550,3 @@ export function insertPattern(args: {
         };
     }
 }
-

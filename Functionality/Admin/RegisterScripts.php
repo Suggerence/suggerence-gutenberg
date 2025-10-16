@@ -27,6 +27,7 @@ class RegisterScripts
             'admin_ajax_url' => admin_url('admin-ajax.php'),
             'updates_nonce' => wp_create_nonce('updates'),
             'site_url' => home_url(),
+            'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php')
         ]) . ';';
 
         /**

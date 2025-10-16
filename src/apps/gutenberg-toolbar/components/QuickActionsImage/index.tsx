@@ -7,6 +7,7 @@ import { __ } from '@wordpress/i18n';
 import { useDispatch } from '@wordpress/data';
 import { generateEditedImage } from '@/shared/mcps/tools/image-generation';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 
 interface QuickActionsImageProps {
 	imageUrl?: string;
@@ -25,6 +26,7 @@ export const QuickActionsImage = ({
 }: QuickActionsImageProps) => {
 	const [isProcessing, setIsProcessing] = useState(false);
 	const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
+	const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
 
 	const handleGenerateAltText = async () => {
 		if (!imageUrl) return;
@@ -72,10 +74,14 @@ export const QuickActionsImage = ({
 				updateBlockAttributes(clientId, {
 					alt: altText
 				});
-			}
 
-			onClose();
+				createSuccessSnackbar(__('Alt text generated successfully!', 'suggerence'));
+				onClose();
+			} else {
+				createErrorSnackbar(__('Failed to generate alt text. Please try again.', 'suggerence'));
+			}
 		} catch (error) {
+			createErrorSnackbar(__('An error occurred while generating alt text.', 'suggerence'));
 			console.error('Error generating alt text:', error);
 		} finally {
 			setIsProcessing(false);
@@ -102,10 +108,14 @@ export const QuickActionsImage = ({
 					url: response.data.image_url,
 					alt: response.data.alt_text
 				});
-			}
 
-			onClose();
+				createSuccessSnackbar(__('Background removed successfully!', 'suggerence'));
+				onClose();
+			} else {
+				createErrorSnackbar(__('Failed to remove background. Please try again.', 'suggerence'));
+			}
 		} catch (error) {
+			createErrorSnackbar(__('An error occurred while removing background.', 'suggerence'));
 			console.error('Error removing background:', error);
 		} finally {
 			setIsProcessing(false);

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { Button, TextareaControl, Notice, Flex, FlexItem, KeyboardShortcuts } from '@wordpress/components';
+import { Button, TextareaControl, Flex, FlexItem, KeyboardShortcuts } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
 import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/useGutenbergAI';
 import { AudioButton } from '@/shared/components/AudioButton';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 
 export const CommandBox = ({
     onClose,
@@ -15,13 +16,12 @@ export const CommandBox = ({
 }: CommandBoxProps) => {
     const {
         isExecuting,
-        error,
         setExecuting,
-        setResult,
-        setError
+        setResult
     } = useCommandStore();
 
     const { executeCommand: defaultExecuteCommand, isLoading: mcpLoading } = useGutenbergAI();
+    const { createErrorSnackbar } = useSnackbar();
     const [inputValue, setInputValue] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -42,7 +42,6 @@ export const CommandBox = ({
 
         try {
             setExecuting(true);
-            setError(null);
 
             const success = await executeCommand(inputValue.trim());
 
@@ -51,10 +50,10 @@ export const CommandBox = ({
                 setInputValue('');
                 onClose?.();
             } else {
-                setError(__('Command execution failed. Please try again.', 'suggerence'));
+                createErrorSnackbar(__('Command execution failed. Please try again.', 'suggerence'));
             }
         } catch (error) {
-            setError(__('An error occurred while executing the command.', 'suggerence'));
+            createErrorSnackbar(__('An error occurred while executing the command.', 'suggerence'));
             console.error('Command execution error:', error);
         } finally {
             setExecuting(false);
@@ -85,7 +84,6 @@ export const CommandBox = ({
     const handleAudioMessage = async (audioMessage: any) => {
         try {
             setExecuting(true);
-            setError(null);
 
             // Pass the full multimodal message to executeCommand
             const success = await executeCommand(audioMessage);
@@ -95,10 +93,10 @@ export const CommandBox = ({
                 setInputValue('');
                 onClose?.();
             } else {
-                setError(__('Audio command execution failed. Please try again.', 'suggerence'));
+                createErrorSnackbar(__('Audio command execution failed. Please try again.', 'suggerence'));
             }
         } catch (error) {
-            setError(__('An error occurred while executing the audio command.', 'suggerence'));
+            createErrorSnackbar(__('An error occurred while executing the audio command.', 'suggerence'));
             console.error('Audio command execution error:', error);
         } finally {
             setExecuting(false);
@@ -122,13 +120,8 @@ export const CommandBox = ({
             <div aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(1px, 1px, 1px, 1px)' }}>
 				{isLoading
 					? (mcpLoading ? __('Loading…', 'suggerence') : __('Executing…', 'suggerence'))
-					: (error ? __('Error', 'suggerence') : '')}
+					: ''}
 			</div>
-
-            {/* Status Notice */}
-            {error && (
-                <Notice status="error">{error}</Notice>
-            )}
 
             <div>
                     <TextareaControl

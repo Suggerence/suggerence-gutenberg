@@ -1,4 +1,3 @@
-import { useState } from '@wordpress/element';
 import {
 	MenuGroup,
 	MenuItem,
@@ -8,6 +7,7 @@ import { __ } from '@wordpress/i18n';
 import { chevronRight } from '@wordpress/icons';
 import { useDispatch } from '@wordpress/data';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 
 const PROGRAMMING_LANGUAGES = [
 	{ label: __('JavaScript', 'suggerence'), value: 'JavaScript' },
@@ -99,6 +99,7 @@ export const QuickActionsCode = ({
 	setIsProcessing
 }: QuickActionsCodeProps) => {
 	const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
+	const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
 
 	const { callAI } = useBaseAI({
 		getSystemPrompt: () => 'You are a helpful AI assistant that translates code between programming languages. Return ONLY the translated code without any explanations, markdown formatting, or code block markers. Preserve the logic and structure of the original code.',
@@ -140,8 +141,13 @@ export const QuickActionsCode = ({
 				updateBlockAttributes(clientId, {
 					content: response.content
 				});
+
+				createSuccessSnackbar(__('Code translated successfully!', 'suggerence'));
+			} else {
+				createErrorSnackbar(__('Failed to translate code. Please try again.', 'suggerence'));
 			}
 		} catch (error) {
+			createErrorSnackbar(__('An error occurred while translating code.', 'suggerence'));
 			console.error('Error processing quick action:', error);
 		} finally {
 			setIsProcessing(false);

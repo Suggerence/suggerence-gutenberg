@@ -16,6 +16,7 @@ import { QuickActionsText } from '@/apps/gutenberg-toolbar/components/QuickActio
 import { QuickActionsImage } from '@/apps/gutenberg-toolbar/components/QuickActionsImage';
 import { QuickActionsCode } from '@/apps/gutenberg-toolbar/components/QuickActionsCode';
 import { generateEditedImage } from '@/shared/mcps/tools/image-generation';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import type { BlockEditProps } from '@wordpress/blocks';
 
 const withToolbarButton = createHigherOrderComponent(
@@ -25,6 +26,7 @@ const withToolbarButton = createHigherOrderComponent(
 			const [commandBoxMode, setCommandBoxMode] = useState<'default' | 'image-edit'>('default');
 			const [isProcessing, setIsProcessing] = useState(false);
 			const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
+			const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
 
 			if (!props.isSelected) {
 				return <BlockEdit {...props} />;
@@ -66,10 +68,13 @@ const withToolbarButton = createHigherOrderComponent(
 							url: response.data.image_url,
 							alt: response.data.alt_text
 						});
+						createSuccessSnackbar(__('Image edited successfully!', 'suggerence'));
 						return true;
 					}
+					createErrorSnackbar(__('Failed to edit image. Please try again.', 'suggerence'));
 					return false;
 				} catch (error) {
+					createErrorSnackbar(__('An error occurred while editing the image.', 'suggerence'));
 					console.error('Error editing image:', error);
 					return false;
 				}

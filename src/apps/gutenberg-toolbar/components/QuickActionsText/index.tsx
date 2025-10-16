@@ -1,4 +1,3 @@
-import { useState } from '@wordpress/element';
 import {
 	MenuGroup,
 	MenuItem,
@@ -8,6 +7,7 @@ import { __ } from '@wordpress/i18n';
 import { chevronRight } from '@wordpress/icons';
 import { useDispatch } from '@wordpress/data';
 import { useBaseAI } from '@/shared/hooks/useBaseAi';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 
 const TONES = [
 	{ label: __('Professional', 'suggerence'), value: 'professional' },
@@ -152,6 +152,7 @@ export const QuickActionsText = ({
 	setIsProcessing
 }: QuickActionsTextProps) => {
 	const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
+	const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
 
 	const { callAI } = useBaseAI({
 		getSystemPrompt: () => 'You are a helpful AI assistant that modifies text content based on user requests. Return ONLY the modified text without any explanations or additional formatting.',
@@ -199,8 +200,28 @@ export const QuickActionsText = ({
 				updateBlockAttributes(clientId, {
 					content: response.content
 				});
+
+				// Show success message based on action
+				let successMessage = '';
+				switch (action) {
+					case 'summarize':
+						successMessage = __('Text summarized successfully!', 'suggerence');
+						break;
+					case 'tone':
+						successMessage = __('Tone changed successfully!', 'suggerence');
+						break;
+					case 'translate':
+						successMessage = __('Text translated successfully!', 'suggerence');
+						break;
+				}
+				if (successMessage) {
+					createSuccessSnackbar(successMessage);
+				}
+			} else {
+				createErrorSnackbar(__('Failed to process text. Please try again.', 'suggerence'));
 			}
 		} catch (error) {
+			createErrorSnackbar(__('An error occurred while processing text.', 'suggerence'));
 			console.error('Error processing quick action:', error);
 		} finally {
 			setIsProcessing(false);

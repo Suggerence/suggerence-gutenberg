@@ -26,25 +26,26 @@ export const QuickActionsImage = ({
 	const [isProcessing, setIsProcessing] = useState(false);
 	const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
 
-	const { callAI } = useBaseAI({
-		getSystemPrompt: () => 'You are a helpful AI assistant that generates concise, descriptive alt text for images to improve web accessibility.',
-		getSiteContext: () => ({
-			selectedContexts: imageUrl ? [{
-				id: imageId ? `image-${imageId}` : 'image-for-alt',
-				type: 'image',
-				label: 'Current Image',
-				data: {
-					url: imageUrl
-				}
-			}] : []
-		})
-	});
-
 	const handleGenerateAltText = async () => {
 		if (!imageUrl) return;
 
 		setIsProcessing(true);
 		try {
+
+			const { callAI } = useBaseAI({
+				getSystemPrompt: () => 'You are a helpful AI assistant that generates concise, descriptive alt text for images to improve web accessibility.',
+				getSiteContext: () => ({
+					selectedContexts: [{
+						id: imageId ? `image-${imageId}` : 'image-for-alt',
+						type: 'image',
+						label: 'Current Image',
+						data: {
+							url: imageUrl
+						}
+					}]
+				})
+			});
+
 			const defaultModel: AIModel = {
 				id: 'suggerence-v1',
 				provider: 'suggerence',

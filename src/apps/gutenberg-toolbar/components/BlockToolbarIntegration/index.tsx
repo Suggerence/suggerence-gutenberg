@@ -16,6 +16,7 @@ import { QuickActionsText } from '@/apps/gutenberg-toolbar/components/QuickActio
 import { QuickActionsImage } from '@/apps/gutenberg-toolbar/components/QuickActionsImage';
 import { QuickActionsCode } from '@/apps/gutenberg-toolbar/components/QuickActionsCode';
 import { generateEditedImage } from '@/shared/mcps/tools/image-generation';
+import { useBaseAI } from '@/shared/hooks/useBaseAi';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import type { BlockEditProps } from '@wordpress/blocks';
 
@@ -27,6 +28,12 @@ const withToolbarButton = createHigherOrderComponent(
 			const [isProcessing, setIsProcessing] = useState(false);
 			const { updateBlockAttributes } = useDispatch('core/block-editor') as any;
 			const { createErrorSnackbar, createSuccessSnackbar } = useSnackbar();
+
+			// Initialize useBaseAI hook at the top level for audio transcription
+			const { callAI } = useBaseAI({
+				getSystemPrompt: () => 'You are a helpful assistant that transcribes audio messages. Provide only the transcription without any additional text.',
+				getSiteContext: () => ({ selectedContexts: [] })
+			});
 
 			if (!props.isSelected) {
 				return <BlockEdit {...props} />;
@@ -55,11 +62,59 @@ const withToolbarButton = createHigherOrderComponent(
 			};
 
 			// Image edit execute function
-			const handleImageEdit = async (command: string) => {
+			const handleImageEdit = async (command: string | MCPClientMessage) => {
 				if (!imageUrl) return false;
 
 				try {
-					const result = await generateEditedImage(command, imageUrl);
+					let editPrompt: string;
+
+					// Check if this is an audio message that needs transcription
+					if (typeof command !== 'string' && command.content && Array.isArray(command.content)) {
+						const audioContent = command.content.find((item: any) => item.type === 'audio');
+
+						if (audioContent) {
+							// Transcribe audio using AI
+							const defaultModel: AIModel = {
+								id: 'suggerence-v1',
+								provider: 'suggerence',
+								providerName: 'Suggerence',
+								name: 'Suggerence v1',
+								date: new Date().toISOString(),
+								capabilities: ['text-generation', 'audio-transcription']
+							};
+
+							const messages: MCPClientMessage[] = [{
+								role: 'user',
+								content: command.content,
+								date: new Date().toISOString()
+							}];
+
+							const response = await callAI(messages, defaultModel, []);
+
+							if (!response.content) {
+								createErrorSnackbar(__('Failed to transcribe audio. Please try again.', 'suggerence'));
+								return false;
+							}
+
+							editPrompt = response.content;
+						} else {
+							// Extract text from multimodal content (no audio)
+							editPrompt = command.content
+								.filter((item: any) => item.type === 'text')
+								.map((item: any) => item.text)
+								.join(' ');
+						}
+					} else {
+						// Simple string command
+						editPrompt = typeof command === 'string' ? command : String(command.content || '');
+					}
+
+					if (!editPrompt.trim()) {
+						createErrorSnackbar(__('Please provide a valid edit command.', 'suggerence'));
+						return false;
+					}
+
+					const result = await generateEditedImage(editPrompt, imageUrl);
 					const response = JSON.parse(result.content[0].text);
 
 					if (response.success && response.data) {

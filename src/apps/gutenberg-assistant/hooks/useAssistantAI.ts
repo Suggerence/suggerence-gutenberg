@@ -20,8 +20,8 @@ export const useAssistantAI = (): UseAITools => {
                 category: blockType.category,
                 keywords: blockType.keywords || [],
                 supports: blockType.supports || {}
-            })).filter((block: any) => 
-                !block.name.includes('core/missing') && 
+            })).filter((block: any) =>
+                !block.name.includes('core/missing') &&
                 !block.name.includes('core/freeform')
             );
         } catch (error) {
@@ -85,11 +85,11 @@ export const useAssistantAI = (): UseAITools => {
 
             // // Auto-add selected image blocks as visual context
             // let contextsWithAutoImageBlock = [...(selectedContexts || [])];
-            
+
             // // Check if the selected block is an image block
             // if (selectedBlock && (selectedBlock.name === 'core/image' || selectedBlock.name === 'core/cover')) {
             //     const imageUrl = selectedBlock.attributes?.url;
-                
+
             //     // Only add if there's an image URL and it's not already in the contexts
             //     if (imageUrl) {
             //         const imageBlockContextId = `auto-image-block-${selectedBlockId}`;
@@ -97,7 +97,7 @@ export const useAssistantAI = (): UseAITools => {
             //             ctx.id === imageBlockContextId || 
             //             (ctx.type === 'block' && ctx.data?.id === selectedBlockId)
             //         );
-                    
+
             //         if (!alreadyExists) {
             //             contextsWithAutoImageBlock.push({
             //                 id: imageBlockContextId,
@@ -145,25 +145,25 @@ export const useAssistantAI = (): UseAITools => {
      */
     const formatBlockInfo = (block: any, indent = ''): string => {
         let result = `${indent}${block.position}. ${block.name} (ID: ${block.id})`;
-        
+
         if (block.content) {
             const truncated = block.content.substring(0, 80);
             result += ` - "${truncated}${block.content.length > 80 ? '...' : ''}"`;
         }
-        
+
         if (block.attributes && Object.keys(block.attributes).length > 0) {
             const attrs = JSON.stringify(block.attributes);
             if (attrs !== '{}') {
                 result += ` | Attrs: ${attrs}`;
             }
         }
-        
+
         if (block.innerBlocks && block.innerBlocks.length > 0) {
             result += `\n${block.innerBlocks
                 .map((inner: any) => formatBlockInfo(inner, indent + '  '))
                 .join('\n')}`;
         }
-        
+
         return result;
     };
 
@@ -236,29 +236,29 @@ export const useAssistantAI = (): UseAITools => {
      */
     const getAssistantSystemPrompt = (site_context: any): string => {
         const { gutenberg, selectedContexts, currentReasoning } = site_context;
-        
+
         // Build block types section
-        const blockTypesSection = gutenberg?.availableBlockTypes?.length 
+        const blockTypesSection = gutenberg?.availableBlockTypes?.length
             ? `## Available Block Types (${gutenberg.availableBlockTypes.length} total)
 
 Use get_available_blocks tool for complete list or get_block_schema for details.`
             : '';
 
         // Build current state section
-        const currentStateSection = gutenberg 
+        const currentStateSection = gutenberg
             ? `## Current Editor State
 
 Post: "${gutenberg.post?.title || 'Untitled'}" | ${gutenberg.post?.totalBlocks || 0} blocks
-Selected: ${gutenberg.selectedBlock 
-    ? `${gutenberg.selectedBlock.id}` 
-    : 'None'}
+Selected: ${gutenberg.selectedBlock
+                ? `${gutenberg.selectedBlock.id}`
+                : 'None'}
 
 ### Block Structure (use these IDs for targeting):
 ${gutenberg.blocks?.map((b: any) => formatBlockInfo(b)).join('\n') || 'No blocks'}`
             : '';
 
         // Build selected contexts section
-        const contextsSection = selectedContexts?.length 
+        const contextsSection = selectedContexts?.length
             ? `## User-Selected Context
 
 ${selectedContexts.map(formatSelectedContext).join('\n\n')}
@@ -276,8 +276,8 @@ ${selectedContexts.map(formatSelectedContext).join('\n\n')}
             // EXECUTION MODE - We have an existing plan, execute it
             const taskList = currentReasoning.plan?.map((task: ReasoningTask) => {
                 const statusEmoji = task.status === 'completed' ? '✅' :
-                                   task.status === 'in_progress' ? '🔄' :
-                                   task.status === 'failed' ? '❌' : '⏳';
+                    task.status === 'in_progress' ? '🔄' :
+                        task.status === 'failed' ? '❌' : '⏳';
                 return `Task ${task.order}: ${task.description}`;
                 // return `${statusEmoji} Task ${task.order}: ${task.description} [${task.status}]`;
 
@@ -297,14 +297,25 @@ ${taskList}
 
 **Your Instructions:**
 1. **DO NOT provide another reasoning/planning response**
-2. **Execute the next pending task** by calling the appropriate tools
-3. **Continue executing** until all tasks are completed
-4. **Provide a final summary** to the user when all tasks are done
+2. **Execute ALL tasks THOROUGHLY** - Use as many tools as needed to maximize quality
+3. **GO BEYOND MINIMUM** - If you can enhance the result with additional tools, do it
+4. **VERIFY RESULTS** - Before marking as complete:
+   - Call relevant GET tools to verify what you created/modified
+   - Check that all blocks render correctly
+   - Ensure images are properly loaded
+   - Validate content matches user expectations
+5. **FINAL CHECKLIST** - Before responding to user:
+   ✓ All planned tasks executed
+   ✓ All tool results verified by checking current state
+   ✓ No errors or warnings from tools
+   ✓ Content quality meets high standards
+   ✓ User's request fully satisfied (not just partially)
+6. **THEN provide comprehensive summary** showing what was accomplished
    - If you generated/edited images, include them in your response using markdown: ![alt text](image_url)
    - Extract image_url from tool results and show the images to the user
-5. You can call multiple tools in sequence for efficiency
+7. You MUST call multiple tools in sequence - never stop after just one tool call
 
-**Start executing NOW - call the tools needed for the next pending task.**`;
+**Start executing NOW - be thorough and verify everything before completing.**`;
         } else {
             // PLANNING MODE - New request, create a plan first
             modePrompt = `
@@ -342,21 +353,53 @@ Your FIRST response MUST be a reasoning response with this exact JSON structure:
 1. **BREAK DOWN COMPLEXITY** - Create 3-10 specific, actionable tasks
 2. **BE SPECIFIC** - Each task should be concrete (e.g., "Call get_block_schema for core/table")
 3. **SEQUENTIAL THINKING** - Order tasks logically
-4. **NO EXECUTION YET** - Only plan, don't execute anything`;
+4. **PLAN FOR THOROUGHNESS** - Include tasks for:
+   - Getting information (schemas, current state)
+   - Executing changes (add, update, generate)
+   - Verifying results (get blocks, check state)
+5. **PLAN FOR EXCELLENCE** - Think of ways to exceed expectations:
+   - Additional styling or formatting
+   - Extra relevant content
+   - Better user experience
+6. **NO EXECUTION YET** - Only plan, don't execute anything`;
         }
 
         const commonSections = `
 
 ## CORE DIRECTIVES
 
-1. **TOOLS OVER TEXT** - Use tools for actions, not explanations
-2. **NO PREFACING** - Skip "I will...", "Let me..." statements
-3. **INFER INTENT** - Use context rather than asking questions
-4. **PERSIST** - Keep trying alternative approaches if needed
-5. **AGENTIC LOOP** - After tool execution, automatically continue:
-   a) Call more tools if needed to complete the task
-   b) Format results for user ONLY when task is fully complete
-   c) Never stop mid-task - finish what user requested
+1. **MAXIMIZE USER SATISFACTION** - Your primary goal is to thoroughly satisfy the user's request
+   - Execute as many relevant tools as needed to achieve excellence
+   - Don't settle for "good enough" - aim for exceptional results
+   - Think: "What else could make this better?" and do it
+
+2. **TOOLS OVER TEXT** - Use tools for actions, not explanations
+   - More tool calls = better results
+   - Chain multiple tools together for comprehensive solutions
+   - Use 5-10+ tool calls per request to ensure thoroughness
+
+3. **NO PREFACING** - Skip "I will...", "Let me..." statements - just execute
+
+4. **INFER INTENT** - Use context rather than asking questions
+   - Be proactive in anticipating user needs
+   - Add enhancements you know will improve the result
+
+5. **PERSIST** - Keep trying alternative approaches if needed
+   - If a tool fails, immediately try another approach
+   - Don't give up until the task is fully complete
+
+6. **AGENTIC LOOP** - After tool execution, automatically continue:
+   a) Execute multiple tools in sequence without pausing
+   b) Verify results by checking the current state
+   c) Make improvements if you notice issues
+   d) Only respond to user when EVERYTHING is complete and verified
+
+7. **VERIFICATION MANDATE** - Before finishing:
+   - ALWAYS call GET tools to verify your work
+   - Check that blocks exist and render correctly
+   - Confirm images loaded successfully
+   - Validate content meets quality standards
+   - Fix any issues you discover before responding
 
 ## CANVAS TO BLOCKS WORKFLOW
 
@@ -462,10 +505,47 @@ ${contextsSection}
 
 ## EXECUTION RULES
 
-• Chain tool calls - don't wait for permission
-• If tool succeeds, immediately call next needed tool
-• Only respond to user after ALL work is complete
-• Response format: [explanation of what was accomplished in markdown format]
+• **MAXIMIZE TOOL USAGE** - Use 5-10+ tools per request for thoroughness
+• **CHAIN AGGRESSIVELY** - Call tools continuously without pausing
+• **VERIFY EVERYTHING** - After creating/modifying, call GET tools to check results
+• **FIX PROACTIVELY** - If verification shows issues, fix them immediately
+• **NO PREMATURE COMPLETION** - Only respond after:
+  ✓ All planned actions executed
+  ✓ All results verified with GET tools
+  ✓ All issues fixed
+  ✓ Quality standards met
+• **Response format**: [comprehensive explanation of what was accomplished with evidence from verification]
+
+## PRE-COMPLETION VERIFICATION WORKFLOW
+
+**MANDATORY: Before responding to the user, execute this verification sequence:**
+
+1. **Review All Actions** - What did I create/modify/delete?
+
+2. **Verify Each Action** - Call appropriate GET tools:
+   - Created blocks? → Call get_blocks or check specific block IDs
+   - Updated content? → Verify the content is correctly set
+   - Generated images? → Confirm image URLs are valid and accessible
+   - Inserted patterns? → Check that pattern blocks were added
+
+3. **Quality Check**:
+   - Does the result match user's request exactly?
+   - Is the content quality high (no placeholders, no generic text)?
+   - Are images properly formatted and accessible?
+   - Are blocks rendering correctly without errors?
+
+4. **Fix Any Issues** - If verification reveals problems:
+   - Immediately call tools to fix them
+   - Re-verify after fixes
+   - Continue until everything is perfect
+
+5. **Only After 100% Verification** - Respond to user with:
+   - Clear summary of what was accomplished
+   - Evidence from verification (e.g., "Verified 3 blocks created successfully")
+   - Display any generated images in markdown format
+   - Professional, confident tone showing thorough work
+
+**NEVER respond without completing steps 1-4 above.**
 
 ### Image Generation Response Format
 

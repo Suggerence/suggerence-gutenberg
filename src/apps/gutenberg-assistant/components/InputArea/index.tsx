@@ -311,10 +311,20 @@ export const InputArea = () => {
 
         if (!lastMessage) return;
 
-        // If the last message is an assistant message, the conversation is done
+        // If the last message is an assistant message, continue the loop (AI can send multiple messages)
         if (lastMessage.role === 'assistant') {
-            setIsLoading(false);
-            setAbortController(null);
+            // Create a new AbortController for continuing the conversation
+            const controller = new AbortController();
+            setAbortController(controller);
+            setIsLoading(true);
+            handleNewMessage(messages, controller.signal)
+                .catch((error) => {
+                    if (error?.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                    setIsLoading(false);
+                    setAbortController(null);
+                });
             return;
         }
 
@@ -338,10 +348,19 @@ export const InputArea = () => {
         // If tool is still loading, wait
         if (lastMessage.role === 'tool' && lastMessage.loading) return;
 
-        // If tool finished, check if it was stopped by user
+        // If tool finished, check if it was stopped by user or if it's the no_action tool
         if (lastMessage.role === 'tool' && !lastMessage.loading) {
             // Don't continue if the tool was stopped by user
             if (lastMessage.content === 'Stopped by user' || lastMessage.toolResult === 'Stopped by user') {
+                setIsLoading(false);
+                setAbortController(null);
+                return;
+            }
+
+            const cleanToolName = lastMessage.toolName?.replace(/^[^_]*___/, '') || lastMessage.toolName;
+
+            // Check if the tool is no_action - if so, stop the loop
+            if (cleanToolName === 'no_action') {
                 setIsLoading(false);
                 setAbortController(null);
                 return;

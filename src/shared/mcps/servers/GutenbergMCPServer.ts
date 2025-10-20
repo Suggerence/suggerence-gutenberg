@@ -33,6 +33,9 @@ import {
     removeFeaturedImageTool, removeFeaturedImage,
     getPostContentTool, getPostContent
 } from '@/shared/mcps/tools/document-tools';
+import {
+    noActionTool, handleNoAction
+} from '@/shared/mcps/tools/workflow-control';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -74,7 +77,8 @@ export class GutenbergMCPServer {
         updatePostExcerptTool,
         setFeaturedImageTool,
         removeFeaturedImageTool,
-        getPostContentTool
+        getPostContentTool,
+        noActionTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -193,6 +197,9 @@ export class GutenbergMCPServer {
 
                 case 'get_post_content':
                     return getPostContent(args.post_id, args.post_type, args.context);
+
+                case 'no_action':
+                    return handleNoAction(args);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

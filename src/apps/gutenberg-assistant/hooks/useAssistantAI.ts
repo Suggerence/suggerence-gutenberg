@@ -249,6 +249,9 @@ Use get_available_blocks tool for complete list or get_block_schema for details.
             ? `## Current Editor State
 
 Post: "${gutenberg.post?.title || 'Untitled'}" | ${gutenberg.post?.totalBlocks || 0} blocks
+Type: ${gutenberg.post?.type || 'post'}
+ID: ${gutenberg.post?.id || 'N/A'}
+
 Selected: ${gutenberg.selectedBlock 
     ? `${gutenberg.selectedBlock.id}` 
     : 'None'}
@@ -299,10 +302,12 @@ ${taskList}
 1. **DO NOT provide another reasoning/planning response**
 2. **Execute the next pending task** by calling the appropriate tools
 3. **Continue executing** until all tasks are completed
-4. **Provide a final summary** to the user when all tasks are done
-   - If you generated/edited images, include them in your response using markdown: ![alt text](image_url)
+4. **Provide updates** to the user as assistant messages if needed (the loop will continue)
+5. **When ALL tasks are complete**, call the no_action tool with reason: "All tasks completed" and a summary
+   - If you generated/edited images, include them in an assistant message BEFORE calling no_action
    - Extract image_url from tool results and show the images to the user
-5. You can call multiple tools in sequence for efficiency
+   - You can send multiple assistant messages before calling no_action
+6. You can call multiple tools in sequence for efficiency
 
 **Start executing NOW - call the tools needed for the next pending task.**`;
         } else {
@@ -342,7 +347,8 @@ Your FIRST response MUST be a reasoning response with this exact JSON structure:
 1. **BREAK DOWN COMPLEXITY** - Create 3-10 specific, actionable tasks
 2. **BE SPECIFIC** - Each task should be concrete (e.g., "Call get_block_schema for core/table")
 3. **SEQUENTIAL THINKING** - Order tasks logically
-4. **NO EXECUTION YET** - Only plan, don't execute anything`;
+4. **NO EXECUTION YET** - Only plan, don't execute anything
+5. **ALWAYS END WITH no_action** - Your final task should be calling no_action when complete`;
         }
 
         const commonSections = `
@@ -466,6 +472,8 @@ ${contextsSection}
 • If tool succeeds, immediately call next needed tool
 • Only respond to user after ALL work is complete
 • Response format: [explanation of what was accomplished in markdown format]
+• When all tasks are complete or you need user input, call the no_action tool to signal completion
+• You can send multiple assistant messages before calling no_action if you want to provide updates
 
 ### Image Generation Response Format
 

@@ -43,6 +43,9 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'set_featured_image': __('Set featured image', 'suggerence'),
     'remove_featured_image': __('Remove featured image', 'suggerence'),
     'get_post_content': __('Get post content', 'suggerence'),
+
+    // Workflow control tools
+    'no_action': __('No action', 'suggerence'),
 });
 
 /**

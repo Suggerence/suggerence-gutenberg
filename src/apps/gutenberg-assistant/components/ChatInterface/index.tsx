@@ -241,6 +241,19 @@ export const ChatInterface = () => {
                                                 );
                                             }
 
+                                            // if (cleanToolName == 'no_action') {
+                                            //     return (
+                                            //         <AssistantMessage
+                                            //             key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                            //             message={{
+                                            //                 role: 'assistant',
+                                            //                 content: JSON.parse(message.content).message,
+                                            //                 date: message.date
+                                            //             }}
+                                            //         />
+                                            //     );
+                                            // }
+
                                             return (
                                                 <ToolMessage
                                                     key={`${message.role}-${groupIndex}-${index}-${message.date}`}

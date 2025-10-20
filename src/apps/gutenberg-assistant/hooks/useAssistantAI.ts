@@ -267,83 +267,83 @@ ${selectedContexts.map(formatSelectedContext).join('\n\n')}
             : '';
 
         // Check if we're in execution phase (have existing reasoning)
-        const isExecutionPhase = !!currentReasoning;
+        const isExecutionPhase =  true;//!!currentReasoning;
 
         // Build the mode-specific prompt section
         let modePrompt = '';
 
-        if (isExecutionPhase) {
-            // EXECUTION MODE - We have an existing plan, execute it
-            const taskList = currentReasoning.plan?.map((task: ReasoningTask) => {
-                const statusEmoji = task.status === 'completed' ? '✅' :
-                                   task.status === 'in_progress' ? '🔄' :
-                                   task.status === 'failed' ? '❌' : '⏳';
-                return `Task ${task.order}: ${task.description}`;
-                // return `${statusEmoji} Task ${task.order}: ${task.description} [${task.status}]`;
+//         if (isExecutionPhase) {
+//             // EXECUTION MODE - We have an existing plan, execute it
+//             const taskList = currentReasoning.plan?.map((task: ReasoningTask) => {
+//                 const statusEmoji = task.status === 'completed' ? '✅' :
+//                                    task.status === 'in_progress' ? '🔄' :
+//                                    task.status === 'failed' ? '❌' : '⏳';
+//                 return `Task ${task.order}: ${task.description}`;
+//                 // return `${statusEmoji} Task ${task.order}: ${task.description} [${task.status}]`;
 
-            }).join('\n') || 'No tasks defined';
+//             }).join('\n') || 'No tasks defined';
 
-            modePrompt = `
+//             modePrompt = `
 
-## EXECUTION MODE - FOLLOW YOUR EXISTING PLAN
+// ## EXECUTION MODE - FOLLOW YOUR EXISTING PLAN
 
-**IMPORTANT: You are in EXECUTION mode. DO NOT create another plan.**
+// **IMPORTANT: You are in EXECUTION mode. DO NOT create another plan.**
 
-**Your Analysis:**
-${currentReasoning.analysis || 'N/A'}
+// **Your Analysis:**
+// ${currentReasoning.analysis || 'N/A'}
 
-**Your Tasks:**
-${taskList}
+// **Your Tasks:**
+// ${taskList}
 
-**Your Instructions:**
-1. **DO NOT provide another reasoning/planning response**
-2. **Execute the next pending task** by calling the appropriate tools
-3. **Continue executing** until all tasks are completed
-4. **Provide a final summary** to the user when all tasks are done
-   - If you generated/edited images, include them in your response using markdown: ![alt text](image_url)
-   - Extract image_url from tool results and show the images to the user
-5. You can call multiple tools in sequence for efficiency
+// **Your Instructions:**
+// 1. **DO NOT provide another reasoning/planning response**
+// 2. **Execute the next pending task** by calling the appropriate tools
+// 3. **Continue executing** until all tasks are completed
+// 4. **Provide a final summary** to the user when all tasks are done
+//    - If you generated/edited images, include them in your response using markdown: ![alt text](image_url)
+//    - Extract image_url from tool results and show the images to the user
+// 5. You can call multiple tools in sequence for efficiency
 
-**Start executing NOW - call the tools needed for the next pending task.**`;
-        } else {
-            // PLANNING MODE - New request, create a plan first
-            modePrompt = `
+// **Start executing NOW - call the tools needed for the next pending task.**`;
+//         } else {
+//             // PLANNING MODE - New request, create a plan first
+//             modePrompt = `
 
-## PLANNING MODE - CREATE A PLAN FIRST
+// ## PLANNING MODE - CREATE A PLAN FIRST
 
-**IMPORTANT: This is a new user request. You MUST start with a planning response.**
+// **IMPORTANT: This is a new user request. You MUST start with a planning response.**
 
-Your FIRST response MUST be a reasoning response with this exact JSON structure:
+// Your FIRST response MUST be a reasoning response with this exact JSON structure:
 
-\`\`\`json
-{
-    "type": "reasoning",
-    "reasoning": {
-        "analysis": "Brief understanding of what the user wants and the current context",
-        "plan": [
-            {
-                "id": "task-1",
-                "description": "First specific action to take",
-                "status": "pending",
-                "order": 1
-            },
-            {
-                "id": "task-2",
-                "description": "Second specific action to take",
-                "status": "pending",
-                "order": 2
-            }
-        ]
-    }
-}
-\`\`\`
+// \`\`\`json
+// {
+//     "type": "reasoning",
+//     "reasoning": {
+//         "analysis": "Brief understanding of what the user wants and the current context",
+//         "plan": [
+//             {
+//                 "id": "task-1",
+//                 "description": "First specific action to take",
+//                 "status": "pending",
+//                 "order": 1
+//             },
+//             {
+//                 "id": "task-2",
+//                 "description": "Second specific action to take",
+//                 "status": "pending",
+//                 "order": 2
+//             }
+//         ]
+//     }
+// }
+// \`\`\`
 
-**Rules for Planning:**
-1. **BREAK DOWN COMPLEXITY** - Create 3-10 specific, actionable tasks
-2. **BE SPECIFIC** - Each task should be concrete (e.g., "Call get_block_schema for core/table")
-3. **SEQUENTIAL THINKING** - Order tasks logically
-4. **NO EXECUTION YET** - Only plan, don't execute anything`;
-        }
+// **Rules for Planning:**
+// 1. **BREAK DOWN COMPLEXITY** - Create 3-10 specific, actionable tasks
+// 2. **BE SPECIFIC** - Each task should be concrete (e.g., "Call get_block_schema for core/table")
+// 3. **SEQUENTIAL THINKING** - Order tasks logically
+// 4. **NO EXECUTION YET** - Only plan, don't execute anything`;
+//         }
 
         const commonSections = `
 
@@ -494,8 +494,6 @@ When you have an audio, you can include it in your response using the following 
 
         // Construct and return the final prompt
         return `You are a direct-action AI that executes WordPress Gutenberg operations immediately without confirmation.
-
-${modePrompt}
 
 ${commonSections}`;
     };

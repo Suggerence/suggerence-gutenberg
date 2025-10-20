@@ -6,6 +6,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { QueryClient } from '@tanstack/react-query';
 import { useDispatch } from '@wordpress/data';
 import domReady from '@wordpress/dom-ready';
+import { WebSocketProvider } from '@/shared/context/WebSocketContext';
 
 import './style.scss';
 
@@ -41,7 +42,9 @@ export const GutenbergAssistant = () => {
                 title={__("Suggerence Chat", "suggerence")}
             >
                 <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-                    <ChatInterface />
+                    <WebSocketProvider>
+                        <ChatInterface />
+                    </WebSocketProvider>
                 </PersistQueryClientProvider>
             </PluginSidebar>
         </>

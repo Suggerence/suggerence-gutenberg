@@ -10,7 +10,7 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 import {
     getBlocksWithHierarchy,
     highlightBlock,
-    removeBlockHighlight,
+    unhighlightBlock,
 } from '@/shared/components/BlockSelector/api';
 import type { BlockSelectorProps } from '@/shared/components/BlockSelector/types';
 
@@ -46,7 +46,7 @@ export const BlockSelector = ({
 
     const handleBlockHover = (blockId: string) => {
         if (hoveredBlockId && hoveredBlockId !== blockId) {
-            removeBlockHighlight(hoveredBlockId);
+            unhighlightBlock(hoveredBlockId);
         }
         setHoveredBlockId(blockId);
         highlightBlock(blockId);
@@ -54,7 +54,7 @@ export const BlockSelector = ({
 
     const handleBlockLeave = (blockId: string) => {
         setHoveredBlockId(null);
-        removeBlockHighlight(blockId);
+        unhighlightBlock(blockId);
     };
 
     const getBlockSearchText = (block: BlockInstance): string => {

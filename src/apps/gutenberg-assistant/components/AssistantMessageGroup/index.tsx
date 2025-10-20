@@ -16,12 +16,12 @@ export const AssistantMessageGroup = ({ children }: AssistantMessageGroupProps) 
                 return (
                     <div key={index}>
                         {/* Message content - the message itself contains its icon */}
-                        <div style={{ paddingBottom: '4px' }}>
+                        <div className="pb-4">
                             {child}
                         </div>
 
                         {/* Connecting line to next message */}
-                        {!isLast && (
+                        {/* {!isLast && (
                             <div
                                 style={{
                                     width: '2px',
@@ -32,7 +32,7 @@ export const AssistantMessageGroup = ({ children }: AssistantMessageGroupProps) 
                                     marginBottom: '4px'
                                 }}
                             />
-                        )}
+                        )} */}
                     </div>
                 );
             })}

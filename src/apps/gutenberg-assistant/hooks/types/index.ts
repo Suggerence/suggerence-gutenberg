@@ -1,5 +1,11 @@
 interface UseAITools {
-    callAI: (messages: MCPClientMessage[], model: AIModel | null, tools: SuggerenceMCPResponseTool[]) => Promise<MCPClientMessage>;
+    callAI: (
+        messages: MCPClientMessage[],
+        model: AIModel | null,
+        tools: SuggerenceMCPResponseTool[],
+        abortSignal?: AbortSignal,
+        onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void
+    ) => Promise<MCPClientMessage>;
     parseAIResponse: (response: any) => MCPClientAIResponse;
 }
 

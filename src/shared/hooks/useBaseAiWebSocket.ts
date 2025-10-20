@@ -1,12 +1,15 @@
 import { convertImageUrlToBase64 } from "../utils/image-utils";
-import { WEBSOCKET_CONFIG } from "../config/websocket";
+import { useWebSocket } from "../context/WebSocketContext";
 
 export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => {
+    const { isConnected, sendRequest } = useWebSocket();
+
     const callAI = async (
         messages: MCPClientMessage[],
         model: AIModel | null,
         tools: SuggerenceMCPResponseTool[],
-        abortSignal?: AbortSignal
+        abortSignal?: AbortSignal,
+        onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void
     ): Promise<MCPClientMessage> => {
         // Find the most recent reasoning message (if any)
         // BUT only if the last message is NOT a new user message
@@ -201,20 +204,57 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
         }
 
         // Convert messages to Gemini format for WebSocket
-        const geminiMessages = convertedMessages.map((message: any) => {
+        const geminiMessages: any[] = [];
+
+        for (let i = 0; i < convertedMessages.length; i++) {
+            const message = convertedMessages[i];
+
             if (message.role === 'user') {
-                return {
+                geminiMessages.push({
                     role: 'user',
                     parts: Array.isArray(message.content) ? message.content : [{ text: message.content }]
-                };
-            } else if (message.role === 'assistant') {
-                return {
-                    role: 'model',
-                    parts: Array.isArray(message.content) ? message.content : [{ text: message.content }]
-                };
+                });
+            } else if (message.role === 'assistant' || message.role === 'model') {
+                // Check if this assistant message has a tool call
+                const hasToolCall = message.toolName && message.toolArgs;
+
+                if (hasToolCall) {
+                    // Assistant message with function call
+                    geminiMessages.push({
+                        role: 'model',
+                        parts: [
+                            {
+                                functionCall: {
+                                    name: message.toolName,
+                                    args: message.toolArgs
+                                }
+                            }
+                        ]
+                    });
+                } else {
+                    // Regular assistant message
+                    geminiMessages.push({
+                        role: 'model',
+                        parts: Array.isArray(message.content) ? message.content : [{ text: message.content || '' }]
+                    });
+                }
+            } else if (message.role === 'tool') {
+                // Tool result - must be sent as functionResponse
+                geminiMessages.push({
+                    role: 'user',
+                    parts: [
+                        {
+                            functionResponse: {
+                                name: message.toolName,
+                                response: {
+                                    content: message.toolResult || message.content
+                                }
+                            }
+                        }
+                    ]
+                });
             }
-            return message;
-        });
+        }
 
         const requestBody: any = {
             messages: geminiMessages,
@@ -224,98 +264,123 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
 
         console.log('WebSocket request body:', JSON.stringify(requestBody, null, 2));
 
-        // Get API key and WebSocket URL from configuration
-        const apiKey = WEBSOCKET_CONFIG.getApiKey();
-        const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
-        
+        // Check if WebSocket is connected
+        if (!isConnected) {
+            throw new Error('WebSocket not connected. Please wait for connection.');
+        }
+
         return new Promise((resolve, reject) => {
-            // Create WebSocket with API key as query parameter
-            const wsUrlWithAuth = wsUrl; //`${wsUrl}?api_key=${encodeURIComponent(apiKey)}`;
-            console.log('Attempting WebSocket connection to:', wsUrlWithAuth);
-            console.log('Current location:', window.location.href);
-            console.log('WebSocket URL:', wsUrl);
-            console.log('API Key (first 10 chars):', apiKey.substring(0, 10));
-
-            const ws = new WebSocket(wsUrlWithAuth);
             let accumulatedContent = '';
+            let accumulatedThinking = '';
+            let functionCalls: any[] = [];
             let isComplete = false;
-
-            console.log('WebSocket created, readyState:', ws.readyState);
 
             // Handle abort signal
             if (abortSignal) {
                 abortSignal.addEventListener('abort', () => {
-                    ws.close();
+                    isComplete = true;
                     reject(new DOMException('Aborted', 'AbortError'));
                 });
             }
 
-            ws.onopen = () => {
-                console.log('✅ WebSocket connected successfully to:', wsUrlWithAuth);
-                console.log('WebSocket readyState after open:', ws.readyState);
-                console.log('Sending generation request...');
-                // Send the generation request
-                ws.send(JSON.stringify({
-                    type: 'generate',
-                    data: requestBody
-                }));
-                console.log('Generation request sent');
-            };
+            // Handler for incoming messages
+            const handleMessage = (data: any) => {
+                if (isComplete) return; // Ignore messages after completion
 
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    console.log('WebSocket message received:', data);
+                console.log('📦 WebSocket message received:', data.type);
 
                     switch (data.type) {
                         case 'content':
-                            accumulatedContent += data.content;
+                            console.log('📝 Content chunk:', data.content?.substring(0, 50) + '...');
+                            accumulatedContent = data.accumulated || accumulatedContent + data.content;
+
+                            // Emit streaming chunk for real-time UI updates
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'content',
+                                    content: data.content,
+                                    accumulated: accumulatedContent
+                                });
+                            }
                             break;
+
                         case 'thinking':
-                            console.log('Thinking:', data.thinking);
+                            console.log('🤔 Thinking chunk:', data.content?.substring(0, 50) + '...');
+                            accumulatedThinking = data.accumulated || accumulatedThinking + data.content;
+
+                            // Emit thinking chunk for UI
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'thinking',
+                                    content: data.content,
+                                    accumulated: accumulatedThinking
+                                });
+                            }
                             break;
+
                         case 'function_calls':
-                            console.log('Function calls:', data.functionCalls);
+                            console.log('🔧 Function calls received:', data.functionCalls);
+                            functionCalls = data.functionCalls || [];
+
+                            // For now, we'll handle function calls by returning them when done
+                            // In the future, we might want to stream these too
                             break;
+
                         case 'done':
+                            console.log('✅ Stream completed');
+                            console.log('   Content length:', data.contentLength);
+                            console.log('   Thinking length:', data.thinkingLength);
+                            console.log('   Total chunks:', data.totalChunks);
+                            console.log('   Function calls:', functionCalls.length);
                             isComplete = true;
-                            ws.close();
-                            resolve({
-                                content: accumulatedContent,
-                                toolName: undefined,
-                                toolArgs: undefined
-                            } as MCPClientMessage);
+
+                            // If we have function calls, return the first one as a tool call
+                            if (functionCalls.length > 0) {
+                                const firstCall = functionCalls[0];
+                                console.log('🔧 Returning tool call:', firstCall.name, 'with args:', firstCall.args);
+                                resolve({
+                                    content: accumulatedContent,
+                                    toolName: firstCall.name,
+                                    toolArgs: firstCall.args,
+                                    toolCallId: `call_${Date.now()}`
+                                } as any);
+                            } else {
+                                console.log('💬 Returning text response');
+                                resolve({
+                                    content: accumulatedContent,
+                                    toolName: undefined,
+                                    toolArgs: undefined
+                                } as MCPClientMessage);
+                            }
                             break;
+
                         case 'error':
-                            ws.close();
+                            console.error('❌ Server error:', data.message);
+                            isComplete = true;
                             reject(new Error(data.message || 'WebSocket error'));
                             break;
+
+                        default:
+                            console.warn('⚠️ Unknown message type:', data.type);
                     }
-                } catch (error) {
-                    console.error('Error parsing WebSocket message:', error);
-                }
             };
 
-            ws.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
-                console.error('WebSocket readyState:', ws.readyState);
-                console.error('Failed to connect to:', wsUrlWithAuth);
-                console.error('Current origin:', window.location.origin);
-                console.error('Target:', wsUrlWithAuth);
-                console.error('Make sure the API server is running on the correct port');
-                console.error('Common causes:');
-                console.error('1. API server not running');
-                console.error('2. CORS/Origin blocking');
-                console.error('3. Network firewall');
-                ws.close();
-                reject(new Error(`WebSocket connection failed to ${wsUrlWithAuth}. Make sure the API server is running.`));
-            };
-
-            ws.onclose = () => {
-                if (!isComplete) {
-                    reject(new Error('WebSocket connection closed unexpectedly'));
-                }
-            };
+            // Send the request using persistent connection
+            try {
+                sendRequest(
+                    {
+                        type: 'generate',
+                        data: requestBody
+                    },
+                    handleMessage,
+                    () => {
+                        // Cleanup on complete
+                        console.log('Request completed');
+                    }
+                );
+            } catch (error) {
+                reject(error);
+            }
         });
     };
 

@@ -15,15 +15,14 @@
     svg.lucide-mic, svg.lucide-square, svg.lucide-pencil, svg.lucide-pen-tool, svg.lucide-eraser, svg.lucide-brush, svg.lucide-paintbrush, svg.lucide-highlighter, svg.lucide-arrow-right, svg.lucide-type {
         fill: none;
     }
-
+    
+    p {
+        margin: 0 !important;
+    }
     
 }
 .suggerence-gutenberg-assistant-modal svg, .suggerence-command-box svg {
     &.lucide-mic, &.lucide-square, &.lucide-pencil, &.lucide-pen-tool, &.lucide-eraser, &.lucide-brush, &.lucide-paintbrush, &.lucide-highlighter, &.lucide-arrow-right, &.lucide-type, &.lucide-pen, &.lucide-circle, &.lucide-minus {
         fill: none !important;
     }
-}
-
-.thinking-message p {
-    margin: 0 !important;
 }

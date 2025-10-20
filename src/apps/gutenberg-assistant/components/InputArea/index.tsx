@@ -27,6 +27,7 @@ export const InputArea = () => {
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { addContext } = useContextStore();
     const { pendingToolCall, setPendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [availableTools, setAvailableTools] = useState<SuggerenceMCPResponseTool[]>([]);
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -70,8 +71,79 @@ export const InputArea = () => {
             capabilities: ['text-generation', 'tool-calling']
         };
 
-        const response = await callAI(currentMessages, defaultModel, tools);
+        // Create a streaming message that will be updated as chunks arrive
+        let streamingMessageId = '';
+        let thinkingContent = '';
+        let contentAccumulated = '';
+
+        const response = await callAI(
+            currentMessages,
+            defaultModel,
+            tools,
+            signal,
+            (chunk: { type: string; content: string; accumulated: string }) => {
+                console.log('🔄 Streaming chunk received:', chunk.type, 'length:', chunk.content?.length);
+
+                // Handle streaming chunks
+                if (chunk.type === 'thinking') {
+                    thinkingContent = chunk.accumulated;
+                    console.log('🤔 Updating thinking, total length:', thinkingContent.length);
+
+                    // Update or create thinking message
+                    if (!streamingMessageId) {
+                        streamingMessageId = 'streaming-' + Date.now();
+                        console.log('Creating new message with thinking');
+                        addMessage({
+                            role: 'assistant',
+                            content: '',
+                            date: new Date().toISOString(),
+                            aiModel: defaultModel.id,
+                            loading: true,
+                            thinking: thinkingContent
+                        } as any);
+                    } else {
+                        console.log('Updating existing message with thinking');
+                        setLastMessage({
+                            role: 'assistant',
+                            content: contentAccumulated,
+                            date: new Date().toISOString(),
+                            aiModel: defaultModel.id,
+                            loading: true,
+                            thinking: thinkingContent
+                        } as any);
+                    }
+                } else if (chunk.type === 'content') {
+                    contentAccumulated = chunk.accumulated;
+                    console.log('📝 Updating content, total length:', contentAccumulated.length);
+
+                    // Update or create content message
+                    if (!streamingMessageId) {
+                        streamingMessageId = 'streaming-' + Date.now();
+                        console.log('Creating new message with content');
+                        addMessage({
+                            role: 'assistant',
+                            content: contentAccumulated,
+                            date: new Date().toISOString(),
+                            aiModel: defaultModel.id,
+                            loading: true
+                        });
+                    } else {
+                        console.log('Updating existing message with content');
+                        setLastMessage({
+                            role: 'assistant',
+                            content: contentAccumulated,
+                            date: new Date().toISOString(),
+                            aiModel: defaultModel.id,
+                            loading: true,
+                            thinking: thinkingContent || undefined
+                        } as any);
+                    }
+                }
+            }
+        );
+
         const aiResponse = parseAIResponse(response);
+        console.log('🤖 AI Response type:', aiResponse.type, aiResponse);
 
         // Check if aborted after AI call
         if (signal?.aborted) {
@@ -197,12 +269,26 @@ export const InputArea = () => {
                 });
             }
         } else {
-            addMessage({
-                role: 'assistant',
-                content: aiResponse.content as string,
-                date: new Date().toISOString(),
-                aiModel: defaultModel.id
-            });
+            // Text response - update the streaming message to mark as complete
+            if (streamingMessageId) {
+                // We already have a streaming message, just mark it as complete
+                setLastMessage({
+                    role: 'assistant',
+                    content: contentAccumulated,
+                    date: new Date().toISOString(),
+                    aiModel: defaultModel.id,
+                    loading: false,
+                    thinking: thinkingContent || undefined
+                } as any);
+            } else {
+                // No streaming happened (edge case), add the message
+                addMessage({
+                    role: 'assistant',
+                    content: aiResponse.content as string,
+                    date: new Date().toISOString(),
+                    aiModel: defaultModel.id
+                });
+            }
         }
     }, [getGutenbergTools, callGutenbergTool, callAI, parseAIResponse, addMessage, setLastMessage]);
 

@@ -1,6 +1,6 @@
 import { select } from '@wordpress/data';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
-import { useBaseAI } from '@/shared/hooks/useBaseAi';
+import { useBaseAIWebSocket } from '@/shared/hooks/useBaseAiWebSocket';
 
 export const useAssistantAI = (): UseAITools => {
     const { selectedContexts } = useContextStore();
@@ -500,7 +500,7 @@ ${modePrompt}
 ${commonSections}`;
     };
 
-    const { callAI, parseAIResponse } = useBaseAI({
+    const { callAI, parseAIResponse } = useBaseAIWebSocket({
         getSystemPrompt: getAssistantSystemPrompt,
         getSiteContext
     });

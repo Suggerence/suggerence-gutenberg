@@ -49,10 +49,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                         if (ctx.type === 'drawing') {
                             // Handle drawings (base64 data)
                             return {
-                                type: 'image',
-                                source: {
-                                    type: 'base64',
-                                    media_type: 'image/png',
+                                inlineData: {
+                                    mimeType: 'image/png',
                                     data: ctx.data.split(',')[1] // Remove data:image/png;base64, prefix
                                 }
                             };
@@ -61,10 +59,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             try {
                                 const { data, media_type } = await convertImageUrlToBase64(ctx.data.url);
                                 const imageAttachment = {
-                                    type: 'image',
-                                    source: {
-                                        type: 'base64',
-                                        media_type: media_type,
+                                    inlineData: {
+                                        mimeType: media_type,
                                         data: data
                                     }
                                 };
@@ -80,10 +76,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                                 try {
                                     const { data, media_type } = await convertImageUrlToBase64(imageUrl);
                                     return {
-                                        type: 'image',
-                                        source: {
-                                            type: 'base64',
-                                            media_type: media_type,
+                                        inlineData: {
+                                            mimeType: media_type,
                                             data: data
                                         }
                                     };

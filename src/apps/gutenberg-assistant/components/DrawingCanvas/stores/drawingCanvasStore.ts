@@ -360,7 +360,6 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
         if (!canvas) return;
 
         try {
-            console.log('Persisting current canvas state');
             const canvasData = canvas.toDataURL('image/png');
             localStorage.setItem('suggerence-drawing-canvas', canvasData);
         } catch (error) {

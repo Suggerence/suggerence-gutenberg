@@ -30,15 +30,15 @@ domReady(() => {
         toolbarRoot.render(<GutenbergToolbar />);
 
         // Create a container for the autocomplete app
-        const autocompleteContainer = document.createElement('div');
-        autocompleteContainer.id = 'suggerence-gutenberg-autocomplete';
-        autocompleteContainer.style.position = 'fixed';
-        autocompleteContainer.style.zIndex = '999998';
-        autocompleteContainer.style.pointerEvents = 'none';
-        document.body.appendChild(autocompleteContainer);
+        // const autocompleteContainer = document.createElement('div');
+        // autocompleteContainer.id = 'suggerence-gutenberg-autocomplete';
+        // autocompleteContainer.style.position = 'fixed';
+        // autocompleteContainer.style.zIndex = '999998';
+        // autocompleteContainer.style.pointerEvents = 'none';
+        // document.body.appendChild(autocompleteContainer);
 
-        const autocompleteRoot = createRoot(autocompleteContainer);
-        autocompleteRoot.render(<GutenbergAutocomplete />);
+        // const autocompleteRoot = createRoot(autocompleteContainer);
+        // autocompleteRoot.render(<GutenbergAutocomplete />);
 
         // Create a container for the suggestions app
         // const suggestionsContainer = document.createElement('div');

@@ -24,7 +24,7 @@ export const InputArea = () => {
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const [isMediaOpen, setIsMediaOpen] = useState(false);
     const { isLoading, setIsLoading, abortController, setAbortController } = useChatInterfaceStore();
-    const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
+    const { messages, addMessage, setLastMessage, setMessages } = useGutenbergAssistantMessagesStore();
     const { addContext } = useContextStore();
     const { pendingToolCall, setPendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
 
@@ -47,6 +47,7 @@ export const InputArea = () => {
     }, []);
 
     const handleNewMessage = useCallback(async (currentMessages: MCPClientMessage[] = messages, signal?: AbortSignal) => {
+        const getMessagesStore = useGutenbergAssistantMessagesStore.getState;
         if (!isServerReadyRef.current) {
             console.error('Server not ready!', { isGutenbergServerReady: isServerReadyRef.current });
             throw new Error('Gutenberg MCP server not ready');
@@ -82,12 +83,9 @@ export const InputArea = () => {
             tools,
             signal,
             (chunk: { type: string; content: string; accumulated: string }) => {
-                console.log('🔄 Streaming chunk received:', chunk.type, 'length:', chunk.content?.length);
-
                 // Handle streaming chunks
                 if (chunk.type === 'thinking') {
                     thinkingContent = chunk.accumulated;
-                    console.log('🤔 Updating thinking, total length:', thinkingContent.length);
 
                     // Start tracking thinking duration on first chunk
                     if (thinkingStartTime === null) {
@@ -97,7 +95,6 @@ export const InputArea = () => {
                     // Update or create thinking message
                     if (!streamingThinkingMessageId) {
                         streamingThinkingMessageId = 'streaming-thinking-' + Date.now();
-                        console.log('Creating new message with thinking');
                         addMessage({
                             role: 'thinking',
                             content: thinkingContent,
@@ -106,7 +103,6 @@ export const InputArea = () => {
                             loading: true,
                         } as any);
                     } else {
-                        console.log('Updating existing message with thinking');
                         setLastMessage({
                             role: 'thinking',
                             content: thinkingContent,
@@ -117,12 +113,10 @@ export const InputArea = () => {
                     }
                 } else if (chunk.type === 'content') {
                     contentAccumulated = chunk.accumulated;
-                    console.log('📝 Updating content, total length:', contentAccumulated.length);
 
                     // Update or create content message
                     if (!streamingMessageId) {
                         streamingMessageId = 'streaming-' + Date.now();
-                        console.log('Creating new message with content');
                         addMessage({
                             role: 'assistant',
                             content: contentAccumulated,
@@ -130,7 +124,6 @@ export const InputArea = () => {
                             aiModel: defaultModel.id
                         });
                     } else {
-                        console.log('Updating existing message with content');
                         setLastMessage({
                             role: 'assistant',
                             content: contentAccumulated,
@@ -143,7 +136,6 @@ export const InputArea = () => {
         );
 
         const aiResponse = parseAIResponse(response);
-        console.log('🤖 AI Response type:', aiResponse.type, aiResponse);
 
         // Check if aborted after AI call
         if (signal?.aborted) {
@@ -153,20 +145,35 @@ export const InputArea = () => {
         // Calculate thinking duration if we had thinking
         if (thinkingStartTime !== null) {
             thinkingDuration = Math.ceil((Date.now() - thinkingStartTime) / 1000);
-            console.log('⏱️ Thinking duration:', thinkingDuration, 'seconds');
         }
 
         // If we have a streaming thinking message, mark it as complete
-        const lastMessage = currentMessages[currentMessages.length - 1] as MCPClientMessage;
-        if (streamingThinkingMessageId && lastMessage && lastMessage.role === 'thinking') {
-            setLastMessage({
-                role: 'thinking',
+        if (streamingThinkingMessageId) {
+            // Check if the last message is still the thinking message
+            const currentStoreMessages = getMessagesStore().messages;
+            const lastMsg = currentStoreMessages[currentStoreMessages.length - 1];
+
+            const updatedThinkingMessage = {
+                role: 'thinking' as const,
                 content: thinkingContent,
                 date: new Date().toISOString(),
                 aiModel: defaultModel.id,
                 loading: false,
                 thinkingDuration: thinkingDuration > 0 ? thinkingDuration : undefined
-            } as any);
+            };
+
+            if (lastMsg?.role === 'thinking') {
+                // Safe to use setLastMessage
+                setLastMessage(updatedThinkingMessage as any);
+            } else {
+                // Find the thinking message and update it
+                const updatedMessages = currentStoreMessages.map((msg) =>
+                    msg.role === 'thinking' && msg.loading ? updatedThinkingMessage as any : msg
+                );
+                setMessages(updatedMessages);
+            }
+
+            streamingThinkingMessageId = '';
         }
 
         if (aiResponse.type === 'tool') {
@@ -285,7 +292,7 @@ export const InputArea = () => {
                 });
             }
         }
-    }, [getGutenbergTools, callGutenbergTool, callAI, parseAIResponse, addMessage, setLastMessage]);
+    }, [getGutenbergTools, callGutenbergTool, callAI, parseAIResponse, addMessage, setLastMessage, setMessages]);
 
     const handleSendMessage = async () => {
         if (!inputValue.trim() || isLoading) return;
@@ -344,7 +351,6 @@ export const InputArea = () => {
     };
 
     const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
-        console.log('handleAudioMessage called', { isLoading, isGutenbergServerReady, audioMessage });
         if (isLoading) return;
 
         addMessage(audioMessage);

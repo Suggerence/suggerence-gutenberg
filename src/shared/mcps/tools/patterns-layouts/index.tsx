@@ -92,7 +92,6 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
  * Check if Kadence Blocks is installed and fetch patterns from their API
  */
 async function getKadencePatternsAPI(): Promise<any[] | null> {
-    console.log('Checking if Kadence Blocks is installed:', SuggerenceData?.has_kadence_blocks);
     // Check if Kadence Blocks is installed
     if (!(SuggerenceData?.has_kadence_blocks)) {
         return [];
@@ -108,8 +107,6 @@ async function getKadencePatternsAPI(): Promise<any[] | null> {
         // Kadence returns an object with pattern IDs as keys
         if (data && typeof data === 'string') {
             const parsedData = JSON.parse(data);
-
-            console.log('Kadence patterns:', parsedData);
 
             return Object.entries(parsedData).map(([patternId, kadencePattern]: [string, any]) => {
                 // Extract category names from the categories object
@@ -134,8 +131,6 @@ async function getKadencePatternsAPI(): Promise<any[] | null> {
                 };
             });
         }
-
-        console.log('No Kadence patterns found');
 
         return [];
     } catch (error) {
@@ -251,8 +246,6 @@ export async function searchPattern(args: {
 
                 return matches;
             });
-
-            console.log(`Search filter: ${beforeFilterCount} -> ${patterns.length} patterns for search "${normalizedSearch}"`);
         }
 
         // Format pattern information

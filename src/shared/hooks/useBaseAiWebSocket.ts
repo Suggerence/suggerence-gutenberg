@@ -11,44 +11,10 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
         abortSignal?: AbortSignal,
         onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void
     ): Promise<MCPClientMessage> => {
-        // Find the most recent reasoning message (if any)
-        // BUT only if the last message is NOT a new user message
-        let currentReasoning: ReasoningContent | undefined = undefined;
-
-        // Check if the last message is a new user message (indicating a fresh request)
-        const lastMessage = messages[messages.length - 1];
-        const isNewUserRequest = lastMessage?.role === 'user';
-
-        // Only use existing reasoning if we're continuing a conversation (not a new user request)
-        if (!isNewUserRequest) {
-            for (let i = messages.length - 1; i >= 0; i--) {
-                if (messages[i].role === 'reasoning' && (messages[i] as any).reasoning) {
-                    currentReasoning = (messages[i] as any).reasoning;
-                    break;
-                }
-            }
-        }
-
         // Get comprehensive site context using the provided function
         const siteContext = config.getSiteContext();
 
-        // Add current reasoning to the site context
-        const siteContextWithReasoning = {
-            ...siteContext,
-            currentReasoning
-        };
-
-        // Get system prompt using the provided function (which now has access to currentReasoning)
-        const systemPrompt = config.getSystemPrompt(siteContextWithReasoning);
-
-        // Log original messages before conversion
-        console.log('📥 Original messages before conversion:', JSON.stringify(messages.map(m => ({
-            role: m.role,
-            content: m.content?.substring(0, 50) + (m.content?.length > 50 ? '...' : ''),
-            loading: (m as any).loading,
-            thinking: (m as any).role === 'thinking' ? 'yes' : 'no',
-            toolName: (m as any).toolName
-        })), null, 2));
+        const systemPrompt = config.getSystemPrompt(siteContext);
 
         // Check if we have visual contexts for the current conversation
         const visualContexts = siteContext.selectedContexts?.filter((ctx: any) => {
@@ -92,11 +58,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             };
                         } else if (ctx.type === 'image') {
                             // Handle media library images - convert URL to base64
-                            console.log('WE HAVE AN IMAGE');
-                            console.log('ctx.data', ctx.data);
                             try {
                                 const { data, media_type } = await convertImageUrlToBase64(ctx.data.url);
-                                console.log('Image converted successfully:', { media_type, dataLength: data.length });
                                 const imageAttachment = {
                                     type: 'image',
                                     source: {
@@ -105,7 +68,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                                         data: data
                                     }
                                 };
-                                console.log('Image attachment created:', imageAttachment);
                                 return imageAttachment;
                             } catch (error) {
                                 console.error('Error converting media library image to base64:', error);
@@ -135,7 +97,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     }));
 
                     const validImageAttachments = imageAttachments.filter(Boolean);
-                    console.log('Valid image attachments:', validImageAttachments.length);
 
                     if (validImageAttachments.length > 0) {
                         const messageWithImages = {
@@ -148,7 +109,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                                 ...validImageAttachments
                             ]
                         };
-                        console.log('Message with images:', JSON.stringify(messageWithImages, null, 2));
                         return messageWithImages;
                     }
                 }
@@ -265,15 +225,12 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
         }
 
         // Log converted messages after Gemini format conversion
-        console.log('📤 Gemini messages after conversion:', JSON.stringify(geminiMessages, null, 2));
-
         const requestBody: any = {
             messages: geminiMessages,
             system: systemPrompt ? [{ text: systemPrompt }] : undefined,
             tools: tools || []
         };
 
-        console.log('🚀 WebSocket request body (full):', JSON.stringify(requestBody, null, 2));
 
         // Check if WebSocket is connected
         if (!isConnected) {
@@ -297,12 +254,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             // Handler for incoming messages
             const handleMessage = (data: any) => {
                 if (isComplete) return; // Ignore messages after completion
-
-                console.log('📦 WebSocket message received:', data.type);
-
                     switch (data.type) {
                         case 'content':
-                            console.log('📝 Content chunk:', data.content?.substring(0, 50) + '...');
                             accumulatedContent = data.accumulated || accumulatedContent + data.content;
 
                             // Emit streaming chunk for real-time UI updates
@@ -316,7 +269,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             break;
 
                         case 'thinking':
-                            console.log('🤔 Thinking chunk:', data.content?.substring(0, 50) + '...');
                             accumulatedThinking = data.accumulated || accumulatedThinking + data.content;
 
                             // Emit thinking chunk for UI
@@ -330,25 +282,15 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             break;
 
                         case 'function_calls':
-                            console.log('🔧 Function calls received:', data.functionCalls);
                             functionCalls = data.functionCalls || [];
-
-                            // For now, we'll handle function calls by returning them when done
-                            // In the future, we might want to stream these too
                             break;
 
                         case 'done':
-                            console.log('✅ Stream completed');
-                            console.log('   Content length:', data.contentLength);
-                            console.log('   Thinking length:', data.thinkingLength);
-                            console.log('   Total chunks:', data.totalChunks);
-                            console.log('   Function calls:', functionCalls.length);
                             isComplete = true;
 
                             // If we have function calls, return the first one as a tool call
                             if (functionCalls.length > 0) {
                                 const firstCall = functionCalls[0];
-                                console.log('🔧 Returning tool call:', firstCall.name, 'with args:', firstCall.args);
                                 resolve({
                                     content: accumulatedContent,
                                     toolName: firstCall.name,
@@ -356,7 +298,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                                     toolCallId: `call_${Date.now()}`
                                 } as any);
                             } else {
-                                console.log('💬 Returning text response');
                                 resolve({
                                     content: accumulatedContent,
                                     toolName: undefined,
@@ -386,7 +327,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     handleMessage,
                     () => {
                         // Cleanup on complete
-                        console.log('Request completed');
                     }
                 );
             } catch (error) {

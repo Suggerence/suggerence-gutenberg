@@ -239,7 +239,6 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
         const { getBlockType } = select('core/blocks') as any;
 
         const blockDefinition = getBlockType(blockType);
-        console.log('blockDefinition', blockDefinition);
 
         if (!blockDefinition) {
             return {
@@ -371,9 +370,6 @@ export function getBlockSchema(blockType: string): { content: Array<{ type: stri
         if (blockDefinition.example?.innerBlocks) {
             usageGuide.push(`INNER BLOCKS: This block accepts inner blocks. Check example for structure. Common inner blocks: ${blockDefinition.example.innerBlocks.map((b: any) => b.name).join(', ')}`);
         }
-
-        console.log('usageGuide', usageGuide);
-        console.log('schema', schema);
 
         return {
             content: [{

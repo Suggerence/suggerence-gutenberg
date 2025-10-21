@@ -38,33 +38,45 @@ export const useAssistantAI = (): UseAITools => {
 
         // Always add current Gutenberg blocks information
         try {
-            const {
-                getBlocks,
-                getSelectedBlockClientId,
-                getSelectedBlock,
-                getEditedPostAttribute,
-            } = select('core/block-editor') as any;
+            // Use core/editor for the most up-to-date edited content
+            const editorStore = select('core/editor') as any;
+            const blockEditorStore = select('core/block-editor') as any;
 
-            const {
-                getEditedPostAttribute: getEditorPostAttribute,
-            } = select('core/editor') as any;
+            // Get methods - use core/block-editor for blocks (it has the latest)
+            // but use getCurrentPost from core/editor for edited attributes
+            const getBlocks = blockEditorStore?.getBlocks;
+            const getBlock = blockEditorStore?.getBlock;
+            const getSelectedBlockClientId = blockEditorStore?.getSelectedBlockClientId;
+            const getSelectedBlock = blockEditorStore?.getSelectedBlock;
+            const getEditedPostAttribute = editorStore?.getEditedPostAttribute;
 
             // Recursive function to process blocks and their inner blocks
-            const processBlock = (block: any, position: number, parentId?: string): any => ({
-                position,
-                id: block.clientId,
-                name: block.name,
-                content: block.attributes?.content || '',
-                attributes: block.attributes,
-                parentId: parentId || null,
-                innerBlocks: block.innerBlocks?.map((innerBlock: any, innerIndex: number) =>
-                    processBlock(innerBlock, innerIndex, block.clientId)
-                ) || []
-            });
+            // IMPORTANT: Fetch fresh block data using getBlock() to get the latest content
+            const processBlock = (blockId: string, position: number, parentId?: string): any => {
+                // Get the FRESH block data from the store
+                const freshBlock = getBlock(blockId);
+                if (!freshBlock) return null;
+
+                return {
+                    position,
+                    id: freshBlock.clientId,
+                    name: freshBlock.name,
+                    content: freshBlock.attributes?.content || '',
+                    attributes: freshBlock.attributes,
+                    parentId: parentId || null,
+                    innerBlocks: freshBlock.innerBlocks?.map((innerBlock: any, innerIndex: number) =>
+                        processBlock(innerBlock.clientId, innerIndex, freshBlock.clientId)
+                    ).filter(Boolean) || []
+                };
+            };
 
             // Get all blocks with content and nested structure
             const blocks = getBlocks();
-            const blocksInfo = blocks.map((block: any, index: number) => processBlock(block, index));
+
+            // Process each block by fetching fresh data
+            const blocksInfo = blocks
+                .map((block: any, index: number) => processBlock(block.clientId, index))
+                .filter(Boolean);
 
             // Get selected block info
             const selectedBlockId = getSelectedBlockClientId();
@@ -77,8 +89,8 @@ export const useAssistantAI = (): UseAITools => {
             } : null;
 
             // Get post information
-            const postTitle = getEditorPostAttribute?.('title') || getEditedPostAttribute?.('title') || '';
-            const postContent = getEditorPostAttribute?.('content') || '';
+            const postTitle = getEditedPostAttribute?.('title') || '';
+            const postContent = getEditedPostAttribute?.('content') || '';
 
             // Get available block types
             const availableBlockTypes = getAvailableBlockTypes();
@@ -235,7 +247,7 @@ export const useAssistantAI = (): UseAITools => {
      * @param site_context - Context including gutenberg state, selected contexts, and current reasoning
      */
     const getAssistantSystemPrompt = (site_context: any): string => {
-        const { gutenberg, selectedContexts, currentReasoning } = site_context;
+        const { gutenberg, selectedContexts } = site_context;
         
         // Build block types section
         const blockTypesSection = gutenberg?.availableBlockTypes?.length 

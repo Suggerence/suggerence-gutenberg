@@ -210,13 +210,11 @@ Instructions: You have complete information about the selected ${selectedBlockIn
                     arguments: response.toolArgs
                 });
 
-                console.log('Tool execution result:', toolResult);
                 return true;
             }
 
             // If AI provides text response, log it
             if (response.content) {
-                console.log('AI Response:', response.content);
                 return true;
             }
 

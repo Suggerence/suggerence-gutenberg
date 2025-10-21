@@ -344,7 +344,6 @@ export function addBlock(
 
     // Special handling for table blocks - ensure body and head are properly structured
     if (blockType === 'core/table') {
-        console.log('Creating table block with attributes:', JSON.stringify(attributes, null, 2));
         
         // WordPress table structure (based on schema example):
         // body/head: array of row objects
@@ -410,8 +409,6 @@ export function addBlock(
                 return row;
             });
         }
-        
-        console.log('Transformed table attributes:', JSON.stringify(attributes, null, 2));
     }
 
     // Only pass innerBlocks if they exist - some blocks like core/table don't use innerBlocks

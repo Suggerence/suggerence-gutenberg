@@ -35,20 +35,17 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
         }
 
         const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
-        console.log('🔌 Connecting persistent WebSocket:', wsUrl);
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
-            console.log('✅ Persistent WebSocket connected');
             setIsConnected(true);
         };
 
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('📦 Persistent WebSocket message:', data.type);
 
                 // Route message to all active request handlers
                 requestHandlersRef.current.forEach((handler) => {
@@ -69,7 +66,6 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
         };
 
         ws.onclose = () => {
-            console.log('🔌 Persistent WebSocket closed, reconnecting...');
             setIsConnected(false);
             wsRef.current = null;
 
@@ -92,7 +88,6 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
             onComplete();
         }});
 
-        console.log('📤 Sending request:', requestId);
         wsRef.current.send(JSON.stringify(request));
     }, []);
 

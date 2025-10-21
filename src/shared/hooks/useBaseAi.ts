@@ -80,11 +80,8 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                             };
                         } else if (ctx.type === 'image') {
                             // Handle media library images - convert URL to base64
-                            console.log('WE HAVE AN IMAGE');
-                            console.log('ctx.data', ctx.data);
                             try {
                                 const { data, media_type } = await convertImageUrlToBase64(ctx.data.url);
-                                console.log('Image converted successfully:', { media_type, dataLength: data.length });
                                 const imageAttachment = {
                                     type: 'image',
                                     source: {
@@ -93,7 +90,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                         data: data
                                     }
                                 };
-                                console.log('Image attachment created:', imageAttachment);
                                 return imageAttachment;
                             } catch (error) {
                                 console.error('Error converting media library image to base64:', error);
@@ -123,7 +119,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                     }));
 
                     const validImageAttachments = imageAttachments.filter(Boolean);
-                    console.log('Valid image attachments:', validImageAttachments.length);
 
                     if (validImageAttachments.length > 0) {
                         const messageWithImages = {
@@ -136,7 +131,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                 ...validImageAttachments
                             ]
                         };
-                        console.log('Message with images:', JSON.stringify(messageWithImages, null, 2));
                         return messageWithImages;
                     }
                 }
@@ -211,8 +205,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             requestBody.tools = tools;
         }
 
-        console.log('Final request messages:', JSON.stringify(convertedMessages, null, 2));
-
         // Retry configuration
         const MAX_RETRIES = 3;
         const INITIAL_DELAY = 1000; // 1 second
@@ -220,9 +212,7 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
 
         // Retry loop with exponential backoff
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-            try {
-                console.log(`AI request attempt ${attempt + 1}/${MAX_RETRIES}`);
-                
+            try {                
                 const response = await apiFetch({
                     path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
                     headers: {
@@ -250,7 +240,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                     
                     // Calculate delay with exponential backoff
                     const delay = INITIAL_DELAY * Math.pow(2, attempt);
-                    console.log(`Retrying in ${delay}ms due to empty content...`);
                     
                     // Wait before retrying
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -283,7 +272,6 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                 
                 // Calculate delay with exponential backoff
                 const delay = INITIAL_DELAY * Math.pow(2, attempt);
-                console.log(`Retrying in ${delay}ms...`);
                 
                 // Wait before retrying
                 await new Promise(resolve => setTimeout(resolve, delay));

@@ -27,21 +27,17 @@ export const useWebSocketConnection = (): UseWebSocketConnectionReturn => {
 
     const connect = useCallback(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
-            console.log('WebSocket already connected');
             return;
         }
 
         const apiKey = WEBSOCKET_CONFIG.getApiKey();
         const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
 
-        console.log('🔌 Connecting to WebSocket:', wsUrl);
-
         try {
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 
             ws.onopen = () => {
-                console.log('✅ WebSocket connected');
                 setIsConnected(true);
 
                 // Clear reconnect timeout
@@ -54,7 +50,6 @@ export const useWebSocketConnection = (): UseWebSocketConnectionReturn => {
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('📦 WebSocket message:', data.type);
 
                     // Notify all registered handlers
                     messageHandlersRef.current.forEach(handler => {
@@ -83,13 +78,11 @@ export const useWebSocketConnection = (): UseWebSocketConnectionReturn => {
             };
 
             ws.onclose = (event) => {
-                console.log('🔌 WebSocket closed:', event.code, event.reason);
                 setIsConnected(false);
                 wsRef.current = null;
 
                 // Auto-reconnect if not manually disconnected
                 if (shouldReconnectRef.current) {
-                    console.log('⏰ Reconnecting in 3 seconds...');
                     reconnectTimeoutRef.current = window.setTimeout(() => {
                         connect();
                     }, 3000);
@@ -102,7 +95,6 @@ export const useWebSocketConnection = (): UseWebSocketConnectionReturn => {
     }, []);
 
     const disconnect = useCallback(() => {
-        console.log('Disconnecting WebSocket');
         shouldReconnectRef.current = false;
 
         if (reconnectTimeoutRef.current) {
@@ -124,7 +116,6 @@ export const useWebSocketConnection = (): UseWebSocketConnectionReturn => {
             throw new Error('WebSocket not connected');
         }
 
-        console.log('📤 Sending message:', message.type);
         wsRef.current.send(JSON.stringify(message));
     }, []);
 

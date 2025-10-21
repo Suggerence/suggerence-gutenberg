@@ -1,29 +1,15 @@
 import { Response } from '@/components/ai-elements/response';
 import { BotMessageSquare, Loader2 } from 'lucide-react';
 import { __experimentalHStack as HStack, __experimentalVStack as VStack } from '@wordpress/components';
-import { ReasoningDisplay } from '../ReasoningDisplay';
 
 export const AssistantMessage = ({message}: {message: MCPClientMessage}) => {
-    const thinking = (message as any).thinking;
-    const hasThinking = thinking && thinking.length > 0;
     const isLoading = message.loading;
     const hasContent = message.content && message.content.length > 0;
 
-    // Only show bot icon if we have content (not just thinking)
-    const showBotIcon = hasContent || (isLoading && !hasThinking);
-
     return (
         <HStack justify="start" alignment="start">
-            {showBotIcon && <BotMessageSquare size={16} style={{ flexShrink: 0 }} />}
+            <BotMessageSquare size={16} style={{ flexShrink: 0 }} />
             <VStack spacing={2} style={{ width: '100%' }}>
-                {/* Show thinking/reasoning if present */}
-                {hasThinking && (
-                    <ReasoningDisplay
-                        thinking={thinking}
-                        isStreaming={isLoading}
-                    />
-                )}
-
                 {/* Show content if present */}
                 {hasContent && (
                     <Response
@@ -35,7 +21,7 @@ export const AssistantMessage = ({message}: {message: MCPClientMessage}) => {
                 )}
 
                 {/* Show loading indicator if no content yet */}
-                {isLoading && !hasContent && !hasThinking && (
+                {isLoading && !hasContent && (
                     <HStack justify="start" alignment="center">
                         <Loader2
                             size={14}

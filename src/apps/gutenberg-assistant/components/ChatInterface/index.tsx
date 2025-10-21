@@ -1,7 +1,6 @@
 import { useRef, useEffect, useCallback } from '@wordpress/element';
 import {
     PanelBody,
-    Spinner,
     Notice,
     __experimentalText as Text,
     __experimentalHStack as HStack,
@@ -12,9 +11,9 @@ import { __ } from '@wordpress/i18n';
 import { PanelHeader } from '@/apps/gutenberg-assistant/components/PanelHeader';
 import { UserMessage } from '@/apps/gutenberg-assistant/components/UserMessage';
 import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
-import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
+import { ActionMessage } from '@/apps/gutenberg-assistant/components/ActionMessage';
 import { AssistantMessage } from '@/apps/gutenberg-assistant/components/AssistantMessage';
-import { ReasoningMessage } from '@/apps/gutenberg-assistant/components/ReasoningMessage';
+import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
 import { ToolConfirmationMessage } from '@/apps/gutenberg-assistant/components/ToolConfirmationMessage';
 import { AssistantMessageGroup } from '@/apps/gutenberg-assistant/components/AssistantMessageGroup';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
@@ -200,9 +199,9 @@ export const ChatInterface = () => {
                                             );
                                         }
 
-                                        if (message.role === 'reasoning') {
+                                        if (message.role === 'thinking') {
                                             return (
-                                                <ReasoningMessage
+                                                <ThinkingMessage
                                                     key={`${message.role}-${groupIndex}-${index}-${message.date}`}
                                                     message={message}
                                                 />
@@ -229,10 +228,10 @@ export const ChatInterface = () => {
                                                 }
                                             };
 
-                                            // Use ThinkingMessage for certain tools, ToolMessage for others
+                                            // Use ActionMessage for certain tools, ToolMessage for others
                                             if (cleanToolName != undefined && thinkingTools[cleanToolName]) {
                                                 return (
-                                                    <ThinkingMessage
+                                                    <ActionMessage
                                                         key={`${message.role}-${groupIndex}-${index}-${message.date}`}
                                                         message={message}
                                                         thinkingText={thinkingTools[cleanToolName].thinking}

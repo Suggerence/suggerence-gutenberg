@@ -49,7 +49,7 @@ interface MCPClientSession {
     messages: MCPClientMessage[];
 }
 
-type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation' | 'reasoning';
+type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation' | 'thinking';
 
 interface ReasoningTask {
     id: string;

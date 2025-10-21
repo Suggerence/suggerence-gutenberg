@@ -41,12 +41,21 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
         // Get system prompt using the provided function (which now has access to currentReasoning)
         const systemPrompt = config.getSystemPrompt(siteContextWithReasoning);
 
+        // Log original messages before conversion
+        console.log('📥 Original messages before conversion:', JSON.stringify(messages.map(m => ({
+            role: m.role,
+            content: m.content?.substring(0, 50) + (m.content?.length > 50 ? '...' : ''),
+            loading: (m as any).loading,
+            thinking: (m as any).role === 'thinking' ? 'yes' : 'no',
+            toolName: (m as any).toolName
+        })), null, 2));
+
         // Check if we have visual contexts for the current conversation
         const visualContexts = siteContext.selectedContexts?.filter((ctx: any) => {
             const isDrawing = ctx.type === 'drawing';
             const isImage = ctx.type === 'image';
             const isImageBlock = ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover');
-            
+
             return isDrawing || isImage || isImageBlock;
         }) || [];
 
@@ -62,8 +71,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             }
 
             convertedMessages = await Promise.all(messages.map(async (message, index) => {
-                // Skip tool_confirmation and reasoning messages - they're UI only
-                if (message.role === 'tool_confirmation' || message.role === 'reasoning') {
+                // Skip tool_confirmation, reasoning, and thinking messages - they're UI only
+                if (message.role === 'tool_confirmation' || message.role === 'thinking') {
                     return null;
                 }
 
@@ -167,20 +176,19 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             const messagesWithAssistant: any[] = [];
 
             messages.forEach((message) => {
-                // Skip tool_confirmation and reasoning messages - they're UI only
-                if (message.role === 'tool_confirmation' || message.role === 'reasoning') {
+                // Skip tool_confirmation, reasoning, and thinking messages - they're UI only
+                if (message.role === 'tool_confirmation' || message.role === 'thinking') {
                     return;
                 }
 
-                // If this is a tool message with assistant response data, inject assistant message first
-                if (message.role === 'tool' && (message as any)._assistantResponse) {
-                    const assistantMsg = (message as any)._assistantResponse;
+                // If this is a tool message, inject assistant message with function call first
+                if (message.role === 'tool' && (message as any).toolName) {
                     messagesWithAssistant.push({
                         role: 'assistant',
-                        content: assistantMsg.content || '',
-                        ...(((message as any).toolCallId) && { toolCallId: (message as any).toolCallId }),
-                        ...(((message as any).toolName) && { toolName: (message as any).toolName }),
-                        ...(((message as any).toolArgs) && { toolArgs: (message as any).toolArgs })
+                        content: '',  // Function calls have no text content
+                        toolCallId: (message as any).toolCallId,
+                        toolName: (message as any).toolName,
+                        toolArgs: (message as any).toolArgs
                     });
                 }
 
@@ -256,13 +264,16 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             }
         }
 
+        // Log converted messages after Gemini format conversion
+        console.log('📤 Gemini messages after conversion:', JSON.stringify(geminiMessages, null, 2));
+
         const requestBody: any = {
             messages: geminiMessages,
             system: systemPrompt ? [{ text: systemPrompt }] : undefined,
             tools: tools || []
         };
 
-        console.log('WebSocket request body:', JSON.stringify(requestBody, null, 2));
+        console.log('🚀 WebSocket request body (full):', JSON.stringify(requestBody, null, 2));
 
         // Check if WebSocket is connected
         if (!isConnected) {

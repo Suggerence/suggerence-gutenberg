@@ -144,7 +144,7 @@ export const useAssistantAI = (): UseAITools => {
      * Format block information for the prompt
      */
     const formatBlockInfo = (block: any, indent = ''): string => {
-        let result = `${indent}${block.position}. ${block.name} (ID: ${block.id})`;
+        let result = `${indent}${block.position}. ${block.name} (block_id: ${block.id})`;
         
         if (block.content) {
             const truncated = block.content.substring(0, 80);
@@ -208,7 +208,7 @@ export const useAssistantAI = (): UseAITools => {
             case 'block':
                 const block = context.data;
                 info += `\n  Type: ${block.name}`;
-                info += `\n  ClientID: ${block.clientId}`;
+                info += `\n  Block ID: ${block.clientId}`;
 
                 // Special handling for image blocks
                 if (block.name === 'core/image' || block.name === 'core/cover') {
@@ -253,7 +253,7 @@ Selected: ${gutenberg.selectedBlock
     ? `${gutenberg.selectedBlock.id}` 
     : 'None'}
 
-### Block Structure (use these IDs for targeting):
+### Block Structure (use these block_ids for targeting):
 ${gutenberg.blocks?.map((b: any) => formatBlockInfo(b)).join('\n') || 'No blocks'}`
             : '';
 

@@ -29,19 +29,6 @@ function getAllBlockIds(): string[] {
     }
 }
 
-function getAvailableBlockTypes(): string[] {
-    try {
-        const { getBlockTypes } = select('core/blocks') as any;
-        const blockTypes = getBlockTypes();
-        return blockTypes
-            .filter((block: any) => !block.deprecated && !block.private)
-            .map((block: any) => block.name);
-    } catch (error) {
-        // Fallback to common block types if WordPress data is not available
-        return ['core/paragraph', 'core/heading', 'core/image', 'core/list', 'core/code', 'core/button', 'core/group', 'core/columns', 'core/cover', 'core/gallery', 'core/audio', 'core/video', 'core/embed', 'core/spacer', 'core/separator', 'core/quote', 'core/table', 'core/html', 'core/shortcode'];
-    }
-}
-
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
     description: '⚠️ PREREQUISITE: Call get_block_schema FIRST to see correct attribute structure and supported styling. Creates and inserts new blocks with FULL styling support: duotone filters, border radius (circular images with "50%"), spacing, typography, colors, and all block-specific attributes. Schema provides usage examples for complex features. Supports nested layouts (columns with innerBlocks). Use "attributes" for content/functional properties, use "style" for visual properties like duotone, borders, colors. Combined with schema, this tool can create blocks with ANY WordPress styling feature.',
@@ -50,8 +37,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
         properties: {
             block_type: {
                 type: 'string',
-                description: 'The WordPress block type identifier to create. Must be a valid registered block type (e.g., "core/paragraph" for text, "core/heading" for titles, "core/image" for images, "core/button" for buttons). Use get available blocks tool to see all valid block types if unsure.',
-                enum: getAvailableBlockTypes()
+                description: 'The WordPress block type identifier to create. Must be a valid registered block type (e.g., "core/paragraph" for text, "core/heading" for titles, "core/image" for images, "core/button" for buttons). Use get available blocks tool to see all valid block types if unsure.'
             },
             attributes: {
                 type: 'object',
@@ -177,7 +163,7 @@ export function deleteBlockTool(): SuggerenceMCPResponseTool {
         inputSchema: {
             type: 'object',
             properties: {
-                client_id: {
+                block_id: {
                     type: 'string',
                     description: hasAvailableBlocks
                         ? `The clientId of the block to remove. Valid values: ${availableClientIds.join(', ')}. MUST be one of these - do not invent new IDs.`
@@ -186,7 +172,7 @@ export function deleteBlockTool(): SuggerenceMCPResponseTool {
                     required: true
                 }
             },
-            required: ['client_id']
+            required: ['block_id']
         }
     };
 }
@@ -717,7 +703,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                 text: JSON.stringify({
                     success: false,
                     action: 'block_delete_failed',
-                    error: 'No block selected and no client_id provided'
+                    error: 'No block selected and no block_id provided'
                 })
             }]
         };
@@ -732,7 +718,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                 text: JSON.stringify({
                     success: false,
                     action: 'block_delete_failed',
-                    error: `Block with clientId "${targetClientId}" not found. This clientId is invalid or does not exist in the current document.`
+                    error: `Block with block_id "${targetClientId}" not found. This blockId is invalid or does not exist in the current document.`
                 })
             }]
         };
@@ -758,7 +744,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                     success: true,
                     action: 'block_deleted',
                     data: {
-                        client_id: targetClientId,
+                        block_id: targetClientId,
                         block_type: block.name || 'unknown',
                         had_inner_blocks: block.innerBlocks?.length > 0
                     }
@@ -773,7 +759,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                     success: false,
                     action: 'block_delete_failed',
                     error: `Error deleting block: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    client_id: targetClientId,
+                    block_id: targetClientId,
                     block_type: block.name || 'unknown'
                 })
             }]

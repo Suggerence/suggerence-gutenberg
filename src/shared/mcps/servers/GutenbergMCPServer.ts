@@ -106,7 +106,7 @@ export class GutenbergMCPServer {
                     return duplicateBlock(args.block_id, args.position);
 
                 case 'delete_block':
-                    return deleteBlock(args.client_id || args.block_id);
+                    return deleteBlock(args.block_id || args.id);
 
                 case 'generate_image':
                     return generateImage(args.prompt, args.alt_text);

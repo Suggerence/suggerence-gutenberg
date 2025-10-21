@@ -27,8 +27,6 @@ export const InputArea = () => {
     const { messages, addMessage, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { addContext } = useContextStore();
     const { pendingToolCall, setPendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [availableTools, setAvailableTools] = useState<SuggerenceMCPResponseTool[]>([]);
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const isServerReadyRef = useRef(isGutenbergServerReady);
@@ -60,7 +58,6 @@ export const InputArea = () => {
         }
 
         const tools = await getGutenbergTools();
-        setAvailableTools(tools);
 
         const defaultModel: AIModel = {
             id: 'suggerence-v1',
@@ -73,8 +70,11 @@ export const InputArea = () => {
 
         // Create a streaming message that will be updated as chunks arrive
         let streamingMessageId = '';
+        let streamingThinkingMessageId = '';
         let thinkingContent = '';
         let contentAccumulated = '';
+        let thinkingStartTime: number | null = null;
+        let thinkingDuration = 0;
 
         const response = await callAI(
             currentMessages,
@@ -89,27 +89,30 @@ export const InputArea = () => {
                     thinkingContent = chunk.accumulated;
                     console.log('🤔 Updating thinking, total length:', thinkingContent.length);
 
+                    // Start tracking thinking duration on first chunk
+                    if (thinkingStartTime === null) {
+                        thinkingStartTime = Date.now();
+                    }
+
                     // Update or create thinking message
-                    if (!streamingMessageId) {
-                        streamingMessageId = 'streaming-' + Date.now();
+                    if (!streamingThinkingMessageId) {
+                        streamingThinkingMessageId = 'streaming-thinking-' + Date.now();
                         console.log('Creating new message with thinking');
                         addMessage({
-                            role: 'assistant',
-                            content: '',
+                            role: 'thinking',
+                            content: thinkingContent,
                             date: new Date().toISOString(),
                             aiModel: defaultModel.id,
                             loading: true,
-                            thinking: thinkingContent
                         } as any);
                     } else {
                         console.log('Updating existing message with thinking');
                         setLastMessage({
-                            role: 'assistant',
-                            content: contentAccumulated,
+                            role: 'thinking',
+                            content: thinkingContent,
                             date: new Date().toISOString(),
                             aiModel: defaultModel.id,
                             loading: true,
-                            thinking: thinkingContent
                         } as any);
                     }
                 } else if (chunk.type === 'content') {
@@ -124,8 +127,7 @@ export const InputArea = () => {
                             role: 'assistant',
                             content: contentAccumulated,
                             date: new Date().toISOString(),
-                            aiModel: defaultModel.id,
-                            loading: true
+                            aiModel: defaultModel.id
                         });
                     } else {
                         console.log('Updating existing message with content');
@@ -133,9 +135,7 @@ export const InputArea = () => {
                             role: 'assistant',
                             content: contentAccumulated,
                             date: new Date().toISOString(),
-                            aiModel: defaultModel.id,
-                            loading: true,
-                            thinking: thinkingContent || undefined
+                            aiModel: defaultModel.id
                         } as any);
                     }
                 }
@@ -150,22 +150,27 @@ export const InputArea = () => {
             throw new DOMException('Aborted', 'AbortError');
         }
 
-        if (aiResponse.type === 'reasoning') {
-            // Add the reasoning message
-            addMessage({
-                role: 'reasoning',
-                content: '', // Content is in the reasoning object
-                date: new Date().toISOString(),
-                reasoning: aiResponse.reasoning,
-                aiModel: defaultModel.id
-            });
+        // Calculate thinking duration if we had thinking
+        if (thinkingStartTime !== null) {
+            thinkingDuration = Math.ceil((Date.now() - thinkingStartTime) / 1000);
+            console.log('⏱️ Thinking duration:', thinkingDuration, 'seconds');
+        }
 
-            // After showing reasoning, automatically continue to execute the plan
-            // The AI will be called again and should now execute the tasks
-            return;
+        // If we have a streaming thinking message, mark it as complete
+        const lastMessage = currentMessages[currentMessages.length - 1] as MCPClientMessage;
+        if (streamingThinkingMessageId && lastMessage && lastMessage.role === 'thinking') {
+            setLastMessage({
+                role: 'thinking',
+                content: thinkingContent,
+                date: new Date().toISOString(),
+                aiModel: defaultModel.id,
+                loading: false,
+                thinkingDuration: thinkingDuration > 0 ? thinkingDuration : undefined
+            } as any);
         }
 
         if (aiResponse.type === 'tool') {
+
             // Check if this is a dangerous tool
             const tool = tools.find(t => t.name === aiResponse.toolName);
             const isDangerous = tool?.dangerous === true;
@@ -269,19 +274,9 @@ export const InputArea = () => {
                 });
             }
         } else {
-            // Text response - update the streaming message to mark as complete
-            if (streamingMessageId) {
-                // We already have a streaming message, just mark it as complete
-                setLastMessage({
-                    role: 'assistant',
-                    content: contentAccumulated,
-                    date: new Date().toISOString(),
-                    aiModel: defaultModel.id,
-                    loading: false,
-                    thinking: thinkingContent || undefined
-                } as any);
-            } else {
-                // No streaming happened (edge case), add the message
+            // Text response - streaming message was already marked as complete above
+            // Only add a message if no streaming happened (edge case)
+            if (!streamingMessageId) {
                 addMessage({
                     role: 'assistant',
                     content: aiResponse.content as string,
@@ -404,22 +399,6 @@ export const InputArea = () => {
             return;
         }
 
-        // If the last message is a reasoning message, continue to execute the plan
-        if (lastMessage.role === 'reasoning') {
-            // Create a new AbortController for continuing the conversation
-            const controller = new AbortController();
-            setAbortController(controller);
-            setIsLoading(true);
-            handleNewMessage(messages, controller.signal)
-                .catch((error) => {
-                    if (error?.name !== 'AbortError') {
-                        console.error(error);
-                    }
-                    setIsLoading(false);
-                    setAbortController(null);
-                });
-            return;
-        }
 
         // If tool is still loading, wait
         if (lastMessage.role === 'tool' && lastMessage.loading) return;

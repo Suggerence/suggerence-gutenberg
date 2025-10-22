@@ -370,6 +370,10 @@ export async function getPostMetadata(): Promise<{ content: Array<{ type: string
 export function updatePostTitle(title: string): { content: Array<{ type: string, text: string }> } {
     try {
         const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+        const oldTitle = post.title;
+
         editPost({ title });
 
         return {
@@ -379,6 +383,7 @@ export function updatePostTitle(title: string): { content: Array<{ type: string,
                     success: true,
                     action: 'post_title_updated',
                     data: {
+                        old_title: oldTitle,
                         new_title: title
                     }
                 })
@@ -401,6 +406,10 @@ export function updatePostTitle(title: string): { content: Array<{ type: string,
 export function updatePostExcerpt(excerpt: string): { content: Array<{ type: string, text: string }> } {
     try {
         const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+        const oldExcerpt = post.excerpt;
+        
         editPost({ excerpt });
 
         return {
@@ -410,6 +419,7 @@ export function updatePostExcerpt(excerpt: string): { content: Array<{ type: str
                     success: true,
                     action: 'post_excerpt_updated',
                     data: {
+                        old_excerpt: oldExcerpt,
                         new_excerpt: excerpt
                     }
                 })

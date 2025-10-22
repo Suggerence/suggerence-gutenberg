@@ -261,7 +261,7 @@ export const ChatInterface = () => {
 
                         {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && !messages.some(m => m.role === 'thinking' && m.loading) && (
                             <>
-                                <div className="flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground">
+                                <div className="flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground pb-4">
                                     <BrainIcon className="size-4" />
                                     <ThinkingWords duration={1} changeInterval={3000} />
                                 </div>

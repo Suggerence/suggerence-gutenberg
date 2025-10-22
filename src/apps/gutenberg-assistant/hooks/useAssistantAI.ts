@@ -384,16 +384,16 @@ When user says "Generate the complete page layout from the drawing":
 
 **PRIORITY 2: Get Images from Openverse**
 - For EVERY image in the drawing, call search_openverse first
-- Example: search_openverse({query: "mountain landscape", perPage: 5})
+- Example: search_openverse({query: "mountain landscape", per_page: 5})
 - Pick best result, then upload_openverse_to_media({image_id, image_url, title, creator, license})
 - Returns media_id to use in blocks
 - ONLY use generate_image if Openverse returns no good results
 
 **PRIORITY 3: Build Layout with Columns**
 - Multi-column layouts use add_block with core/columns
-- 50/50: innerBlocks: [{blockType: "core/column", attributes: {width: "50%"}, innerBlocks: [...]}, {...}]
+- 50/50: inner_blocks: [{block_type: "core/column", attributes: {width: "50%"}, inner_blocks: [...]}, {...}]
 - 33/66: widths "33.33%" and "66.66%"
-- Put actual content (images, headings, text) inside each column's innerBlocks
+- Put actual content (images, headings, text) inside each column's inner_blocks
 
 **PRIORITY 4: Generate Actual Content**
 - READ text annotations in the drawing - they could be instructions for what to create
@@ -408,10 +408,10 @@ When user says "Generate the complete page layout from the drawing":
   • "Benefits section" → Write actual benefits (not "Benefit 1", "Benefit 2")
 - Always generate REAL content, NEVER placeholders like "Your text here" or "Lorem ipsum"
 - Block syntax:
-  • Headings: {blockType: "core/heading", attributes: {content: "Actual Generated Title", level: 2}}
-  • Paragraphs: {blockType: "core/paragraph", attributes: {content: "Full generated paragraph..."}}
-  • Lists: {blockType: "core/list", attributes: {values: "<li>Real Item 1</li><li>Real Item 2</li>..."}}
-  • Buttons: {blockType: "core/button", attributes: {text: "Descriptive CTA", url: "#"}}
+  • Headings: {block_type: "core/heading", attributes: {content: "Actual Generated Title", level: 2}}
+  • Paragraphs: {block_type: "core/paragraph", attributes: {content: "Full generated paragraph..."}}
+  • Lists: {block_type: "core/list", attributes: {values: "<li>Real Item 1</li><li>Real Item 2</li>..."}}
+  • Buttons: {block_type: "core/button", attributes: {text: "Descriptive CTA", url: "#"}}
 
 **Execute ALL steps** - Don't ask permission, don't stop until complete
 

@@ -165,6 +165,25 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             convertedMessages = messagesWithAssistant;
         }
 
+        // Helper function to convert media objects to Gemini inlineData format
+        const convertMediaToGemini = (content: any): any => {
+            if (Array.isArray(content)) {
+                return content.map(item => {
+                    // Convert old-format audio to inlineData
+                    if (item.type === 'audio' && item.source) {
+                        return {
+                            inlineData: {
+                                mimeType: item.source.media_type || 'audio/webm',
+                                data: item.source.data
+                            }
+                        };
+                    }
+                    return item;
+                });
+            }
+            return content;
+        };
+
         // Convert messages to Gemini format for WebSocket
         const geminiMessages: any[] = [];
 
@@ -174,7 +193,7 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             if (message.role === 'user') {
                 geminiMessages.push({
                     role: 'user',
-                    parts: Array.isArray(message.content) ? message.content : [{ text: message.content }]
+                    parts: Array.isArray(message.content) ? convertMediaToGemini(message.content) : [{ text: message.content }]
                 });
             } else if (message.role === 'assistant' || message.role === 'model') {
                 // Check if this assistant message has a tool call
@@ -197,7 +216,7 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     // Regular assistant message
                     geminiMessages.push({
                         role: 'model',
-                        parts: Array.isArray(message.content) ? message.content : [{ text: message.content || '' }]
+                        parts: Array.isArray(message.content) ? convertMediaToGemini(message.content) : [{ text: message.content || '' }]
                     });
                 }
             } else if (message.role === 'tool') {

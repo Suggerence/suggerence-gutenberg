@@ -385,7 +385,7 @@ When user says "Generate the complete page layout from the drawing":
 **PRIORITY 2: Get Images from Openverse**
 - For EVERY image in the drawing, call search_openverse first
 - Example: search_openverse({query: "mountain landscape", perPage: 5})
-- Pick best result, then upload_openverse_to_media({imageId, imageUrl, title, creator, license})
+- Pick best result, then upload_openverse_to_media({image_id, image_url, title, creator, license})
 - Returns media_id to use in blocks
 - ONLY use generate_image if Openverse returns no good results
 

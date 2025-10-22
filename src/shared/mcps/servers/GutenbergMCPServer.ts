@@ -93,11 +93,11 @@ export class GutenbergMCPServer {
         try {
             switch (name) {
                 case 'add_block':
-                    return addBlock(args.block_type, args.attributes, args.position, args.target_block_id, args.inner_blocks, args.style);
+                    return addBlock(args.block_type, args.attributes, args.position, args.relative_to_block_id, args.inner_blocks, args.style);
 
                 case 'move_block':
                     return moveBlock({
-                        targetBlockId: args.target_block_id,
+                        targetBlockId: args.relative_to_block_id,
                         position: args.position,
                         blockId: args.block_id
                     });
@@ -125,7 +125,7 @@ export class GutenbergMCPServer {
                 case 'transform_block':
                     return transformBlock({
                         blockId: args.block_id,
-                        targetBlockType: args.target_block_type
+                        targetBlockType: args.transform_to
                     });
 
                 case 'wrap_block':
@@ -147,7 +147,7 @@ export class GutenbergMCPServer {
                     return insertPattern({
                         patternName: args.pattern_name,
                         position: args.position,
-                        targetBlockId: args.target_block_id
+                        targetBlockId: args.relative_to_block_id
                     });
 
                 case 'get_available_blocks':

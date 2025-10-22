@@ -80,7 +80,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                 description: 'Insertion position relative to the target block. "before" inserts above the target block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after" if not specified.',
                 enum: ['before', 'after', 'end']
             },
-            target_block_id: {
+            relative_to_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor. Only needed when inserting relative to a specific block that is not currently selected.'
             }
@@ -99,7 +99,7 @@ export const moveBlockTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'The client ID of the block to relocate. If omitted, moves the currently selected block in the editor. Use this parameter when moving a specific block that is not currently selected.'
             },
-            target_block_id: {
+            relative_to_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. The block will be moved relative to this target block. Required to specify where to move the block.'
             },
@@ -109,7 +109,7 @@ export const moveBlockTool: SuggerenceMCPResponseTool = {
                 enum: ['before', 'after']
             }
         },
-        required: ['target_block_id', 'position']
+        required: ['relative_to_block_id', 'position']
     }
 };
 
@@ -211,13 +211,13 @@ export const transformBlockTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'The client ID of the block to transform. If omitted, transforms the currently selected block in the editor. Use this parameter when transforming a specific block that is not currently selected.'
             },
-            target_block_type: {
+            transform_to: {
                 type: 'string',
                 description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.',
                 required: true
             }
         },
-        required: ['target_block_type']
+        required: ['transform_to']
     }
 };
 
@@ -562,7 +562,7 @@ export function moveBlock(args: {
                     action: 'block_already_at_position',
                     data: {
                         block_id: sourceBlockId,
-                        target_block_id: args.targetBlockId,
+                        relative_to_block_id: args.targetBlockId,
                         position: args.position
                     }
                 })
@@ -588,7 +588,7 @@ export function moveBlock(args: {
                     data: {
                         block_id: sourceBlockId,
                         block_type: sourceBlock.name,
-                        target_block_id: args.targetBlockId,
+                        relative_to_block_id: args.targetBlockId,
                         position: args.position,
                         from_parent: sourceRootClientId || 'root',
                         to_parent: targetRootClientId || 'root',
@@ -607,7 +607,7 @@ export function moveBlock(args: {
                     action: 'block_move_failed',
                     error: `Error moving block: ${error instanceof Error ? error.message : 'Unknown error'}`,
                     block_id: sourceBlockId,
-                    target_block_id: args.targetBlockId
+                    relative_to_block_id: args.targetBlockId
                 })
             }]
         };

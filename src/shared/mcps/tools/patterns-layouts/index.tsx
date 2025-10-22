@@ -79,7 +79,7 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
                 description: 'Where to insert the pattern. "before" inserts above the selected block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after".',
                 enum: ['before', 'after', 'end']
             },
-            target_block_id: {
+            relative_to_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor.'
             }

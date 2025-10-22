@@ -76,7 +76,7 @@ export const UserMessage = ({message}: {message: MCPClientMessage}) => {
     }, []);
 
     return (
-        <div style={{ paddingLeft: '2rem', marginLeft: 'auto', maxWidth: '90%' }}>
+        <div className="pb-4" style={{ paddingLeft: '2rem', marginLeft: 'auto', maxWidth: '90%' }}>
             <div
                 style={{
                     padding: '10px 14px',

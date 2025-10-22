@@ -12,6 +12,7 @@ import type { ComponentProps } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import { Response } from "./response";
 import { Shimmer } from "./shimmer";
+import { ThinkingWords } from "./thinking-words";
 
 type ReasoningContextValue = {
   isStreaming: boolean;
@@ -115,7 +116,7 @@ export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger>;
 
 const getThinkingMessage = (isStreaming: boolean, duration?: number) => {
   if (isStreaming) {
-    return <Shimmer duration={1}>Thinking...</Shimmer>;
+    return <ThinkingWords duration={1} changeInterval={2000} />;
   }
   if (duration === undefined) {
     return <p>Thought for a few seconds</p>;

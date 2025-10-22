@@ -20,7 +20,7 @@ export const ThinkingMessage = ({ message }: ThinkingMessageProps) => {
     return (
         <Reasoning
             isStreaming={isStreaming}
-            defaultOpen={true}
+            defaultOpen={false}
             duration={thinkingDuration}
         >
             <ReasoningTrigger />

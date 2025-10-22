@@ -20,8 +20,8 @@ import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/s
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
 import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
-import { Loader2 } from 'lucide-react';
-import { Response } from '@/components/ai-elements/response';
+import { BrainIcon } from 'lucide-react';
+import { ThinkingWords } from '@/components/ai-elements/thinking-words';
 import { removeBlockHighlightsFromToolData } from '@/shared/utils/block-highlight';
 
 export const ChatInterface = () => {
@@ -173,7 +173,7 @@ export const ChatInterface = () => {
 
             <VStack spacing={0} style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-                    <VStack spacing={4}>
+                    <VStack spacing={0}>
                         {groupMessages(messages).map((group, groupIndex) => {
                             if (group.type === 'user') {
                                 return group.messages.map((message, index) => (
@@ -259,27 +259,12 @@ export const ChatInterface = () => {
                             );
                         })}
 
-                        {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && (
+                        {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && !messages.some(m => m.role === 'thinking' && m.loading) && (
                             <>
-                                <HStack justify="start" alignment="center">
-                                    {isLoading && (
-                                        <Loader2
-                                            size={16}
-                                            style={{
-                                                animation: 'spin 1s linear infinite',
-                                                color: '#64748b',
-                                                flexShrink: 0
-                                            }}
-                                        />
-                                    )}
-                                  
-                                    <Response
-                                        parseIncompleteMarkdown={true}
-                                        className="text-sm leading-relaxed text-gray-600 thinking-message"
-                                    >
-                                        {__("Thinking...", "suggerence")}
-                                    </Response>
-                                </HStack>
+                                <div className="flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground">
+                                    <BrainIcon className="size-4" />
+                                    <ThinkingWords duration={1} changeInterval={3000} />
+                                </div>
                 
                                 <style>
                                     {`

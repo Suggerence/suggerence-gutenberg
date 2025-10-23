@@ -19,6 +19,8 @@ class RegisterScripts
     public function register_scripts()
     {
 
+        $suggerence_config = get_option('suggerence_suggerence_config');
+
         $suggerence_data = 'const SuggerenceData = ' . wp_json_encode([
             'suggerence_api_url' => 'https://api.suggerence.com/v1',
             'locale' => get_locale(),
@@ -27,7 +29,8 @@ class RegisterScripts
             'admin_ajax_url' => admin_url('admin-ajax.php'),
             'updates_nonce' => wp_create_nonce('updates'),
             'site_url' => home_url(),
-            'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php')
+            'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php'),
+            'api_key' => $suggerence_config['api_key'] ?? ''
         ]) . ';';
 
         /**

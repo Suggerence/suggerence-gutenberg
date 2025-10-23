@@ -1,7 +1,9 @@
 // WebSocket configuration for direct API calls
+declare const SuggerenceData: SuggerenceData;
+
 export const WEBSOCKET_CONFIG = {
     // Default WebSocket URL - can be overridden via environment or WordPress settings
-    DEFAULT_URL: 'ws://localhost:3000/v1/gutenberg/text-wss',
+    DEFAULT_URL: 'wss://api.suggerence.com/v1/gutenberg/text-wss',
 
     // Get WebSocket URL from WordPress settings or environment
     getWebSocketUrl: (): string => {
@@ -44,7 +46,7 @@ export const WEBSOCKET_CONFIG = {
 
     // Get API key from WordPress
     getApiKey: (): string => {
-        const apiKey = (window as any).suggerenceApiKey || 'sk-sgg-demo-key';
+        const apiKey = SuggerenceData.api_key || 'sk-sgg-demo-key';
         // Remove 'sk-sgg-' prefix if present (it will be added by the server)
         return apiKey.replace('sk-sgg-', '');
     }

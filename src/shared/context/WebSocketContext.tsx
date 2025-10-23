@@ -35,8 +35,9 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
         }
 
         const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
+        const apiKey = WEBSOCKET_CONFIG.getApiKey();
 
-        const ws = new WebSocket(wsUrl);
+        const ws = new WebSocket(wsUrl + '?api_key=' + apiKey);
         wsRef.current = ws;
 
         ws.onopen = () => {

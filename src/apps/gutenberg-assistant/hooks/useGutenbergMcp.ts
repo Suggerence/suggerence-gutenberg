@@ -10,7 +10,7 @@ export const useGutenbergMCP = (): UseGutenbergMCPTools => {
         callTool: callGutenbergTool
     } = useBaseMCP(
         {
-            serverName: 'gutenberg',
+            serverName: 'orchestrator',
             debugName: 'Gutenberg sidebar',
             toolPrefix: 'gutenberg___'
         },

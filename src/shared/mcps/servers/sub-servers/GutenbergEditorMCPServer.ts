@@ -33,30 +33,21 @@ import {
     removeFeaturedImageTool, removeFeaturedImage,
     getPostContentTool, getPostContent
 } from '@/shared/mcps/tools/document-tools';
-import {
-    seoExpertTool, seoExpert,
-    contentWriterTool, contentWriter,
-    accessibilityExpertTool, accessibilityExpert,
-    copyEditorTool, copyEditor,
-    socialMediaExpertTool, socialMediaExpert,
-    technicalWriterTool, technicalWriter,
-    marketingExpertTool, marketingExpert
-} from '@/shared/mcps/tools/sub-agents';
 
-export class GutenbergMCPServer {
+export class GutenbergEditorMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
         return {
-            name: 'gutenberg',
+            name: 'gutenberg-editor',
             title: 'Gutenberg Editor',
-            description: 'Frontend MCP server for Gutenberg block editor operations',
+            description: 'Core Gutenberg block editor operations and document management',
             protocol_version: '1.0.0',
             endpoint_url: 'http://localhost:3000',
             is_active: true,
-            type: 'frontend',
+            type: 'core',
             connected: true,
-            client: new GutenbergMCPServer(),
+            client: new GutenbergEditorMCPServer(),
             id: 1,
-            capabilities: '',
+            capabilities: 'block-manipulation,media-management,document-operations',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         }
@@ -83,15 +74,7 @@ export class GutenbergMCPServer {
         updatePostExcerptTool,
         setFeaturedImageTool,
         removeFeaturedImageTool,
-        getPostContentTool,
-        // Sub-agent tools
-        seoExpertTool,
-        contentWriterTool,
-        accessibilityExpertTool,
-        copyEditorTool,
-        socialMediaExpertTool,
-        technicalWriterTool,
-        marketingExpertTool
+        getPostContentTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -210,28 +193,6 @@ export class GutenbergMCPServer {
 
                 case 'get_post_content':
                     return getPostContent(args.post_id, args.post_type, args.context);
-
-                // Sub-agent tools
-                case 'seo_expert':
-                    return seoExpert(args.content, args.target_keywords, args.content_type, args.context);
-
-                case 'content_writer':
-                    return contentWriter(args.content, args.tone, args.audience, args.purpose, args.context);
-
-                case 'accessibility_expert':
-                    return accessibilityExpert(args.content, args.content_type, args.image_description, args.context);
-
-                case 'copy_editor':
-                    return copyEditor(args.content, args.style_guide, args.focus_areas, args.context);
-
-                case 'social_media_expert':
-                    return socialMediaExpert(args.content, args.platform, args.post_type, args.tone, args.include_hashtags, args.context);
-
-                case 'technical_writer':
-                    return technicalWriter(args.content, args.audience_level, args.content_type, args.include_examples, args.context);
-
-                case 'marketing_expert':
-                    return marketingExpert(args.content, args.campaign_goal, args.target_audience, args.include_cta, args.urgency_level, args.context);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

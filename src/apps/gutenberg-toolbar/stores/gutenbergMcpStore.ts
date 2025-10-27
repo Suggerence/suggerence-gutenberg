@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GutenbergMCPServer } from '@/shared/mcps/servers/GutenbergMCPServer';
+import { OrchestratorMCPServer } from '@/shared/mcps/servers/OrchestratorMCPServer';
 
 interface GutenbergMCPStore {
     serverConnections: SuggerenceMCPServerConnection[];
@@ -9,7 +9,7 @@ interface GutenbergMCPStore {
 
 export const useGutenbergMCPStore = create<GutenbergMCPStore>((set) => ({
     serverConnections: [
-        GutenbergMCPServer.initialize()
+        OrchestratorMCPServer.initialize()
     ],
     addServer: async (server: SuggerenceMCPServerConnection) => {
         set((state) => {

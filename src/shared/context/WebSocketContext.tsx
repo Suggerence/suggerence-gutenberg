@@ -102,6 +102,14 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
         };
     }, [connect]);
 
+    // Expose the websocket context globally for use by MCP servers
+    useEffect(() => {
+        (window as any).suggerenceWebSocketContext = {
+            isConnected,
+            sendRequest
+        };
+    }, [isConnected, sendRequest]);
+
     return (
         <WebSocketContext.Provider value={{ isConnected, sendRequest }}>
             {children}

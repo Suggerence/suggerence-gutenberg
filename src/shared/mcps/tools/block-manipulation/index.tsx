@@ -278,21 +278,33 @@ export const redoTool: SuggerenceMCPResponseTool = {
 
 /**
  * Helper function to recursively create blocks with innerBlocks
+ * Handles both camelCase (blockType) and snake_case (block_type) formats
  */
 function createBlockFromDefinition(blockDef: {
-    blockType: string;
+    blockType?: string;
+    block_type?: string;
     attributes?: Record<string, any>;
     innerBlocks?: any[];
+    inner_blocks?: any[];
 }): any {
-    const innerBlocks = blockDef.innerBlocks?.map(innerBlockDef => 
+    // Support both naming conventions
+    const blockType = blockDef.blockType || blockDef.block_type;
+    const innerBlocksArray = blockDef.innerBlocks || blockDef.inner_blocks;
+
+    if (!blockType) {
+        console.error('Block definition missing blockType/block_type:', blockDef);
+        return null;
+    }
+
+    const innerBlocks = innerBlocksArray?.map(innerBlockDef =>
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];
 
     // Only pass innerBlocks if they exist - some blocks like core/table don't use innerBlocks
     // and passing an empty array can cause issues with their internal processing
     return innerBlocks.length > 0
-        ? createBlock(blockDef.blockType, blockDef.attributes || {}, innerBlocks)
-        : createBlock(blockDef.blockType, blockDef.attributes || {});
+        ? createBlock(blockType, blockDef.attributes || {}, innerBlocks)
+        : createBlock(blockType, blockDef.attributes || {});
 }
 
 export function addBlock(
@@ -336,6 +348,7 @@ export function addBlock(
     }
 
     // Create inner blocks recursively if provided
+    // createBlockFromDefinition handles both snake_case (block_type) and camelCase (blockType)
     const processedInnerBlocks = innerBlocks?.map(innerBlockDef =>
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];

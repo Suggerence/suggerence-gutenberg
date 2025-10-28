@@ -114,9 +114,14 @@ export const Reasoning = memo(
 
 export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger>;
 
+const ThinkingMessage = memo(() => {
+  return <ThinkingWords duration={1} changeInterval={2000} />;
+});
+ThinkingMessage.displayName = "ThinkingMessage";
+
 const getThinkingMessage = (isStreaming: boolean, duration?: number) => {
   if (isStreaming) {
-    return <ThinkingWords duration={1} changeInterval={2000} />;
+    return <ThinkingMessage />;
   }
   if (duration === undefined) {
     return <p>Thought for a few seconds</p>;
@@ -163,7 +168,7 @@ export const ReasoningContent = memo(
   ({ className, children, ...props }: ReasoningContentProps) => (
     <CollapsibleContent
       className={cn(
-        "mt-4 text-sm",
+        "mt-4 text-sm max-h-40 overflow-y-auto",
         "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-muted-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
         className
       )}

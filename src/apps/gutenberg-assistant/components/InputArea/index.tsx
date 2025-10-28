@@ -116,20 +116,23 @@ export const InputArea = () => {
                     contentAccumulated = chunk.accumulated;
 
                     // Update or create content message
+                    // Mark as loading to indicate streaming is still in progress
                     if (!streamingMessageId) {
                         streamingMessageId = 'streaming-' + Date.now();
                         addMessage({
                             role: 'assistant',
                             content: contentAccumulated,
                             date: new Date().toISOString(),
-                            aiModel: defaultModel.id
+                            aiModel: defaultModel.id,
+                            loading: true
                         });
                     } else {
                         setLastMessage({
                             role: 'assistant',
                             content: contentAccumulated,
                             date: new Date().toISOString(),
-                            aiModel: defaultModel.id
+                            aiModel: defaultModel.id,
+                            loading: true
                         } as any);
                     }
                 }
@@ -184,6 +187,17 @@ export const InputArea = () => {
         }
 
         if (aiResponse.type === 'tool') {
+            // If we have a streaming message with content, mark it as complete before executing tools
+            if (streamingMessageId && contentAccumulated) {
+                setLastMessage({
+                    role: 'assistant',
+                    content: contentAccumulated,
+                    date: new Date().toISOString(),
+                    aiModel: defaultModel.id,
+                    loading: false
+                } as any);
+            }
+
             // Check if we have multiple function calls to execute
             const allCalls = (response as any).allFunctionCalls;
 
@@ -403,14 +417,24 @@ export const InputArea = () => {
                 });
             }
         } else {
-            // Text response - streaming message was already marked as complete above
-            // Only add a message if no streaming happened (edge case)
-            if (!streamingMessageId) {
+            // Text response - mark streaming message as complete
+            if (streamingMessageId) {
+                // Update the streaming message to mark it as complete (loading: false)
+                setLastMessage({
+                    role: 'assistant',
+                    content: contentAccumulated || (aiResponse.content as string),
+                    date: new Date().toISOString(),
+                    aiModel: defaultModel.id,
+                    loading: false
+                } as any);
+            } else {
+                // Only add a message if no streaming happened (edge case)
                 addMessage({
                     role: 'assistant',
                     content: aiResponse.content as string,
                     date: new Date().toISOString(),
-                    aiModel: defaultModel.id
+                    aiModel: defaultModel.id,
+                    loading: false
                 });
             }
         }
@@ -520,10 +544,13 @@ export const InputArea = () => {
 
         if (!lastMessage) return;
 
-        // If the last message is an assistant or thinking message (without loading), the conversation is done
+        // If the last message is an assistant message, only stop loading if it's not loading
         if (lastMessage.role === 'assistant') {
-            setIsLoading(false);
-            setAbortController(null);
+            // If the message is still loading (streaming), don't stop the loading state
+            if (!lastMessage.loading) {
+                setIsLoading(false);
+                setAbortController(null);
+            }
             return;
         }
 

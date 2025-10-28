@@ -2,7 +2,7 @@ import { select } from '@wordpress/data';
 
 export const getAvailableBlocksTool: SuggerenceMCPResponseTool = {
     name: 'get_available_blocks',
-    description: 'Retrieves a comprehensive list of all WordPress Gutenberg block types registered in the current editor, including their metadata and capabilities. Use this tool when you need to discover what block types are available, explore blocks in a specific category, or determine the correct block type identifier for an add_block or update_block operation. Useful for understanding the user\'s available tools and suggesting appropriate block types for their needs.',
+    description: 'Retrieves a list of all WordPress Gutenberg block type NAMES registered in the current editor (returns only block identifiers like "core/paragraph", "core/heading", etc. to minimize token usage). Use this tool when you need to discover what block types are available or explore blocks in a specific category. For detailed information about a specific block (attributes, supports, usage examples), call get_block_schema with the block name returned by this tool.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -45,19 +45,16 @@ export function getAvailableBlocks(includeInactive: boolean = false, category?: 
             blockTypes = blockTypes.filter((blockType: any) => blockType.category === category);
         }
 
-        const availableBlocks = blockTypes.map((blockType: any) => ({
-            name: blockType.name,
-            title: blockType.title,
-            description: blockType.description || '',
-            category: blockType.category,
-            icon: typeof blockType.icon === 'string' ? blockType.icon : blockType.icon?.src || '',
-            keywords: blockType.keywords || [],
-            supports: blockType.supports || {},
-            isActive: !blockType.deprecated && !blockType.private
-        }));
+        // Only return block names to minimize token usage
+        // Users can call get_block_schema for detailed info on specific blocks
+        let filteredBlocks = blockTypes;
 
         // Filter inactive blocks if requested
-        const filteredBlocks = includeInactive ? availableBlocks : availableBlocks.filter((block: any) => block.isActive);
+        if (!includeInactive) {
+            filteredBlocks = filteredBlocks.filter((blockType: any) => !blockType.deprecated && !blockType.private);
+        }
+
+        const blockNames = filteredBlocks.map((blockType: any) => blockType.name);
 
         return {
             content: [{
@@ -65,8 +62,8 @@ export function getAvailableBlocks(includeInactive: boolean = false, category?: 
                 text: JSON.stringify({
                     success: true,
                     action: 'get_available_blocks_success',
-                    totalBlocks: filteredBlocks.length,
-                    blocks: filteredBlocks
+                    totalBlocks: blockNames.length,
+                    blocks: blockNames
                 }, null, 2)
             }]
         };

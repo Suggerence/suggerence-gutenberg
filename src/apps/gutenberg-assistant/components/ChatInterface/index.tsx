@@ -212,12 +212,16 @@ export const ChatInterface = () => {
                                             // Get clean tool name
                                             const cleanToolName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName;
 
+                                            // Define tools that should be completely hidden from the user
+                                            const hiddenTools = ['get_block_schema'];
+
+                                            // Don't render hidden tools
+                                            if (cleanToolName && hiddenTools.includes(cleanToolName)) {
+                                                return null;
+                                            }
+
                                             // Define tools that should show as thinking messages
                                             const thinkingTools: Record<string, { thinking: string; completed: string }> = {
-                                                'get_block_schema': {
-                                                    thinking: __('Checking the available block settings...', 'suggerence'),
-                                                    completed: __('Checked the available block settings', 'suggerence')
-                                                },
                                                 'get_available_blocks': {
                                                     thinking: __('Looking up available blocks...', 'suggerence'),
                                                     completed: __('Retrieved available blocks', 'suggerence')
@@ -259,7 +263,7 @@ export const ChatInterface = () => {
                             );
                         })}
 
-                        {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && !messages.some(m => m.role === 'thinking' && m.loading) && (
+                        {isLoading && !messages.some(m => m.role === 'tool' && m.loading) && !messages.some(m => m.role === 'thinking' && m.loading) && !messages.some(m => m.role === 'assistant' && m.loading) && (
                             <>
                                 <div className="flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground pb-4">
                                     <BrainIcon className="size-4" />

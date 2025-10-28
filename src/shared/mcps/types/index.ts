@@ -78,6 +78,10 @@ interface MCPClientMessage {
     toolArgs?: Record<string, any>;
     toolResult?: any;
 
+    // Thinking fields (for 'thinking' role messages)
+    thinkingDuration?: number;
+    thinkingSignature?: string;
+
     // Reasoning fields (for 'reasoning' role messages)
     reasoning?: ReasoningContent;
 }

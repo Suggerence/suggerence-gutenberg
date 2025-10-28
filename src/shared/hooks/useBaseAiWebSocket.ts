@@ -37,8 +37,9 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             }
 
             convertedMessages = await Promise.all(messages.map(async (message, index) => {
-                // Skip tool_confirmation, reasoning, and thinking messages - they're UI only
-                if (message.role === 'tool_confirmation' || message.role === 'thinking') {
+                // Skip tool_confirmation messages - they're UI only
+                // IMPORTANT: We now KEEP thinking messages to send to Claude
+                if (message.role === 'tool_confirmation') {
                     return null;
                 }
 
@@ -47,37 +48,42 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     const imageAttachments = await Promise.all(visualContexts.map(async (ctx: any) => {
 
                         if (ctx.type === 'drawing') {
-                            // Handle drawings (base64 data)
+                            // Handle drawings (base64 data) - Claude format
                             return {
-                                inlineData: {
-                                    mimeType: 'image/png',
+                                type: 'image',
+                                source: {
+                                    type: 'base64',
+                                    media_type: 'image/png',
                                     data: ctx.data.split(',')[1] // Remove data:image/png;base64, prefix
                                 }
                             };
                         } else if (ctx.type === 'image') {
-                            // Handle media library images - convert URL to base64
+                            // Handle media library images - convert URL to base64 - Claude format
                             try {
                                 const { data, media_type } = await convertImageUrlToBase64(ctx.data.url);
-                                const imageAttachment = {
-                                    inlineData: {
-                                        mimeType: media_type,
+                                return {
+                                    type: 'image',
+                                    source: {
+                                        type: 'base64',
+                                        media_type: media_type,
                                         data: data
                                     }
                                 };
-                                return imageAttachment;
                             } catch (error) {
                                 console.error('Error converting media library image to base64:', error);
                                 return null;
                             }
                         } else if (ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover')) {
-                            // Handle image blocks - convert URL to base64
+                            // Handle image blocks - convert URL to base64 - Claude format
                             const imageUrl = ctx.data?.attributes?.url;
                             if (imageUrl) {
                                 try {
                                     const { data, media_type } = await convertImageUrlToBase64(imageUrl);
                                     return {
-                                        inlineData: {
-                                            mimeType: media_type,
+                                        type: 'image',
+                                        source: {
+                                            type: 'base64',
+                                            media_type: media_type,
                                             data: data
                                         }
                                     };
@@ -120,6 +126,12 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     if ((message as any).toolResult) baseMessage.toolResult = (message as any).toolResult;
                 }
 
+                // Preserve thinking-related fields for thinking messages
+                if (message.role === 'thinking') {
+                    if ((message as any).thinkingSignature) baseMessage.thinkingSignature = (message as any).thinkingSignature;
+                    if ((message as any).thinkingDuration) baseMessage.thinkingDuration = (message as any).thinkingDuration;
+                }
+
                 return baseMessage;
             }));
 
@@ -130,8 +142,9 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             const messagesWithAssistant: any[] = [];
 
             messages.forEach((message) => {
-                // Skip tool_confirmation, reasoning, and thinking messages - they're UI only
-                if (message.role === 'tool_confirmation' || message.role === 'thinking') {
+                // Skip tool_confirmation messages - they're UI only
+                // IMPORTANT: We now KEEP thinking messages to send to Claude
+                if (message.role === 'tool_confirmation') {
                     return;
                 }
 
@@ -159,89 +172,168 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     if ((message as any).toolResult) baseMessage.toolResult = (message as any).toolResult;
                 }
 
+                // Preserve thinking-related fields for thinking messages
+                if (message.role === 'thinking') {
+                    if ((message as any).thinkingSignature) baseMessage.thinkingSignature = (message as any).thinkingSignature;
+                    if ((message as any).thinkingDuration) baseMessage.thinkingDuration = (message as any).thinkingDuration;
+                }
+
                 messagesWithAssistant.push(baseMessage);
             });
 
             convertedMessages = messagesWithAssistant;
         }
 
-        // Helper function to convert media objects to Gemini inlineData format
-        const convertMediaToGemini = (content: any): any => {
-            if (Array.isArray(content)) {
-                return content.map(item => {
-                    // Convert old-format audio to inlineData
-                    if (item.type === 'audio' && item.source) {
-                        return {
-                            inlineData: {
-                                mimeType: item.source.media_type || 'audio/webm',
-                                data: item.source.data
-                            }
-                        };
-                    }
-                    return item;
-                });
-            }
-            return content;
-        };
-
-        // Convert messages to Gemini format for WebSocket
-        const geminiMessages: any[] = [];
+        // Convert messages to Claude format for WebSocket
+        const claudeMessages: any[] = [];
 
         for (let i = 0; i < convertedMessages.length; i++) {
             const message = convertedMessages[i];
 
             if (message.role === 'user') {
-                geminiMessages.push({
+                // User messages
+                claudeMessages.push({
                     role: 'user',
-                    parts: Array.isArray(message.content) ? convertMediaToGemini(message.content) : [{ text: message.content }]
+                    content: Array.isArray(message.content) ? message.content : message.content
                 });
+            } else if (message.role === 'thinking') {
+                // Thinking messages will be combined with assistant messages
+                // Skip for now, handled in assistant message section
+                continue;
             } else if (message.role === 'assistant' || message.role === 'model') {
                 // Check if this assistant message has a tool call
                 const hasToolCall = message.toolName && message.toolArgs;
 
+                // Look back for thinking message
+                let thinkingMessage = null;
+                if (i > 0 && convertedMessages[i - 1].role === 'thinking') {
+                    thinkingMessage = convertedMessages[i - 1];
+                }
+
                 if (hasToolCall) {
-                    // Assistant message with function call
-                    geminiMessages.push({
-                        role: 'model',
-                        parts: [
-                            {
-                                functionCall: {
-                                    name: message.toolName,
-                                    args: message.toolArgs
-                                }
-                            }
-                        ]
+                    // Assistant message with tool call
+                    const content: any[] = [];
+
+                    // Add thinking if present
+                    if (thinkingMessage) {
+                        content.push({
+                            type: 'thinking',
+                            thinking: thinkingMessage.content,
+                            signature: (thinkingMessage as any).thinkingSignature
+                        });
+                    }
+
+                    // Add tool use
+                    content.push({
+                        type: 'tool_use',
+                        id: message.toolCallId,
+                        name: message.toolName,
+                        input: message.toolArgs
+                    });
+
+                    claudeMessages.push({
+                        role: 'assistant',
+                        content: content
                     });
                 } else {
-                    // Regular assistant message
-                    geminiMessages.push({
-                        role: 'model',
-                        parts: Array.isArray(message.content) ? convertMediaToGemini(message.content) : [{ text: message.content || '' }]
-                    });
+                    // Regular assistant message (text content)
+                    // If there's thinking, we need to structure as content array
+                    if (thinkingMessage) {
+                        const content: any[] = [];
+
+                        // Add thinking first
+                        content.push({
+                            type: 'thinking',
+                            thinking: thinkingMessage.content,
+                            signature: (thinkingMessage as any).thinkingSignature
+                        });
+
+                        // Add text content
+                        if (message.content) {
+                            content.push({
+                                type: 'text',
+                                text: message.content
+                            });
+                        }
+
+                        claudeMessages.push({
+                            role: 'assistant',
+                            content: content
+                        });
+                    } else {
+                        // No thinking, simple text message
+                        claudeMessages.push({
+                            role: 'assistant',
+                            content: message.content || ''
+                        });
+                    }
                 }
             } else if (message.role === 'tool') {
-                // Tool result - must be sent as functionResponse
-                geminiMessages.push({
+                // Tool result
+                claudeMessages.push({
                     role: 'user',
-                    parts: [
+                    content: [
                         {
-                            functionResponse: {
-                                name: message.toolName,
-                                response: {
-                                    content: message.toolResult || message.content
-                                }
-                            }
+                            type: 'tool_result',
+                            tool_use_id: message.toolCallId,
+                            content: message.toolResult || message.content
                         }
                     ]
                 });
             }
         }
 
-        // Log converted messages after Gemini format conversion
+        // Convert tools to Claude format (inputSchema -> input_schema)
+        // Only include Claude-compatible fields (name, description, input_schema)
+        const claudeTools = (tools || []).map((tool: any) => {
+            const inputSchema = tool.inputSchema || tool.input_schema;
+
+            // Recursively clean up schema to be JSON Schema Draft 2020-12 compliant
+            const cleanSchema = (obj: any): any => {
+                if (obj === null || typeof obj !== 'object') return obj;
+
+                if (Array.isArray(obj)) {
+                    return obj.map(cleanSchema);
+                }
+
+                const cleaned: any = {};
+                for (const [key, value] of Object.entries(obj)) {
+                    // Skip invalid 'required' inside property definitions (should only be at schema level)
+                    if (key === 'required' && typeof value === 'boolean') {
+                        continue;
+                    }
+
+                    // Keep additionalProperties only if it's a boolean
+                    if (key === 'additionalProperties') {
+                        if (typeof value === 'boolean') {
+                            cleaned[key] = value;
+                        }
+                        continue;
+                    }
+
+                    // Recursively clean nested objects
+                    if (typeof value === 'object' && value !== null) {
+                        cleaned[key] = cleanSchema(value);
+                    } else {
+                        cleaned[key] = value;
+                    }
+                }
+                return cleaned;
+            };
+
+            return {
+                name: tool.name,
+                description: tool.description,
+                input_schema: cleanSchema(inputSchema)
+                // Exclude custom fields like 'dangerous' - Claude doesn't accept them
+            };
+        });
+
+        // Claude format request body
         const requestBody: any = {
-            messages: geminiMessages,
-            system: systemPrompt ? [{ text: systemPrompt }] : undefined,
-            tools: tools || []
+            messages: claudeMessages,
+            system: systemPrompt,
+            tools: claudeTools
         };
 
 
@@ -253,6 +345,7 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
         return new Promise((resolve, reject) => {
             let accumulatedContent = '';
             let accumulatedThinking = '';
+            let thinkingSignature = '';
             let functionCalls: any[] = [];
             let isComplete = false;
 
@@ -295,27 +388,42 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             break;
 
                         case 'function_calls':
-                            functionCalls = data.functionCalls || [];
+                            // Accumulate function calls - Claude can send multiple tool calls
+                            // as separate WebSocket messages in a single response
+                            if (data.functionCalls && Array.isArray(data.functionCalls)) {
+                                functionCalls.push(...data.functionCalls);
+                            }
                             break;
 
                         case 'done':
                             isComplete = true;
 
-                            // If we have function calls, return the first one as a tool call
+                            // Capture thinking signature from done message
+                            if (data.thinkingSignature) {
+                                thinkingSignature = data.thinkingSignature;
+                            }
+
+                            // Return ALL function calls, not just the first one
                             if (functionCalls.length > 0) {
+                                // Return first call in the old structure for compatibility
+                                // but include all calls in a new field
                                 const firstCall = functionCalls[0];
                                 resolve({
                                     content: accumulatedContent,
                                     toolName: firstCall.name,
                                     toolArgs: firstCall.args,
-                                    toolCallId: `call_${Date.now()}`
+                                    toolCallId: firstCall.id || `call_${Date.now()}`,
+                                    thinkingSignature: thinkingSignature || undefined,
+                                    // NEW: Include all function calls
+                                    allFunctionCalls: functionCalls
                                 } as any);
                             } else {
                                 resolve({
                                     content: accumulatedContent,
                                     toolName: undefined,
-                                    toolArgs: undefined
-                                } as MCPClientMessage);
+                                    toolArgs: undefined,
+                                    thinkingSignature: thinkingSignature || undefined
+                                } as any);
                             }
                             break;
 
@@ -349,7 +457,18 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
     };
 
     const parseAIResponse = (response: any): MCPClientAIResponse => {
-        // Try to parse reasoning from content if it's JSON
+        // PRIORITY 1: Check for tool calls FIRST
+        // When Claude sends both text content AND tool calls, the text has already been
+        // displayed via onStreamChunk callback, so we should execute the tool
+        if (response.toolName) {
+            return {
+                type: 'tool',
+                toolName: response.toolName,
+                toolArgs: response.toolArgs
+            };
+        }
+
+        // PRIORITY 2: Try to parse reasoning from content if it's JSON
         if (response.content) {
             // Check if content is JSON reasoning response
             const trimmedContent = response.content.trim();
@@ -391,14 +510,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             return {
                 type: 'text',
                 content: response.content
-            };
-        }
-
-        else if (response.toolName) {
-            return {
-                type: 'tool',
-                toolName: response.toolName,
-                toolArgs: response.toolArgs
             };
         }
 

@@ -168,8 +168,7 @@ export function deleteBlockTool(): SuggerenceMCPResponseTool {
                     description: hasAvailableBlocks
                         ? `The clientId of the block to remove. Valid values: ${availableClientIds.join(', ')}. MUST be one of these - do not invent new IDs.`
                         : 'No blocks available to delete.',
-                    enum: availableClientIds.length > 0 ? availableClientIds : undefined,
-                    required: true
+                    enum: availableClientIds.length > 0 ? availableClientIds : undefined
                 }
             },
             required: ['block_id']
@@ -213,8 +212,7 @@ export const transformBlockTool: SuggerenceMCPResponseTool = {
             },
             transform_to: {
                 type: 'string',
-                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.',
-                required: true
+                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.'
             }
         },
         required: ['transform_to']

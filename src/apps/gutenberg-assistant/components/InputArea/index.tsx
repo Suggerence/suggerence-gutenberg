@@ -73,6 +73,7 @@ export const InputArea = () => {
         let streamingMessageId = '';
         let streamingThinkingMessageId = '';
         let thinkingContent = '';
+        let thinkingSignature = '';
         let contentAccumulated = '';
         let thinkingStartTime: number | null = null;
         let thinkingDuration = 0;
@@ -142,6 +143,11 @@ export const InputArea = () => {
             throw new DOMException('Aborted', 'AbortError');
         }
 
+        // Capture thinking signature from response
+        if ((response as any).thinkingSignature) {
+            thinkingSignature = (response as any).thinkingSignature;
+        }
+
         // Calculate thinking duration if we had thinking
         if (thinkingStartTime !== null) {
             thinkingDuration = Math.ceil((Date.now() - thinkingStartTime) / 1000);
@@ -159,7 +165,8 @@ export const InputArea = () => {
                 date: new Date().toISOString(),
                 aiModel: defaultModel.id,
                 loading: false,
-                thinkingDuration: thinkingDuration > 0 ? thinkingDuration : undefined
+                thinkingDuration: thinkingDuration > 0 ? thinkingDuration : undefined,
+                thinkingSignature: thinkingSignature || undefined
             };
 
             if (lastMsg?.role === 'thinking') {
@@ -177,7 +184,122 @@ export const InputArea = () => {
         }
 
         if (aiResponse.type === 'tool') {
+            // Check if we have multiple function calls to execute
+            const allCalls = (response as any).allFunctionCalls;
 
+            if (allCalls && allCalls.length > 1) {
+                // Execute all function calls sequentially
+                for (const call of allCalls) {
+                    // Check tool danger
+                    const tool = tools.find((t: { name: string }) => t.name === call.name);
+                    const isDangerous = tool?.dangerous === true;
+
+                    if (isDangerous) {
+                        // Store the pending tool call and add a confirmation message
+                        const pendingTool = {
+                            toolCallId: call.id,
+                            toolName: call.name,
+                            toolArgs: call.args,
+                            timestamp: new Date().toISOString()
+                        };
+
+                        setPendingToolCall(pendingTool);
+
+                        // Add a tool confirmation message with action buttons
+                        addMessage({
+                            role: 'tool_confirmation',
+                            content: '', // Content will be rendered by the UI component
+                            date: new Date().toISOString(),
+                            toolCallId: pendingTool.toolCallId,
+                            toolName: pendingTool.toolName,
+                            toolArgs: pendingTool.toolArgs
+                        } as any);
+
+                        highlightBlocksFromToolData(call.args, undefined);
+
+                        // Stop loading state as we're waiting for user action
+                        setIsLoading(false);
+                        setAbortController(null);
+                        return;
+                    }
+
+                    // Add tool execution message
+                    addMessage({
+                        role: 'tool',
+                        content: `Calling ${call.name} with args ${JSON.stringify(call.args)}...`,
+                        date: new Date().toISOString(),
+                        toolCallId: call.id,
+                        toolName: call.name,
+                        toolArgs: call.args,
+                        loading: true
+                    });
+
+                    // Check abort
+                    if (signal?.aborted) {
+                        setLastMessage({
+                            role: 'tool',
+                            content: 'Stopped by user',
+                            date: new Date().toISOString(),
+                            toolCallId: call.id,
+                            toolName: call.name,
+                            toolArgs: call.args,
+                            toolResult: 'Stopped by user',
+                            loading: false
+                        } as any);
+                        throw new DOMException('Aborted', 'AbortError');
+                    }
+
+                    try {
+                        const toolResult = await callGutenbergTool(
+                            call.name,
+                            call.args,
+                            signal
+                        );
+
+                        setLastMessage({
+                            role: 'tool',
+                            content: toolResult.response,
+                            date: new Date().toISOString(),
+                            toolCallId: call.id,
+                            toolName: call.name,
+                            toolArgs: call.args,
+                            toolResult: toolResult.response,
+                            loading: false
+                        } as any);
+                    } catch (toolError) {
+                        if (toolError instanceof DOMException && toolError.name === 'AbortError') {
+                            setLastMessage({
+                                role: 'tool',
+                                content: 'Stopped by user',
+                                date: new Date().toISOString(),
+                                toolCallId: call.id,
+                                toolName: call.name,
+                                toolArgs: call.args,
+                                toolResult: 'Stopped by user',
+                                loading: false
+                            } as any);
+                            throw toolError;
+                        }
+
+                        setLastMessage({
+                            role: 'tool',
+                            content: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
+                            date: new Date().toISOString(),
+                            toolCallId: call.id,
+                            toolName: call.name,
+                            toolArgs: call.args,
+                            toolResult: `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`,
+                            loading: false
+                        } as any);
+                    }
+                }
+
+                // After all calls executed, continue to next turn
+                // The agentic loop will pick this up and continue if needed
+                return;
+            }
+
+            // Single tool call (legacy path)
             // Check if this is a dangerous tool
             const tool = tools.find(t => t.name === aiResponse.toolName);
             const isDangerous = tool?.dangerous === true;
@@ -398,8 +520,15 @@ export const InputArea = () => {
 
         if (!lastMessage) return;
 
-        // If the last message is an assistant message, the conversation is done
+        // If the last message is an assistant or thinking message (without loading), the conversation is done
         if (lastMessage.role === 'assistant') {
+            setIsLoading(false);
+            setAbortController(null);
+            return;
+        }
+
+        // If the last message is a completed thinking message, the conversation is done
+        if (lastMessage.role === 'thinking' && !lastMessage.loading) {
             setIsLoading(false);
             setAbortController(null);
             return;

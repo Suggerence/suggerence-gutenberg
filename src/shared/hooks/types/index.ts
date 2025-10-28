@@ -16,7 +16,7 @@ interface UseBaseMCPReturn {
 }
 
 interface UseBaseAIConfig {
-    getSystemPrompt: (siteContext: any) => string;
+    getSystemPrompt: (siteContext: any) => string | any[];  // Support both string and array for multi-block system prompts
     getSiteContext: () => any;
 }
 

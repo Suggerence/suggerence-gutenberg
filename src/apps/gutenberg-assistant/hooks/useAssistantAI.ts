@@ -90,6 +90,8 @@ export const useAssistantAI = (): UseAITools => {
 
             // Get post information
             const postTitle = getEditedPostAttribute?.('title') || '';
+            const postType = getEditedPostAttribute?.('type') || 'post';
+            const postId = getEditedPostAttribute?.('id') || null;
 
             // Get available block types
             const availableBlockTypes = getAvailableBlockTypes();
@@ -128,7 +130,9 @@ export const useAssistantAI = (): UseAITools => {
                 ...baseContext,
                 gutenberg: {
                     post: {
+                        id: postId,
                         title: postTitle,
+                        type: postType,
                         totalBlocks: blocks.length
                     },
                     blocks: blocksInfo,
@@ -482,6 +486,8 @@ Use get_available_blocks tool for complete list or get_block_schema for attribut
         const currentStateSection = gutenberg
             ? `<current_editor_state>
 <post_info>
+Post ID: ${gutenberg.post?.id || 'Unknown'}
+Post Type: ${gutenberg.post?.type || 'post'} (use this value for get_post_content's post_type parameter)
 Title: "${gutenberg.post?.title || 'Untitled'}"
 Total blocks: ${gutenberg.post?.totalBlocks || 0}
 Selected block: ${gutenberg.selectedBlock ? gutenberg.selectedBlock.id : 'None'}

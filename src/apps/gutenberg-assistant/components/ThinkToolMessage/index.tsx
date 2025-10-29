@@ -6,7 +6,6 @@ import {
 import { useState, useEffect } from '@wordpress/element';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
 import { __ } from '@wordpress/i18n';
-import { cn } from '@/shared/utils/cn';
 
 interface ThinkToolMessageProps {
     message: MCPClientMessage;

@@ -645,6 +645,10 @@ export const InputArea = () => {
         addContext(drawingContext);
         setIsCanvasOpen(false);
 
+        // Wait for next tick to ensure context store is updated
+        // Zustand updates are synchronous, but we need to ensure React has processed the update
+        await new Promise(resolve => setTimeout(resolve, 0));
+
         // Then, send a message to generate the page based on the layout
         const userMessage: MCPClientMessage = {
             role: 'user',
@@ -653,22 +657,36 @@ export const InputArea = () => {
         };
 
         addMessage(userMessage);
+
+        // Create a new AbortController for this request
+        const controller = new AbortController();
+        setAbortController(controller);
         setIsLoading(true);
 
         try {
-            await handleNewMessage([...messages, userMessage]);
+            await handleNewMessage([...messages, userMessage], controller.signal);
         } catch (error) {
-            console.error('Generate page error:', error);
-            const errorMessage: MCPClientMessage = {
-                role: 'assistant',
-                content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-                date: new Date().toISOString()
-            };
-
-            addMessage(errorMessage);
+            // Check if the error was due to abortion
+            if (error instanceof Error && error.name === 'AbortError') {
+                const abortMessage: MCPClientMessage = {
+                    role: 'assistant',
+                    content: 'Request stopped by user.',
+                    date: new Date().toISOString()
+                };
+                addMessage(abortMessage);
+            } else {
+                console.error('Generate page error:', error);
+                const errorMessage: MCPClientMessage = {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                    date: new Date().toISOString()
+                };
+                addMessage(errorMessage);
+            }
             setIsLoading(false);
+            setAbortController(null);
         }
-    }, [addContext, setIsCanvasOpen, addMessage, setIsLoading, handleNewMessage, messages]);
+    }, [addContext, setIsCanvasOpen, addMessage, setIsLoading, setAbortController, handleNewMessage, messages]);
 
     const handleMediaSelect = (imageData: any) => {
         const imageContext = {

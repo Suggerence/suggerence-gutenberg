@@ -3,8 +3,6 @@ import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore'
 import { useBaseAIWebSocket } from '@/shared/hooks/useBaseAiWebSocket';
 
 export const useAssistantAI = (): UseAITools => {
-    const { selectedContexts } = useContextStore();
-
     /**
      * Get available block types with basic information
      */
@@ -20,8 +18,8 @@ export const useAssistantAI = (): UseAITools => {
                 category: blockType.category,
                 keywords: blockType.keywords || [],
                 supports: blockType.supports || {}
-            })).filter((block: any) => 
-                !block.name.includes('core/missing') && 
+            })).filter((block: any) =>
+                !block.name.includes('core/missing') &&
                 !block.name.includes('core/freeform')
             );
         } catch (error) {
@@ -34,6 +32,9 @@ export const useAssistantAI = (): UseAITools => {
      * Get comprehensive site context including Gutenberg blocks information
      */
     const getSiteContext = () => {
+        // Get the CURRENT state from Zustand store instead of using stale closure
+        const { selectedContexts } = useContextStore.getState();
+
         let baseContext = {};
 
         // Always add current Gutenberg blocks information
@@ -98,19 +99,19 @@ export const useAssistantAI = (): UseAITools => {
 
             // // Auto-add selected image blocks as visual context
             // let contextsWithAutoImageBlock = [...(selectedContexts || [])];
-            
+
             // // Check if the selected block is an image block
             // if (selectedBlock && (selectedBlock.name === 'core/image' || selectedBlock.name === 'core/cover')) {
             //     const imageUrl = selectedBlock.attributes?.url;
-                
+
             //     // Only add if there's an image URL and it's not already in the contexts
             //     if (imageUrl) {
             //         const imageBlockContextId = `auto-image-block-${selectedBlockId}`;
-            //         const alreadyExists = contextsWithAutoImageBlock.some(ctx => 
-            //             ctx.id === imageBlockContextId || 
+            //         const alreadyExists = contextsWithAutoImageBlock.some(ctx =>
+            //             ctx.id === imageBlockContextId ||
             //             (ctx.type === 'block' && ctx.data?.id === selectedBlockId)
             //         );
-                    
+
             //         if (!alreadyExists) {
             //             contextsWithAutoImageBlock.push({
             //                 id: imageBlockContextId,

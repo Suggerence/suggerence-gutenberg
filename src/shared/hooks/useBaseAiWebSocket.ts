@@ -36,7 +36,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                 }
             }
 
-            convertedMessages = await Promise.all(messages.map(async (message, index) => {
+            // First pass: collect all messages with images attached to latest user message
+            const processedMessages = await Promise.all(messages.map(async (message, index) => {
                 // Skip tool_confirmation messages - they're UI only
                 // IMPORTANT: We now KEEP thinking messages to send to Claude
                 if (message.role === 'tool_confirmation') {
@@ -136,7 +137,27 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             }));
 
             // Filter out null entries (from skipped messages)
-            convertedMessages = convertedMessages.filter(Boolean);
+            const filteredMessages = processedMessages.filter(Boolean);
+
+            // Second pass: inject assistant messages with tool calls before tool results
+            // This is the CRITICAL fix - same logic as non-visual path
+            const messagesWithAssistant: any[] = [];
+            filteredMessages.forEach((message) => {
+                // If this is a tool message, inject assistant message with function call first
+                if (message.role === 'tool' && (message as any).toolName) {
+                    messagesWithAssistant.push({
+                        role: 'assistant',
+                        content: '',  // Function calls have no text content
+                        toolCallId: (message as any).toolCallId,
+                        toolName: (message as any).toolName,
+                        toolArgs: (message as any).toolArgs
+                    });
+                }
+
+                messagesWithAssistant.push(message);
+            });
+
+            convertedMessages = messagesWithAssistant;
         } else {
             // No visual contexts, just convert normally
             const messagesWithAssistant: any[] = [];
@@ -335,7 +356,6 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             system: systemPrompt,
             tools: claudeTools
         };
-
 
         // Check if WebSocket is connected
         if (!isConnected) {

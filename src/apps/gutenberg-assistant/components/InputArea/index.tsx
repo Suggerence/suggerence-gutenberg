@@ -508,7 +508,7 @@ export const InputArea = () => {
                 console.error('Send message error:', error);
                 const errorMessage: MCPClientMessage = {
                     role: 'assistant',
-                    content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                    content: `Oops, hit a snag: ${error instanceof Error ? error.message : 'Unknown error'}. Want to give it another shot?`,
                     date: new Date().toISOString()
                 };
                 addMessage(errorMessage);
@@ -552,7 +552,7 @@ export const InputArea = () => {
                 console.error('Audio message error:', error);
                 const errorMessage: MCPClientMessage = {
                     role: 'assistant',
-                    content: `Sorry, I encountered an error processing your audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                    content: `Couldn't process that audio: ${error instanceof Error ? error.message : 'Unknown error'}. Mind trying again?`,
                     date: new Date().toISOString()
                 };
                 addMessage(errorMessage);
@@ -678,7 +678,7 @@ export const InputArea = () => {
                 console.error('Generate page error:', error);
                 const errorMessage: MCPClientMessage = {
                     role: 'assistant',
-                    content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+                    content: `Hit a bump generating that page: ${error instanceof Error ? error.message : 'Unknown error'}. Let's try again?`,
                     date: new Date().toISOString()
                 };
                 addMessage(errorMessage);
@@ -737,7 +737,7 @@ export const InputArea = () => {
                 value={inputValue}
                 onChange={setInputValue}
                 onKeyDown={handleKeyPress}
-                placeholder={messages.length <= 1 ? __("Ask me to create content, move blocks, or modify your post...", "suggerence") : __("Reply...", "suggerence")}
+                placeholder={messages.length <= 1 ? __("What do you want to create? I'm all ears...", "suggerence") : __("Go ahead, I'm listening...", "suggerence")}
                 disabled={isLoading}
                 rows={2}
                 style={{ resize: 'none' }}
@@ -751,7 +751,7 @@ export const InputArea = () => {
                     icon={image}
                     size="compact"
                     aria-label={__("Select image", "suggerence")}
-                    title={__("Select an image to add as context", "suggerence")}
+                    title={__("Add an image—show me what you're working with", "suggerence")}
                 />
 
                 <Button
@@ -760,7 +760,7 @@ export const InputArea = () => {
                     icon={brush}
                     size="compact"
                     aria-label={__("Draw diagram", "suggerence")}
-                    title={__("Draw a diagram or sketch to add as context", "suggerence")}
+                    title={__("Sketch your idea—I'll bring it to life", "suggerence")}
                 />
 
                 {/* Audio messages not currently supported by Claude */}

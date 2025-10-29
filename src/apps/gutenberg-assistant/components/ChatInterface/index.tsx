@@ -3,7 +3,6 @@ import {
     PanelBody,
     Notice,
     __experimentalText as Text,
-    __experimentalHStack as HStack,
     __experimentalVStack as VStack,
 } from '@wordpress/components';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
@@ -146,15 +145,61 @@ export const ChatInterface = () => {
         });
     }, [pendingToolCall, clearPendingToolCall, setLastMessage]);
 
-    const callbackRef = (node: HTMLDivElement | null) => {
-        messagesEndRef.current = node;
-        if (node) {
-            node.scrollIntoView({ behavior: 'smooth' });
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const lastMessageCountRef = useRef(messages.length);
+    const isUserScrollingRef = useRef(false);
+    const scrollTimeoutRef = useRef<number | null>(null);
+
+    // Detect when user is manually scrolling
+    const handleScroll = useCallback(() => {
+        if (!scrollContainerRef.current) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+        // If user scrolled up more than 100px from bottom, they're manually scrolling
+        isUserScrollingRef.current = distanceFromBottom > 100;
+
+        // Clear any existing timeout
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
         }
-    };
+
+        // Reset after 1 second of no scrolling
+        scrollTimeoutRef.current = window.setTimeout(() => {
+            if (scrollContainerRef.current) {
+                const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+                const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+                if (distanceFromBottom < 100) {
+                    isUserScrollingRef.current = false;
+                }
+            }
+        }, 1000);
+    }, []);
+
+    const callbackRef = useCallback((node: HTMLDivElement | null) => {
+        messagesEndRef.current = node;
+
+        // Only auto-scroll if user isn't manually scrolling and we're adding new messages
+        if (node && !isUserScrollingRef.current) {
+            // Use requestAnimationFrame for smooth scrolling without blocking
+            requestAnimationFrame(() => {
+                node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        }
+    }, []);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Only trigger scroll on new messages, not on updates to existing messages
+        const hasNewMessage = messages.length > lastMessageCountRef.current;
+        lastMessageCountRef.current = messages.length;
+
+        if (!hasNewMessage || isUserScrollingRef.current) return;
+
+        // Use requestAnimationFrame to batch scroll updates
+        requestAnimationFrame(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
     }, [messages]);
 
     if (!isGutenbergServerReady) {
@@ -172,7 +217,11 @@ export const ChatInterface = () => {
             <PanelHeader />
 
             <VStack spacing={0} style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+                <div
+                    ref={scrollContainerRef}
+                    onScroll={handleScroll}
+                    style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}
+                >
                     <VStack spacing={0}>
                         {groupMessages(messages).map((group, groupIndex) => {
                             if (group.type === 'user') {

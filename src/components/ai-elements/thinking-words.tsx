@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Shimmer } from "./shimmer";
 
 const THINKING_WORDS = [
@@ -61,25 +61,40 @@ interface ThinkingWordsProps {
   changeInterval?: number;
 }
 
-export const ThinkingWords = ({ 
-  duration = 1, 
-  changeInterval = 2000 
+export const ThinkingWords = ({
+  duration = 1,
+  changeInterval = 2000
 }: ThinkingWordsProps) => {
-  const [currentWord, setCurrentWord] = useState<string>("");
+  // Use ref to store the initial word so it persists across re-renders
+  const initialWordRef = useRef<string | null>(null);
+  const intervalRef = useRef<number | null>(null);
+
+  // Initialize with the stable initial word
+  const [currentWord, setCurrentWord] = useState<string>(() => {
+    if (initialWordRef.current === null) {
+      const randomIndex = Math.floor(Math.random() * THINKING_WORDS.length);
+      initialWordRef.current = THINKING_WORDS[randomIndex];
+    }
+    return initialWordRef.current;
+  });
 
   useEffect(() => {
-    // Set initial random word
-    const randomIndex = Math.floor(Math.random() * THINKING_WORDS.length);
-    setCurrentWord(THINKING_WORDS[randomIndex]);
+    // Only set up the interval once on mount
+    if (intervalRef.current === null) {
+      intervalRef.current = setInterval(() => {
+        const randomIndex = Math.floor(Math.random() * THINKING_WORDS.length);
+        setCurrentWord(THINKING_WORDS[randomIndex]);
+      }, changeInterval);
+    }
 
-    // Set up interval to change words randomly
-    const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * THINKING_WORDS.length);
-      setCurrentWord(THINKING_WORDS[randomIndex]);
-    }, changeInterval);
-
-    return () => clearInterval(interval);
-  }, [changeInterval]);
+    // Clean up only on unmount
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []); // Empty dependency array - only run on mount/unmount
 
   return (
     <Shimmer duration={duration}>

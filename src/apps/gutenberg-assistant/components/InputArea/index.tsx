@@ -15,6 +15,7 @@ import { image, brush } from '@wordpress/icons';
 import { AudioButton } from '@/shared/components/AudioButton';
 import { X } from 'lucide-react';
 import { highlightBlocksFromToolData } from '@/shared/utils/block-highlight';
+import { useThinkingContentStore } from '@/components/ai-elements/thinking-content-store';
 
 export const InputArea = () => {
 
@@ -78,66 +79,95 @@ export const InputArea = () => {
         let thinkingStartTime: number | null = null;
         let thinkingDuration = 0;
 
+        // Throttle streaming updates to prevent UI blocking and jumps
+        // Use requestAnimationFrame for smooth, non-blocking updates
+        let rafId: number | null = null;
+        let pendingUpdate: { type: string; content: string } | null = null;
+
+        const flushPendingUpdate = () => {
+            if (!pendingUpdate) return;
+
+            const { type, content } = pendingUpdate;
+            pendingUpdate = null;
+
+            if (type === 'thinking') {
+                thinkingContent = content;
+
+                // Start tracking thinking duration on first chunk
+                if (thinkingStartTime === null) {
+                    thinkingStartTime = Date.now();
+                }
+
+                // Update the store directly instead of updating the message
+                useThinkingContentStore.getState().setContent(thinkingContent);
+
+                // Update or create thinking message (only once at the start)
+                if (!streamingThinkingMessageId) {
+                    streamingThinkingMessageId = 'streaming-thinking-' + Date.now();
+                    addMessage({
+                        role: 'thinking',
+                        content: '',  // Empty content, will be updated via store
+                        date: new Date().toISOString(),
+                        aiModel: defaultModel.id,
+                        loading: true,
+                    } as any);
+                }
+                // Don't call setLastMessage on subsequent chunks - just update the store
+            } else if (type === 'content') {
+                contentAccumulated = content;
+
+                // Update or create content message
+                // Mark as loading to indicate streaming is still in progress
+                if (!streamingMessageId) {
+                    streamingMessageId = 'streaming-' + Date.now();
+                    addMessage({
+                        role: 'assistant',
+                        content: contentAccumulated,
+                        date: new Date().toISOString(),
+                        aiModel: defaultModel.id,
+                        loading: true
+                    });
+                } else {
+                    setLastMessage({
+                        role: 'assistant',
+                        content: contentAccumulated,
+                        date: new Date().toISOString(),
+                        aiModel: defaultModel.id,
+                        loading: true
+                    } as any);
+                }
+            }
+
+            rafId = null;
+        };
+
         const response = await callAI(
             currentMessages,
             defaultModel,
             tools,
             signal,
             (chunk: { type: string; content: string; accumulated: string }) => {
-                // Handle streaming chunks
-                if (chunk.type === 'thinking') {
-                    thinkingContent = chunk.accumulated;
+                // Store the pending update
+                pendingUpdate = {
+                    type: chunk.type,
+                    content: chunk.accumulated
+                };
 
-                    // Start tracking thinking duration on first chunk
-                    if (thinkingStartTime === null) {
-                        thinkingStartTime = Date.now();
-                    }
-
-                    // Update or create thinking message
-                    if (!streamingThinkingMessageId) {
-                        streamingThinkingMessageId = 'streaming-thinking-' + Date.now();
-                        addMessage({
-                            role: 'thinking',
-                            content: thinkingContent,
-                            date: new Date().toISOString(),
-                            aiModel: defaultModel.id,
-                            loading: true,
-                        } as any);
-                    } else {
-                        setLastMessage({
-                            role: 'thinking',
-                            content: thinkingContent,
-                            date: new Date().toISOString(),
-                            aiModel: defaultModel.id,
-                            loading: true,
-                        } as any);
-                    }
-                } else if (chunk.type === 'content') {
-                    contentAccumulated = chunk.accumulated;
-
-                    // Update or create content message
-                    // Mark as loading to indicate streaming is still in progress
-                    if (!streamingMessageId) {
-                        streamingMessageId = 'streaming-' + Date.now();
-                        addMessage({
-                            role: 'assistant',
-                            content: contentAccumulated,
-                            date: new Date().toISOString(),
-                            aiModel: defaultModel.id,
-                            loading: true
-                        });
-                    } else {
-                        setLastMessage({
-                            role: 'assistant',
-                            content: contentAccumulated,
-                            date: new Date().toISOString(),
-                            aiModel: defaultModel.id,
-                            loading: true
-                        } as any);
-                    }
+                // Schedule update on next animation frame if not already scheduled
+                if (rafId === null) {
+                    rafId = requestAnimationFrame(flushPendingUpdate);
                 }
             }
         );
+
+        // Flush any remaining pending update after streaming completes
+        if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+        if (pendingUpdate) {
+            flushPendingUpdate();
+        }
 
         const aiResponse = parseAIResponse(response);
 

@@ -13,6 +13,7 @@ import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
 import { ActionMessage } from '@/apps/gutenberg-assistant/components/ActionMessage';
 import { AssistantMessage } from '@/apps/gutenberg-assistant/components/AssistantMessage';
 import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingMessage';
+import { ThinkToolMessage } from '@/apps/gutenberg-assistant/components/ThinkToolMessage';
 import { ToolConfirmationMessage } from '@/apps/gutenberg-assistant/components/ToolConfirmationMessage';
 import { AssistantMessageGroup } from '@/apps/gutenberg-assistant/components/AssistantMessageGroup';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
@@ -337,6 +338,16 @@ export const ChatInterface = () => {
                                         if (message.role === 'tool') {
                                             // Get clean tool name
                                             const cleanToolName = message.toolName?.replace(/^[^_]*___/, '') || message.toolName;
+
+                                            // Special handling for think tool - show as reasoning component
+                                            if (cleanToolName === 'think') {
+                                                return (
+                                                    <ThinkToolMessage
+                                                        key={`${message.role}-${groupIndex}-${index}-${message.date}`}
+                                                        message={message}
+                                                    />
+                                                );
+                                            }
 
                                             // Define tools that should be completely hidden from the user
                                             const hiddenTools = ['get_block_schema'];

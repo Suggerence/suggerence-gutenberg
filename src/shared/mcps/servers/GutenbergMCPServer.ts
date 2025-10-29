@@ -33,6 +33,9 @@ import {
     removeFeaturedImageTool, removeFeaturedImage,
     getPostContentTool, getPostContent
 } from '@/shared/mcps/tools/document-tools';
+import {
+    thinkTool, think
+} from '@/shared/mcps/tools/reasoning';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -54,6 +57,7 @@ export class GutenbergMCPServer {
     }
 
     private staticTools: SuggerenceMCPResponseTool[] = [
+        thinkTool,
         addBlockTool,
         moveBlockTool,
         duplicateBlockTool,
@@ -92,6 +96,9 @@ export class GutenbergMCPServer {
 
         try {
             switch (name) {
+                case 'think':
+                    return think(args.thinking);
+
                 case 'add_block':
                     return addBlock(args.block_type, args.attributes, args.position, args.relative_to_block_id, args.inner_blocks, args.style);
 

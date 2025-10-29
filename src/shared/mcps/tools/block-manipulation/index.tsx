@@ -166,7 +166,7 @@ export function deleteBlockTool(): SuggerenceMCPResponseTool {
                 block_id: {
                     type: 'string',
                     description: hasAvailableBlocks
-                        ? `The clientId of the block to remove. Valid values: ${availableClientIds.join(', ')}. MUST be one of these - do not invent new IDs.`
+                        ? `The clientId of the block to remove.`
                         : 'No blocks available to delete.',
                     enum: availableClientIds.length > 0 ? availableClientIds : undefined
                 }

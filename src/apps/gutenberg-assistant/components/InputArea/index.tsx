@@ -763,13 +763,14 @@ export const InputArea = () => {
                     title={__("Draw a diagram or sketch to add as context", "suggerence")}
                 />
 
-                <AudioButton
+                {/* Audio messages not currently supported by Claude */}
+                {/* <AudioButton
                     onAudioMessage={handleAudioMessage}
                     inputValue={inputValue}
                     isLoading={isLoading}
                     disabled={isLoading}
                     size="compact"
-                />
+                /> */}
 
 {isLoading ? (
                     <Button

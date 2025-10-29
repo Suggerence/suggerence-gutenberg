@@ -3,8 +3,8 @@ declare const SuggerenceData: SuggerenceData;
 
 export const WEBSOCKET_CONFIG = {
     // Default WebSocket URL - can be overridden via environment or WordPress settings
-    // DEFAULT_URL: 'wss://api.suggerence.com/v1/gutenberg/text-wss',
-    DEFAULT_URL: 'ws://localhost:3000/v1/gutenberg/claude-text-wss',
+    DEFAULT_URL: 'wss://api.suggerence.com/v1/gutenberg/claude-text-wss',
+    //DEFAULT_URL: 'ws://localhost:3000/v1/gutenberg/claude-text-wss',
 
     // Get WebSocket URL from WordPress settings or environment
     getWebSocketUrl: (): string => {

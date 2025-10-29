@@ -150,13 +150,14 @@ export const CommandBox = ({
                                     )}
                                 </FlexItem>
                                 <FlexItem style={{ display: 'flex', gap: '4px' }}>
-                                    <AudioButton
+                                    {/* Audio messages not currently supported by Claude */}
+                                    {/* <AudioButton
                                         onAudioMessage={handleAudioMessage}
                                         inputValue={inputValue}
                                         isLoading={isLoading}
                                         size="small"
                                         showError={false}
-                                    />
+                                    /> */}
                                     <Button
                                         variant="primary"
                                         size="small"

@@ -36,6 +36,9 @@ import {
 import {
     thinkTool, think
 } from '@/shared/mcps/tools/reasoning';
+import {
+    spawnSubagentTool, spawnSubagent
+} from '@/shared/mcps/tools/orchestration';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -58,6 +61,7 @@ export class GutenbergMCPServer {
 
     private staticTools: SuggerenceMCPResponseTool[] = [
         thinkTool,
+        spawnSubagentTool,
         addBlockTool,
         moveBlockTool,
         duplicateBlockTool,
@@ -98,6 +102,27 @@ export class GutenbergMCPServer {
             switch (name) {
                 case 'think':
                     return think(args.thinking);
+
+                case 'spawn_subagent':
+                    // If this call includes subagentResults, it means the backend executed them
+                    // Return the formatted results instead of spawning again
+                    if ((args as any).subagentResults) {
+                        return {
+                            content: [{
+                                type: 'text',
+                                text: JSON.stringify({
+                                    success: true,
+                                    action: 'subagents_completed',
+                                    data: {
+                                        subagent_count: (args as any).subagentResults.length,
+                                        results: (args as any).subagentResults
+                                    }
+                                }, null, 2)
+                            }]
+                        };
+                    }
+                    // Otherwise, this is the initial call, return placeholder
+                    return spawnSubagent({ subagents: args.subagents });
 
                 case 'add_block':
                     return addBlock(args.block_type, args.attributes, args.position, args.relative_to_block_id, args.inner_blocks, args.style);

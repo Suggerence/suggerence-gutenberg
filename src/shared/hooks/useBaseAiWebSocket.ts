@@ -1,8 +1,111 @@
 import { convertImageUrlToBase64 } from "../utils/image-utils";
 import { useWebSocket } from "../context/WebSocketContext";
+import { useSubagentStore } from "@/apps/gutenberg-assistant/stores/subagentStore";
+
+/**
+ * Handle subagent tool call - execute tool and send result back
+ */
+async function handleSubagentToolCall(data: any, sendRequest: any, callTool?: (toolName: string, args: Record<string, any>) => Promise<any>, setToolResult?: (subagentId: string, toolCallId: string, result: string) => void) {
+    const { subagentId, toolCall } = data;
+
+    console.log(`Executing tool for subagent ${subagentId}:`, toolCall.name);
+
+    try {
+        if (!callTool) {
+            throw new Error('Tool execution function not provided - cannot execute subagent tools');
+        }
+
+        // Remove the prefix from tool name
+        const toolName = toolCall.name.replace('gutenberg___', '');
+
+        // Execute the tool using the provided callTool function
+        const result = await callTool(toolName, toolCall.input);
+
+        const resultText = typeof result.response === 'string' ? result.response : JSON.stringify(result.response);
+
+        // Update store with tool result
+        if (setToolResult) {
+            setToolResult(subagentId, toolCall.id, resultText);
+        }
+
+        // Format result for Claude
+        const formattedResult = {
+            content: [{
+                type: 'text',
+                text: resultText
+            }]
+        };
+
+        // Send result back to backend
+        sendRequest({
+            type: 'subagent_tool_result',
+            data: {
+                subagentId,
+                toolCallId: toolCall.id,
+                result: formattedResult
+            }
+        }, () => {}, () => {});
+
+    } catch (error) {
+        console.error(`Tool execution failed for subagent ${subagentId}:`, error);
+
+        const errorText = JSON.stringify({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+
+        // Update store with error
+        if (setToolResult) {
+            setToolResult(subagentId, toolCall.id, errorText);
+        }
+
+        // Send error back
+        sendRequest({
+            type: 'subagent_tool_result',
+            data: {
+                subagentId,
+                toolCallId: toolCall.id,
+                result: {
+                    content: [{
+                        type: 'text',
+                        text: errorText
+                    }]
+                }
+            }
+        }, () => {}, () => {});
+    }
+}
+
+/**
+ * Handle orchestrator resume - send subagent results as tool result
+ */
+async function handleOrchestratorResume(data: any, sendRequest: any) {
+    const { orchestratorId, toolCallId, subagentResults } = data;
+
+    console.log('Orchestrator resuming with subagent results:', subagentResults);
+
+    // Format subagent results as a tool result for the spawn_subagent tool
+    const formattedResult = {
+        content: [{
+            type: 'text',
+            text: JSON.stringify(subagentResults, null, 2)
+        }]
+    };
+
+    // Send the tool result back to backend to continue the orchestrator conversation
+    sendRequest({
+        type: 'orchestrator_tool_result',
+        data: {
+            orchestratorId,
+            toolCallId,
+            result: formattedResult
+        }
+    }, () => {}, () => {});
+}
 
 export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => {
     const { isConnected, sendRequest } = useWebSocket();
+    const { setSubagentStatus, setSubagentTool, clearSubagents, addSubagentThinking, addSubagentToolCall, setSubagentToolResult, setSubagentFinalResult } = useSubagentStore();
 
     const callAI = async (
         messages: MCPClientMessage[],
@@ -413,6 +516,114 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             if (data.functionCalls && Array.isArray(data.functionCalls)) {
                                 functionCalls.push(...data.functionCalls);
                             }
+                            break;
+
+                        case 'subagent_status':
+                            // Subagent status update - show in UI
+                            setSubagentStatus(data.subagentId, data.agentType, data.status);
+
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'subagent_status',
+                                    content: `[${data.agentType}] ${data.status}`,
+                                    accumulated: accumulatedContent,
+                                    subagentId: data.subagentId,
+                                    agentType: data.agentType,
+                                    status: data.status
+                                });
+                            }
+                            break;
+
+                        case 'subagent_tool_call':
+                            // Subagent needs a tool executed - handle it
+                            setSubagentTool(data.subagentId, data.toolCall.name);
+                            addSubagentToolCall(data.subagentId, {
+                                id: data.toolCall.id,
+                                name: data.toolCall.name,
+                                input: data.toolCall.input
+                            });
+
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'subagent_tool_call',
+                                    content: `[${data.agentType}] Calling ${data.toolCall.name}`,
+                                    accumulated: accumulatedContent,
+                                } as any);
+                            }
+
+                            // Execute the tool and send result back
+                            handleSubagentToolCall(data, sendRequest, config.callTool, setSubagentToolResult);
+                            break;
+
+                        case 'subagent_thinking':
+                            // Subagent thinking content
+                            addSubagentThinking(data.subagentId, data.thinking);
+                            break;
+
+                        case 'subagent_result':
+                            // Subagent final result
+                            setSubagentFinalResult(data.subagentId, data.result);
+                            break;
+
+                        case 'orchestrator_resume':
+                            // All subagents complete - resume orchestrator
+                            clearSubagents(); // Clear UI after orchestrator resumes
+
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'orchestrator_resume',
+                                    content: '✅ All subagents completed - resuming orchestrator',
+                                    accumulated: accumulatedContent,
+                                    orchestratorId: data.orchestratorId,
+                                    subagentResults: data.subagentResults
+                                } as any);
+                            }
+
+                            // Send tool result back to orchestrator
+                            // This will trigger the orchestrator to continue streaming
+                            handleOrchestratorResume(data, sendRequest);
+                            break;
+
+                        case 'orchestrator_continue':
+                            // Backend is ready for orchestrator to continue
+                            // Complete this request with a special tool call that triggers continuation
+                            isComplete = true;
+
+                            functionCalls.push({
+                                id: data.toolCallId,
+                                name: 'spawn_subagent',
+                                args: { subagentResults: JSON.parse(data.toolResult) }
+                            });
+
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'content',
+                                    content: '\n\n',
+                                    accumulated: accumulatedContent
+                                });
+                            }
+                            break;
+
+                        case 'waiting':
+                            // Orchestrator spawned subagents - close thinking but keep conversation active
+
+                            // Capture thinking signature
+                            if (data.thinkingSignature) {
+                                thinkingSignature = data.thinkingSignature;
+                            }
+
+                            // Emit waiting status with signature so UI can close thinking and show waiting
+                            if (onStreamChunk) {
+                                onStreamChunk({
+                                    type: 'waiting',
+                                    content: data.message || 'Waiting for subagents...',
+                                    accumulated: accumulatedContent,
+                                    thinkingSignature: thinkingSignature
+                                } as any);
+                            }
+
+                            // DON'T set isComplete or resolve - keep conversation active
+                            // The orchestrator will continue streaming after subagents complete
                             break;
 
                         case 'done':

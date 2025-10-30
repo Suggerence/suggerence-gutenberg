@@ -20,7 +20,7 @@ import { useThinkingContentStore } from '@/components/ai-elements/thinking-conte
 export const InputArea = () => {
 
     const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
-    const { callAI, parseAIResponse } = useAssistantAI();
+    const { callAI, parseAIResponse } = useAssistantAI(callGutenbergTool);
     const [inputValue, setInputValue] = useState('');
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const [isMediaOpen, setIsMediaOpen] = useState(false);
@@ -113,6 +113,46 @@ export const InputArea = () => {
                     } as any);
                 }
                 // Don't call setLastMessage on subsequent chunks - just update the store
+            } else if (type === 'waiting') {
+                // Orchestrator spawned subagents - close thinking and show waiting message
+
+                // First, close the thinking block if it exists
+                if (streamingThinkingMessageId && thinkingStartTime !== null) {
+                    thinkingDuration = Math.ceil((Date.now() - thinkingStartTime) / 1000);
+
+                    const updatedThinkingMessage = {
+                        role: 'thinking' as const,
+                        content: thinkingContent,
+                        date: new Date().toISOString(),
+                        aiModel: defaultModel.id,
+                        loading: false,
+                        thinkingSignature: thinkingSignature,
+                        thinkingDuration: thinkingDuration
+                    };
+
+                    setLastMessage(updatedThinkingMessage as any);
+                    streamingThinkingMessageId = null;
+                }
+
+                // Then show the waiting message
+                if (!streamingMessageId) {
+                    streamingMessageId = 'streaming-' + Date.now();
+                    addMessage({
+                        role: 'assistant',
+                        content: content,
+                        date: new Date().toISOString(),
+                        aiModel: defaultModel.id,
+                        loading: true
+                    });
+                } else {
+                    setLastMessage({
+                        role: 'assistant',
+                        content: contentAccumulated + content,
+                        date: new Date().toISOString(),
+                        aiModel: defaultModel.id,
+                        loading: true
+                    } as any);
+                }
             } else if (type === 'content') {
                 contentAccumulated = content;
 
@@ -146,7 +186,32 @@ export const InputArea = () => {
             defaultModel,
             tools,
             signal,
-            (chunk: { type: string; content: string; accumulated: string }) => {
+            (chunk: { type: string; content: string; accumulated: string; thinkingSignature?: string }) => {
+                // For waiting, capture signature and handle immediately (not queued)
+                if (chunk.type === 'waiting') {
+                    // Capture signature
+                    if (chunk.thinkingSignature) {
+                        thinkingSignature = chunk.thinkingSignature;
+                    }
+
+                    // Flush any pending updates first
+                    if (rafId !== null) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
+                    if (pendingUpdate) {
+                        flushPendingUpdate();
+                    }
+
+                    // Now handle waiting immediately (close thinking, show waiting message)
+                    pendingUpdate = {
+                        type: chunk.type,
+                        content: chunk.content // Use content (the waiting message), not accumulated
+                    };
+                    flushPendingUpdate();
+                    return;
+                }
+
                 // Store the pending update
                 pendingUpdate = {
                     type: chunk.type,

@@ -23,12 +23,15 @@ import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
 import { BrainIcon } from 'lucide-react';
 import { ThinkingWords } from '@/components/ai-elements/thinking-words';
 import { removeBlockHighlightsFromToolData } from '@/shared/utils/block-highlight';
+import { SubagentPanel } from '@/apps/gutenberg-assistant/components/SubagentPanel';
+import { useSubagentStore } from '@/apps/gutenberg-assistant/stores/subagentStore';
 
 export const ChatInterface = () => {
     const { isGutenbergServerReady, callGutenbergTool } = useGutenbergMCP();
     const { messages, setLastMessage } = useGutenbergAssistantMessagesStore();
     const { isLoading, setIsLoading, setAbortController } = useChatInterfaceStore();
     const { pendingToolCall, clearPendingToolCall } = useToolConfirmationStore();
+    const { getActiveSubagents } = useSubagentStore();
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -301,6 +304,11 @@ export const ChatInterface = () => {
                     style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}
                 >
                     <VStack spacing={0}>
+                        {/* Show subagent panel if there are active subagents */}
+                        {getActiveSubagents().length > 0 && (
+                            <SubagentPanel subagents={getActiveSubagents()} />
+                        )}
+
                         {groupMessages(messages).map((group, groupIndex) => {
                             if (group.type === 'user') {
                                 return group.messages.map((message, index) => (

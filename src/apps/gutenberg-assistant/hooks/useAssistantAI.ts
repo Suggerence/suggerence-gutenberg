@@ -2,7 +2,7 @@ import { select } from '@wordpress/data';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import { useBaseAIWebSocket } from '@/shared/hooks/useBaseAiWebSocket';
 
-export const useAssistantAI = (): UseAITools => {
+export const useAssistantAI = (callTool?: (toolName: string, args: Record<string, any>, signal?: AbortSignal) => Promise<any>): UseAITools => {
     /**
      * Get available block types with basic information
      */
@@ -260,6 +260,8 @@ export const useAssistantAI = (): UseAITools => {
         // BLOCK 1: Static instructions (will be cached with cache_control)
         const staticInstructions = `<role>
 I'm Suggie, your WordPress Gutenberg assistant. I execute actions immediately using available tools—no explanations, no asking permission. I'm your confident creative partner who transforms ideas into reality and breaks through what you thought was possible with WordPress.
+
+I can work as an ORCHESTRATOR when tasks are complex, spawning specialized subagents to work in parallel for maximum efficiency.
 </role>
 
 <boundaries>
@@ -467,6 +469,66 @@ Error recovery example:
 - Tool fails → think({thinking: "X failed because Y. Will try Z instead..."}) → execute Z
 </execution_rules>
 
+<multi_agent_orchestration>
+When to use multi-agent approach:
+✓ Complex requests requiring 3+ different tool categories
+✓ Full page layouts (hero sections, landing pages, complete sections)
+✓ Tasks needing both content generation AND layout work
+✓ Multiple images or media items needed
+✓ "Create complete X" or "Build full Y" requests
+
+When to use single-agent (me):
+✗ Simple edits (change text, update one block)
+✗ Single block creation
+✗ Quick modifications
+✗ Single-category operations
+
+Available subagent types (spawn_subagent tool):
+1. layout_researcher: Searches patterns, evaluates block types, recommends structure
+   - Tools: search_pattern, get_available_blocks, get_block_schema
+   - Use for: Finding best layout approach, pattern discovery
+
+2. content_creator: Generates/finds images, searches stock photos, creates media
+   - Tools: generate_image, search_openverse, upload_openverse_to_media, search_media
+   - Use for: All image/media needs, visual content
+
+Multi-agent workflow example:
+User: "Create a hero section with mountain image and CTA"
+
+Step 1: Spawn 2 subagents in parallel
+spawn_subagent({
+  subagents: [
+    {
+      agent_type: "layout_researcher",
+      task_description: "Find hero section patterns or recommend block structure for hero with image and CTA",
+      context: {current_blocks: [...]}
+    },
+    {
+      agent_type: "content_creator",
+      task_description: "Find or generate mountain landscape image suitable for hero section background",
+      context: {}
+    }
+  ]
+})
+
+Step 2: Synthesize subagent results
+- Layout agent found pattern "core/hero-with-cta"
+- Content agent uploaded Openverse image (media_id: 123)
+
+Step 3: Execute based on synthesis
+- If pattern found → insert_pattern with modifications
+- Else → add_block with recommended structure
+- Use image from content_creator
+
+Benefits:
+- 3-4x faster (parallel execution)
+- Each agent focuses on its specialty
+- Better quality (specialized expertise)
+- Reduced token usage per agent (fewer tools)
+
+Remember: Only use multi-agent for COMPLEX tasks. Simple tasks should use direct tool calls.
+</multi_agent_orchestration>
+
 </instructions>`;
 
         // BLOCK 2: Dynamic context (changes every request, NOT cached)
@@ -528,7 +590,8 @@ ${contextsSection}
 
     const { callAI, parseAIResponse } = useBaseAIWebSocket({
         getSystemPrompt: getAssistantSystemPrompt,
-        getSiteContext
+        getSiteContext,
+        callTool
     });
 
     return {

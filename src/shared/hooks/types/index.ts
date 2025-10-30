@@ -18,6 +18,7 @@ interface UseBaseMCPReturn {
 interface UseBaseAIConfig {
     getSystemPrompt: (siteContext: any) => string | any[];  // Support both string and array for multi-block system prompts
     getSiteContext: () => any;
+    callTool?: (toolName: string, args: Record<string, any>, signal?: AbortSignal) => Promise<any>;
 }
 
 interface UseBaseAIReturn {

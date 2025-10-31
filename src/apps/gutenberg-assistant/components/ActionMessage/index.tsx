@@ -1,7 +1,4 @@
-import { __experimentalVStack as VStack, __experimentalText as Text, __experimentalHStack as HStack } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { Response } from '@/components/ai-elements/response';
 
 interface ActionMessageProps {
     message: MCPClientMessage;
@@ -29,40 +26,17 @@ export const ActionMessage = ({ message, thinkingText, completedText }: ActionMe
     const hasError = isError || isToolFailure;
 
     return (
-        <div style={{ width: '100%' }}>
-            <HStack justify="start" alignment="center">
-                {isLoading ? (
-                    <Loader2
-                        size={16}
-                        style={{
-                            animation: 'spin 1s linear infinite',
-                            color: '#64748b',
-                            flexShrink: 0
-                        }}
-                    />
-                ) : hasError ? (
-                    <XCircle size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
-                ) : (
-                    <CheckCircle2 size={16} style={{ color: '#10b981', flexShrink: 0 }} />
-                )}
-                {/* <Dot size={16} style={{ color: '#10b981', flexShrink: 0 }} /> */}
-
-                <Response
-                    parseIncompleteMarkdown={true}
-                    className="text-sm leading-relaxed text-gray-600 thinking-message"
-                >
-                    {isLoading ? thinkingText : completedText}
-                </Response>
-            </HStack>
-
-            <style>
-                {`
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                `}
-            </style>
+        <div className="w-full flex items-center gap-2 text-sm text-muted-foreground">
+            {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+            ) : hasError ? (
+                <XCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+            ) : (
+                <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-500 flex-shrink-0" />
+            )}
+            <span>
+                {isLoading ? thinkingText : completedText}
+            </span>
         </div>
     );
 };

@@ -1,20 +1,19 @@
 import { Response } from '@/components/ai-elements/response';
 import { BotMessageSquare, Loader2 } from 'lucide-react';
-import { __experimentalHStack as HStack, __experimentalVStack as VStack } from '@wordpress/components';
 
 export const AssistantMessage = ({message}: {message: MCPClientMessage}) => {
     const isLoading = message.loading;
     const hasContent = message.content && message.content.length > 0;
 
     return (
-        <HStack justify="start" alignment="start">
-            <BotMessageSquare size={16} style={{ flexShrink: 0 }} />
-            <VStack spacing={2} style={{ width: '100%' }}>
+        <div className="flex items-start gap-3">
+            <BotMessageSquare className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+            <div className="flex-1 space-y-2">
                 {/* Show content if present */}
                 {hasContent && (
                     <Response
                         parseIncompleteMarkdown={true}
-                        className="text-sm leading-relaxed text-gray-600 assistant-message"
+                        className="text-sm leading-relaxed text-foreground assistant-message prose prose-sm dark:prose-invert max-w-none"
                     >
                         {message.content}
                     </Response>
@@ -22,27 +21,12 @@ export const AssistantMessage = ({message}: {message: MCPClientMessage}) => {
 
                 {/* Show loading indicator if no content yet */}
                 {isLoading && !hasContent && (
-                    <HStack justify="start" alignment="center">
-                        <Loader2
-                            size={14}
-                            style={{
-                                animation: 'spin 1s linear infinite',
-                                color: '#64748b'
-                            }}
-                        />
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>Generating response...</span>
-                    </HStack>
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Generating response...</span>
+                    </div>
                 )}
-            </VStack>
-
-            <style>
-                {`
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                `}
-            </style>
-        </HStack>
+            </div>
+        </div>
     );
 };

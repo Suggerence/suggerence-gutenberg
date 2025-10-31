@@ -7,6 +7,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { useDispatch } from '@wordpress/data';
 import domReady from '@wordpress/dom-ready';
 import { WebSocketProvider } from '@/shared/context/WebSocketContext';
+import { ThemeProvider } from 'next-themes';
 
 import './style.scss';
 
@@ -41,11 +42,13 @@ export const GutenbergAssistant = () => {
                 name="suggerence-chat-sidebar"
                 title={__("Suggerence Chat", "suggerence")}
             >
-                <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-                    <WebSocketProvider>
-                        <ChatInterface />
-                    </WebSocketProvider>
-                </PersistQueryClientProvider>
+                <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+                    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+                        <WebSocketProvider>
+                            <ChatInterface />
+                        </WebSocketProvider>
+                    </PersistQueryClientProvider>
+                </ThemeProvider>
             </PluginSidebar>
         </>
     );

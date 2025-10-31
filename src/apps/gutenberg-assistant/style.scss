@@ -2,6 +2,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    width: 100% !important;
 
     & > .components-panel {
         flex: 1;
@@ -25,4 +26,13 @@
     &.lucide-mic, &.lucide-square, &.lucide-pencil, &.lucide-pen-tool, &.lucide-eraser, &.lucide-brush, &.lucide-paintbrush, &.lucide-highlighter, &.lucide-arrow-right, &.lucide-type, &.lucide-pen, &.lucide-circle, &.lucide-minus {
         fill: none !important;
     }
+}
+
+/* Only when your plugin sidebar is inside the complementary area */
+.interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+    width: 500px !important; /* new width */
+}
+
+#suggerence-gutenberg-assistant\:suggerence-chat-sidebar .interface-complementary-area-header {
+    display: none !important;
 }

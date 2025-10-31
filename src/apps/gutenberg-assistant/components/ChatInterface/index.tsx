@@ -1,10 +1,4 @@
 import { useRef, useEffect, useCallback } from '@wordpress/element';
-import {
-    PanelBody,
-    Notice,
-    __experimentalText as Text,
-    __experimentalVStack as VStack,
-} from '@wordpress/components';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
 import { __ } from '@wordpress/i18n';
 import { PanelHeader } from '@/apps/gutenberg-assistant/components/PanelHeader';
@@ -282,25 +276,27 @@ export const ChatInterface = () => {
 
     if (!isGutenbergServerReady) {
         return (
-            <PanelBody>
-                <Notice status="warning" isDismissible={false}>
-                    <Text>{__("Connecting to Gutenberg AI. Please wait...", "suggerence")}</Text>
-                </Notice>
-            </PanelBody>
+            <div className="p-4 bg-background">
+                <div className="rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 p-4">
+                    <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                        {__("Connecting to Gutenberg AI. Please wait...", "suggerence")}
+                    </p>
+                </div>
+            </div>
         );
     }
 
     return (
-        <VStack spacing={0} style={{ height: '100%' }}>
+        <div className="flex flex-col h-full bg-background">
             <PanelHeader />
 
-            <VStack spacing={0} style={{ flex: 1, overflow: 'hidden' }}>
+            <div className="flex-1 overflow-hidden flex flex-col">
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
-                    style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}
+                    className="flex-1 overflow-y-auto p-2"
                 >
-                    <VStack spacing={0}>
+                    <div className="space-y-0">
                         {groupMessages(messages).map((group, groupIndex) => {
                             if (group.type === 'user') {
                                 return group.messages.map((message, index) => (
@@ -420,11 +416,11 @@ export const ChatInterface = () => {
 
 
                         <div ref={callbackRef} />
-                    </VStack>
+                    </div>
                 </div>
 
                 <InputArea />
-            </VStack>
-        </VStack>
+            </div>
+        </div>
     );
 };

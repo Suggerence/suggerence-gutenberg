@@ -1,4 +1,3 @@
-import { __experimentalVStack as VStack, TextareaControl, Button, __experimentalHStack as HStack } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useState, useRef, useEffect, useCallback } from '@wordpress/element';
 import { useChatInterfaceStore } from '@/apps/gutenberg-assistant/stores/chatInterfaceStore';
@@ -11,11 +10,17 @@ import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
 import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas';
 import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelector';
-import { image, brush } from '@wordpress/icons';
-import { AudioButton } from '@/shared/components/AudioButton';
-import { X } from 'lucide-react';
 import { highlightBlocksFromToolData } from '@/shared/utils/block-highlight';
 import { useThinkingContentStore } from '@/components/ai-elements/thinking-content-store';
+import {
+    PromptInput,
+    PromptInputTextarea,
+    PromptInputToolbar,
+    PromptInputTools,
+    PromptInputButton,
+    PromptInputSubmit,
+} from '@/components/ai-elements/prompt-input';
+import { ImageIcon, SquareIcon, Brush, Send } from 'lucide-react';
 
 export const InputArea = () => {
 
@@ -702,99 +707,73 @@ export const InputArea = () => {
     };
 
     return (
-        <VStack spacing={0} style={{ padding: '16px', backgroundColor: '#f9f9f9', borderTop: '1px solid #ddd' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <div className="p-3 border-t border-border bg-card/50">
+            <div className="flex gap-2 items-center mb-2 flex-wrap">
                 <ContextMenuBadge onContextSelect={addContext} />
                 <BlockBadge />
-
-                {/* Context Usage Indicator */}
-                {/* {contextUsage && (
-                    <div
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            backgroundColor: '#f8fafc',
-                            color: getContextUsageColor(contextUsage.percentage),
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '4px',
-                            padding: '2px 6px',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                            lineHeight: '16px',
-                            marginLeft: 'auto' // Push to the right
-                        }}
-                        title={getContextUsageWarning(contextUsage.percentage) || `Context usage: ${contextUsage.totalTokens} tokens`}
-                    >
-                        {contextUsage.percentage}%
-                    </div>
-                )} */}
             </div>
 
-
-            <TextareaControl
-                value={inputValue}
-                onChange={setInputValue}
-                onKeyDown={handleKeyPress}
-                placeholder={messages.length <= 1 ? __("What do you want to create? I'm all ears...", "suggerence") : __("Go ahead, I'm listening...", "suggerence")}
-                disabled={isLoading}
-                rows={2}
-                style={{ resize: 'none' }}
-                ref={inputRef}
-            />
-
-            <HStack justify="end" spacing={2}>
-                <Button
-                    onClick={() => setIsMediaOpen(true)}
+            <PromptInput
+                onSubmit={(message, event) => {
+                    event.preventDefault();
+                    if (message.text && !isLoading) {
+                        setInputValue(message.text);
+                        handleSendMessage();
+                    }
+                }}
+                className="w-full"
+            >
+                <PromptInputTextarea
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder={messages.length <= 1 ? __("What do you want to create? I'm all ears...", "suggerence") : __("Go ahead, I'm listening...", "suggerence")}
                     disabled={isLoading}
-                    icon={image}
-                    size="compact"
-                    aria-label={__("Select image", "suggerence")}
-                    title={__("Add an image—show me what you're working with", "suggerence")}
+                    className="min-h-[100px] resize-none text-foreground placeholder:text-muted-foreground"
                 />
 
-                <Button
-                    onClick={() => setIsCanvasOpen(true)}
-                    disabled={isLoading}
-                    icon={brush}
-                    size="compact"
-                    aria-label={__("Draw diagram", "suggerence")}
-                    title={__("Sketch your idea—I'll bring it to life", "suggerence")}
-                />
+                <PromptInputToolbar className="bg-transparent border-t-0">
+                    <PromptInputTools>
+                        <PromptInputButton
+                            onClick={() => setIsMediaOpen(true)}
+                            disabled={isLoading}
+                            aria-label={__("Select image", "suggerence")}
+                            title={__("Add an image—show me what you're working with", "suggerence")}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <ImageIcon className="w-4 h-4" />
+                        </PromptInputButton>
 
-                {/* Audio messages not currently supported by Claude */}
-                {/* <AudioButton
-                    onAudioMessage={handleAudioMessage}
-                    inputValue={inputValue}
-                    isLoading={isLoading}
-                    disabled={isLoading}
-                    size="compact"
-                /> */}
+                        <PromptInputButton
+                            onClick={() => setIsCanvasOpen(true)}
+                            disabled={isLoading}
+                            aria-label={__("Draw diagram", "suggerence")}
+                            title={__("Sketch your idea—I'll bring it to life", "suggerence")}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <Brush className="w-4 h-4" />
+                        </PromptInputButton>
+                    </PromptInputTools>
 
-{isLoading ? (
-                    <Button
-                        onClick={handleStop}
-                        aria-label={__("Stop", "suggerence")}
-                        variant="secondary"
-                        size="compact"
-                        icon={<X size={16} />}
-                        style={{ color: '#d63638' }}
-                    >
-                        {__("Stop", "suggerence")}
-                    </Button>
-                ) : (
-                    <Button
-                        onClick={handleSendMessage}
-                        disabled={!inputValue.trim()}
-                        aria-label={__("Send", "suggerence")}
-                        variant="primary"
-                        size="compact"
-                    >
-                        {__("Send", "suggerence")}
-                    </Button>
-                )}
-            </HStack>
+                    {isLoading ? (
+                        <PromptInputButton
+                            onClick={handleStop}
+                            aria-label={__("Stop", "suggerence")}
+                            variant="destructive"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            <SquareIcon className="w-4 h-4" />
+                        </PromptInputButton>
+                    ) : (
+                        <PromptInputSubmit
+                            disabled={!inputValue.trim()}
+                            aria-label={__("Send", "suggerence")}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        >
+                            <Send className="w-4 h-4" />
+                        </PromptInputSubmit>
+                    )}
+                </PromptInputToolbar>
+            </PromptInput>
 
             <DrawingCanvas
                 isOpen={isCanvasOpen}
@@ -808,6 +787,6 @@ export const InputArea = () => {
                 onClose={() => setIsMediaOpen(false)}
                 onSelect={handleMediaSelect}
             />
-        </VStack>
+        </div>
     );
 };

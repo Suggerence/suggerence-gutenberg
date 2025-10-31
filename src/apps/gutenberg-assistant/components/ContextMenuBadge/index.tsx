@@ -7,6 +7,7 @@ import { BlockSelector } from '@/shared/components/BlockSelector';
 import { BlockTitle } from '@wordpress/block-editor';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import type { BlockInstance } from '@wordpress/blocks';
+import { Badge } from '@/components/ui/badge';
 
 const contextOptions: ContextOption[] = [
     {
@@ -255,25 +256,10 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                 const isHovered = hoveredContextId === context.id;
 
                 return (
-                    <span
+                    <Badge
                         key={context.id}
-                        className="context-badge"
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            backgroundColor: isHovered ? '#f1f5f9' : '#f8fafc',
-                            color: '#475569',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '4px',
-                            padding: '2px 6px',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                            lineHeight: '16px',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.15s ease'
-                        }}
+                        variant="outline"
+                        className="gap-1 cursor-pointer font-mono hover:bg-muted transition-colors flex items-center"
                         onMouseEnter={() => setHoveredContextId(context.id)}
                         onMouseLeave={() => setHoveredContextId(undefined)}
                         onClick={() => handleRemoveContext(context.id)}
@@ -282,13 +268,10 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                         <Icon
                             icon={isHovered ? close : (contextOption?.icon || post)}
                             size={12}
-                            style={{
-                                color: isHovered ? '#ef4444' : '#64748b',
-                                transition: 'color 0.15s ease'
-                            }}
+                            className={isHovered ? 'fill-destructive' : 'fill-muted-foreground'}
                         />
                         {context.label}
-                    </span>
+                    </Badge>
                 );
             })}
         </>

@@ -10,31 +10,24 @@ import {
 import type { ToolUIPart } from 'ai';
 
 export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
-    const isError = message.toolResult === 'error';
+    let hasError = message.toolResult === 'error';
     const isLoading = message.loading;
     const toolDisplayName = getToolDisplayName(message.toolName || '');
 
-    // Check if tool was stopped by user
     const isStopped = message.content === 'Stopped by user' || message.toolResult === 'Stopped by user';
-
-    // Check if tool result has success: false
     let parsedResult = null;
-    let isToolFailure = false;
 
     if (message.toolResult && typeof message.toolResult === 'string') {
         try {
             parsedResult = JSON.parse(message.toolResult);
-            isToolFailure = parsedResult && parsedResult.success === false;
+            hasError = parsedResult && parsedResult.success === false;
         } catch (e) {
-            // If parsing fails, treat as regular string result
+            hasError = true;
         }
     } else if (message.toolResult && typeof message.toolResult === 'object') {
-        isToolFailure = message.toolResult.success === false;
+        hasError = message.toolResult.success === false;
     }
 
-    const hasError = isError || isToolFailure;
-
-    // Determine state for the Tool component
     let state: ToolUIPart['state'] = 'output-available';
     if (isLoading) {
         state = 'input-available';
@@ -42,40 +35,23 @@ export const ToolMessage = ({message}: {message: MCPClientMessage}) => {
         state = 'output-error';
     }
 
-    console.log('=== ToolMessage Debug ===');
-    console.log('toolDisplayName:', toolDisplayName);
-    console.log('message.toolName:', message.toolName);
-    console.log('message.toolArgs:', message.toolArgs);
-    console.log('message.toolResult:', message.toolResult);
-    console.log('state:', state);
-    console.log('isLoading:', isLoading);
-    console.log('hasError:', hasError);
-    console.log('parsedResult:', parsedResult);
-    console.log('========================');
-
     return (
         <div className="w-full mb-4">
             <Tool defaultOpen={false}>
                 <ToolHeader
-                    title={toolDisplayName || 'Tool Call'}
+                    title={toolDisplayName || 'Tool'}
                     type={`tool-call`}
                     state={state}
                 />
                 <ToolContent>
                     {message.toolArgs && (
-                        <>
-                            {console.log('Rendering ToolInput with:', message.toolArgs)}
-                            <ToolInput input={message.toolArgs} />
-                        </>
+                        <ToolInput input={message.toolArgs} />
                     )}
                     {!isLoading && message.toolResult !== undefined && (
-                        <>
-                            {console.log('Rendering ToolOutput with:', parsedResult || message.toolResult)}
-                            <ToolOutput
-                                output={parsedResult || message.toolResult}
-                                errorText={hasError ? (isStopped ? __('Stopped by user', 'suggerence') : __('Error occurred', 'suggerence')) : undefined}
-                            />
-                        </>
+                        <ToolOutput
+                            output={parsedResult || message.toolResult}
+                            errorText={hasError ? (isStopped ? __('Stopped by user', 'suggerence') : __('Error occurred', 'suggerence')) : undefined}
+                        />
                     )}
                 </ToolContent>
             </Tool>

@@ -371,7 +371,7 @@ export const ChatInterface = () => {
                                                     <ActionMessage
                                                         key={`${message.role}-${groupIndex}-${index}-${message.date}`}
                                                         message={message}
-                                                        thinkingText={thinkingTools[cleanToolName].thinking}
+                                                        initialText={thinkingTools[cleanToolName].thinking}
                                                         completedText={thinkingTools[cleanToolName].completed}
                                                     />
                                                 );

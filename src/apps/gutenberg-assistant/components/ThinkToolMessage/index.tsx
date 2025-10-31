@@ -3,33 +3,13 @@ import {
     ReasoningTrigger,
     ReasoningContent
 } from '@/components/ai-elements/reasoning';
-import { useState, useEffect } from '@wordpress/element';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
 import { __ } from '@wordpress/i18n';
 
-interface ThinkToolMessageProps {
-    message: MCPClientMessage;
-}
-
-export const ThinkToolMessage = ({ message }: ThinkToolMessageProps) => {
-    const [thinkingContent, setThinkingContent] = useState<string>('');
-
-    useEffect(() => {
-        // Extract thinking content from tool args
-        const toolArgs = (message as any).toolArgs;
-        if (toolArgs && toolArgs.thinking) {
-            setThinkingContent(toolArgs.thinking);
-        }
-    }, [message]);
-
+export const ThinkToolMessage = ({ message }: {message: MCPClientMessage}) => {
     const isStreaming = message.loading;
 
-    // Don't show if no thinking content
-    if (!thinkingContent || thinkingContent.length === 0) {
-        return null;
-    }
-
-    return (
+    return (!message.toolArgs?.thinking || message.toolArgs.thinking.length === 0) ? null : (
         <Reasoning
             isStreaming={isStreaming}
             defaultOpen={true}
@@ -39,7 +19,7 @@ export const ThinkToolMessage = ({ message }: ThinkToolMessageProps) => {
                 <p>{__('Mid-execution reasoning', 'suggerence')}</p>
                 <ChevronDownIcon className="size-4 transition-transform" />
             </ReasoningTrigger>
-            <ReasoningContent>{thinkingContent}</ReasoningContent>
+            <ReasoningContent>{message.toolArgs.thinking}</ReasoningContent>
         </Reasoning>
     );
 };

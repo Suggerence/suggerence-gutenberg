@@ -10,19 +10,12 @@ import {
     ConfirmationAction,
 } from '@/components/ai-elements/confirmation';
 
-interface ToolConfirmationMessageProps {
-    message: MCPClientMessage;
-    onAccept: () => void;
-    onReject: () => void;
-}
-
 export const ToolConfirmationMessage = ({
     message,
     onAccept,
     onReject
 }: ToolConfirmationMessageProps) => {
     const [isArgsExpanded, setIsArgsExpanded] = useState(false);
-
     const cleanToolName = getToolDisplayName(message.toolName || '');
 
     return (

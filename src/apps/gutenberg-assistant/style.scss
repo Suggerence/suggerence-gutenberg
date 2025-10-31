@@ -29,8 +29,14 @@
 }
 
 /* Only when your plugin sidebar is inside the complementary area */
-.interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
-    width: 500px !important; /* new width */
+@media (min-width: 782px) {
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+        width: 500px !important; /* new width */
+    }
+
+    .interface-interface-skeleton__sidebar:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+        margin-bottom: -25px !important;
+    }
 }
 
 #suggerence-gutenberg-assistant\:suggerence-chat-sidebar .interface-complementary-area-header {

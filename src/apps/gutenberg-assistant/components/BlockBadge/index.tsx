@@ -6,13 +6,10 @@ import { Badge } from '@/components/ui/badge';
 
 export const BlockBadge = () => {
     const [isHovered, setIsHovered] = useState(false);
-
-    // @ts-ignore - WordPress types not available
     const { clearSelectedBlock } = useDispatch('core/block-editor');
 
     const blockInfo = useSelect((select): BlockInfo | null => {
         try {
-            // @ts-ignore - WordPress types not available
             const { getSelectedBlock } = select('core/block-editor');
             const selectedBlock = getSelectedBlock?.();
 
@@ -20,11 +17,7 @@ export const BlockBadge = () => {
                 return null;
             }
 
-            // Get block type information from WordPress registry
             const blockName = selectedBlock.name || 'Unknown';
-
-            // Try to get the block type from WordPress blocks registry
-            // @ts-ignore - WordPress types not available
             const blockType = window.wp?.blocks?.getBlockType?.(blockName);
 
             let displayTitle = blockName

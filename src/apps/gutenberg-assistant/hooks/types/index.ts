@@ -4,7 +4,9 @@ interface UseAITools {
         model: AIModel | null,
         tools: SuggerenceMCPResponseTool[],
         abortSignal?: AbortSignal,
-        onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void
+        onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void,
+        onFunctionCall?: (functionCall: { id: string; name: string; args: any }) => void,
+        onThinkingSignature?: (signature: string) => void
     ) => Promise<MCPClientMessage>;
     parseAIResponse: (response: any) => MCPClientAIResponse;
 }

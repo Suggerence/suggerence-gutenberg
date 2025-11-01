@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
-import { useState } from '@wordpress/element';
+import { useState, useCallback } from '@wordpress/element';
 import { getToolDisplayName } from '@/shared/utils/tool-names';
 import {
     Confirmation,
@@ -9,14 +9,40 @@ import {
     ConfirmationActions,
     ConfirmationAction,
 } from '@/components/ai-elements/confirmation';
+import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
+import type { ToolConfirmationMessageProps } from './types';
 
 export const ToolConfirmationMessage = ({
     message,
     onAccept,
-    onReject
+    onReject,
+    onAcceptAll
 }: ToolConfirmationMessageProps) => {
     const [isArgsExpanded, setIsArgsExpanded] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const cleanToolName = getToolDisplayName(message.toolName || '');
+
+    const pendingToolCalls = useToolConfirmationStore((state) => state.pendingToolCalls);
+
+    const handleAccept = useCallback(async () => {
+        if (!message.toolCallId) return;
+        setIsProcessing(true);
+        await onAccept(message.toolCallId);
+        setIsProcessing(false);
+    }, [onAccept, message.toolCallId]);
+
+    const handleReject = useCallback(async () => {
+        if (!message.toolCallId) return;
+        setIsProcessing(true);
+        await onReject(message.toolCallId);
+        setIsProcessing(false);
+    }, [onReject, message.toolCallId]);
+
+    const handleAcceptAll = useCallback(async () => {
+        setIsProcessing(true);
+        await onAcceptAll();
+        setIsProcessing(false);
+    }, [onAcceptAll]);
 
     return (
         <Confirmation
@@ -62,12 +88,23 @@ export const ToolConfirmationMessage = ({
                 <ConfirmationActions>
                     <ConfirmationAction
                         variant="outline"
-                        onClick={onReject}
+                        onClick={handleReject}
+                        disabled={isProcessing}
                     >
                         {__('Reject', 'suggerence')}
                     </ConfirmationAction>
+                    {pendingToolCalls.length > 1 && (
+                        <ConfirmationAction
+                            variant="outline"
+                            onClick={handleAcceptAll}
+                            disabled={isProcessing}
+                        >
+                            {__('Allow All', 'suggerence')}
+                        </ConfirmationAction>
+                    )}
                     <ConfirmationAction
-                        onClick={onAccept}
+                        onClick={handleAccept}
+                        disabled={isProcessing}
                     >
                         {__('Allow', 'suggerence')}
                     </ConfirmationAction>

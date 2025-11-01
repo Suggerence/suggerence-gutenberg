@@ -1,5 +1,6 @@
-interface ToolConfirmationMessageProps {
+export interface ToolConfirmationMessageProps {
     message: MCPClientMessage;
-    onAccept: () => void;
-    onReject: () => void;
+    onAccept: (toolCallId: string) => Promise<void>;
+    onReject: (toolCallId: string) => Promise<void>;
+    onAcceptAll: () => Promise<void>;
 }

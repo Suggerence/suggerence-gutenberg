@@ -9,7 +9,9 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
         model: AIModel | null,
         tools: SuggerenceMCPResponseTool[],
         abortSignal?: AbortSignal,
-        onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void
+        onStreamChunk?: (chunk: { type: string; content: string; accumulated: string }) => void,
+        onFunctionCall?: (functionCall: { id: string; name: string; args: any }) => void,
+        onThinkingSignature?: (signature: string) => void
     ): Promise<MCPClientMessage> => {
         // Get comprehensive site context using the provided function
         const siteContext = config.getSiteContext();
@@ -357,6 +359,27 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             tools: claudeTools
         };
 
+        const normalizeFunctionCall = (call: any) => {
+            const callId = call?.id || `call_${Date.now()}_${Math.random()}`;
+            const rawArgs = call?.args ?? call?.arguments ?? call?.input ?? call?.parameters;
+            let parsedArgs = rawArgs;
+
+            if (typeof rawArgs === 'string') {
+                try {
+                    parsedArgs = JSON.parse(rawArgs);
+                } catch (error) {
+                    console.warn('Failed to parse tool arguments string, passing through raw value:', error);
+                    parsedArgs = rawArgs;
+                }
+            }
+
+            return {
+                id: callId,
+                name: call?.name || '',
+                args: parsedArgs
+            };
+        };
+
         // Check if WebSocket is connected
         if (!isConnected) {
             throw new Error('WebSocket not connected. Please wait for connection.');
@@ -366,8 +389,10 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             let accumulatedContent = '';
             let accumulatedThinking = '';
             let thinkingSignature = '';
-            let functionCalls: any[] = [];
+            const functionCallMap = new Map<string, { id: string; name: string; args: any }>();
             let isComplete = false;
+            let lastStreamType: 'thinking' | 'content' | 'function_calls' | null = null;
+            let hasEmittedThinkingSignature = false;
 
             // Handle abort signal
             if (abortSignal) {
@@ -383,6 +408,7 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                     switch (data.type) {
                         case 'content':
                             accumulatedContent = data.accumulated || accumulatedContent + data.content;
+                            lastStreamType = 'content';
 
                             // Emit streaming chunk for real-time UI updates
                             if (onStreamChunk) {
@@ -396,6 +422,7 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
 
                         case 'thinking':
                             accumulatedThinking = data.accumulated || accumulatedThinking + data.content;
+                            lastStreamType = 'thinking';
 
                             // Emit thinking chunk for UI
                             if (onStreamChunk) {
@@ -407,11 +434,67 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             }
                             break;
 
+                        case 'thinking_signature':
+                            // Thinking signature received - emit immediately so UI can update thinking message
+                            if (data.signature && onThinkingSignature && !hasEmittedThinkingSignature) {
+                                thinkingSignature = data.signature;
+                                hasEmittedThinkingSignature = true;
+                                onThinkingSignature(thinkingSignature);
+                            }
+                            break;
+
                         case 'function_calls':
                             // Accumulate function calls - Claude can send multiple tool calls
                             // as separate WebSocket messages in a single response
                             if (data.functionCalls && Array.isArray(data.functionCalls)) {
-                                functionCalls.push(...data.functionCalls);
+                                const freshCalls: any[] = [];
+
+                                data.functionCalls.forEach((call: any) => {
+                                    const normalisedCall = normalizeFunctionCall(call);
+                                    const existingCall = functionCallMap.get(normalisedCall.id);
+
+                                    if (existingCall) {
+                                        const nextArgs = normalisedCall.args;
+
+                                        if (
+                                            nextArgs &&
+                                            typeof nextArgs === 'object' &&
+                                            existingCall.args &&
+                                            typeof existingCall.args === 'object'
+                                        ) {
+                                            functionCallMap.set(normalisedCall.id, {
+                                                ...existingCall,
+                                                args: {
+                                                    ...existingCall.args,
+                                                    ...nextArgs
+                                                }
+                                            });
+                                        } else if (nextArgs !== undefined) {
+                                            functionCallMap.set(normalisedCall.id, {
+                                                ...existingCall,
+                                                args: nextArgs
+                                            });
+                                        }
+                                        return;
+                                    }
+
+                                    functionCallMap.set(normalisedCall.id, normalisedCall);
+                                    freshCalls.push(normalisedCall);
+                                });
+
+                                if (freshCalls.length > 0) {
+                        lastStreamType = 'function_calls';
+
+                        if (onFunctionCall) {
+                            freshCalls.forEach((call) => {
+                                onFunctionCall({
+                                    id: call.id,
+                                    name: call.name,
+                                    args: call.args
+                                });
+                            });
+                        }
+                                }
                             }
                             break;
 
@@ -421,13 +504,15 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                             // Capture thinking signature from done message
                             if (data.thinkingSignature) {
                                 thinkingSignature = data.thinkingSignature;
+                                hasEmittedThinkingSignature = true;
                             }
 
                             // Return ALL function calls, not just the first one
-                            if (functionCalls.length > 0) {
+                            if (functionCallMap.size > 0) {
                                 // Return first call in the old structure for compatibility
                                 // but include all calls in a new field
-                                const firstCall = functionCalls[0];
+                                const allFunctionCalls = Array.from(functionCallMap.values());
+                                const firstCall = allFunctionCalls[0];
                                 resolve({
                                     content: accumulatedContent,
                                     toolName: firstCall.name,
@@ -435,14 +520,16 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
                                     toolCallId: firstCall.id || `call_${Date.now()}`,
                                     thinkingSignature: thinkingSignature || undefined,
                                     // NEW: Include all function calls
-                                    allFunctionCalls: functionCalls
+                                    allFunctionCalls,
+                                    lastStreamType
                                 } as any);
                             } else {
                                 resolve({
                                     content: accumulatedContent,
                                     toolName: undefined,
                                     toolArgs: undefined,
-                                    thinkingSignature: thinkingSignature || undefined
+                                    thinkingSignature: thinkingSignature || undefined,
+                                    lastStreamType
                                 } as any);
                             }
                             break;

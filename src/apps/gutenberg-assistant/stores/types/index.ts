@@ -1,18 +1,11 @@
-interface ChatInterfaceStore {
-    isLoading: boolean;
-    setIsLoading: (isLoading: boolean) => void;
-    abortController: AbortController | null;
-    setAbortController: (abortController: AbortController | null) => void;
-}
-
-interface SelectedContext {
+export interface SelectedContext {
     id: string;
     type: string;
     label: string;
     data?: any;
 }
 
-interface ContextUsage {
+export interface ContextUsage {
     totalTokens: number;
     percentage: number;
     breakdown: {
@@ -23,7 +16,7 @@ interface ContextUsage {
     };
 }
 
-interface ContextState {
+export interface ContextState {
     selectedContexts: SelectedContext[];
     contextUsage: ContextUsage | null;
     addContext: (context: SelectedContext) => void;
@@ -38,7 +31,7 @@ interface ContextState {
     }) => void;
 }
 
-interface GutenbergAssistantMessagesStore {
+export interface GutenbergAssistantMessagesStore {
     postId: number;
     setPostId: (postId: number) => void;
     messages: MCPClientMessage[];
@@ -46,4 +39,23 @@ interface GutenbergAssistantMessagesStore {
     setLastMessage: (message: MCPClientMessage) => void;
     addMessage: (message: MCPClientMessage) => void;
     clearMessages: () => void;
+
+    // Conversation state
+    isLoading: boolean;
+    setIsLoading: (isLoading: boolean) => void;
+    abortController: AbortController | null;
+    setAbortController: (abortController: AbortController | null) => void;
+
+    // Message update manager
+    _currentTracker: {
+        thinking?: number;
+        content?: number;
+        tool?: number;
+    };
+    upsertThinkingMessage: (content: string, aiModel: string) => void;
+    completeThinkingMessage: (thinkingDuration?: number, thinkingSignature?: string) => void;
+    upsertContentMessage: (content: string, aiModel: string) => void;
+    upsertToolMessage: (toolCallId: string, toolName: string, toolArgs: any, content: string, toolResult?: string) => void;
+    completeToolMessage: (toolResult: string) => void;
+    resetTracker: () => void;
 }

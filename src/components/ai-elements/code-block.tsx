@@ -10,7 +10,7 @@ import {
   type HTMLAttributes,
   useContext,
   useEffect,
-  useRef,
+  useMemo,
   useState,
 } from "react";
 import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
@@ -83,48 +83,41 @@ export const CodeBlock = ({
 }: CodeBlockProps) => {
   const [html, setHtml] = useState<string>("");
   const [darkHtml, setDarkHtml] = useState<string>("");
-  const mounted = useRef(false);
+  const [highlightError, setHighlightError] = useState<Error | null>(null);
 
-  console.log('=== CodeBlock RENDER ===');
-  console.log('code:', code?.substring(0, 100));
-  console.log('language:', language);
-  console.log('html length:', html?.length);
-  console.log('darkHtml length:', darkHtml?.length);
-  if (html) {
-    console.log('FULL HTML:', html);
-  }
-  console.log('========================');
+  const plainFallback = useMemo(
+    () => (
+      <pre className="m-0 whitespace-pre-wrap break-words p-4 text-sm font-mono">
+        {code ?? ""}
+      </pre>
+    ),
+    [code]
+  );
 
   useEffect(() => {
-    console.log('CodeBlock useEffect: Starting...');
-    console.log('mounted.current:', mounted.current);
+    let isActive = true;
+    setHighlightError(null);
 
     highlightCode(code, language, showLineNumbers)
       .then(([light, dark]) => {
-        console.log('CodeBlock: highlightCode SUCCESS');
-        console.log('light html length:', light?.length);
-        console.log('dark html length:', dark?.length);
-        console.log('mounted.current after highlight:', mounted.current);
-
-        if (!mounted.current) {
-          console.log('CodeBlock: Setting HTML state');
-          setHtml(light);
-          setDarkHtml(dark);
-          mounted.current = true;
-          console.log('CodeBlock: HTML state set, mounted = true');
-        } else {
-          console.log('CodeBlock: Already mounted, skipping state update');
-        }
+        if (!isActive) return;
+        setHtml(light);
+        setDarkHtml(dark);
       })
       .catch((err) => {
-        console.error('CodeBlock: highlightCode FAILED:', err);
+        if (!isActive) return;
+        console.error("CodeBlock: highlightCode failed:", err);
+        setHighlightError(err as Error);
+        setHtml("");
+        setDarkHtml("");
       });
 
     return () => {
-      console.log('CodeBlock: Cleanup - setting mounted to false');
-      mounted.current = false;
+      isActive = false;
     };
   }, [code, language, showLineNumbers]);
+
+  const shouldShowFallback = highlightError || (!html && !darkHtml);
 
   return (
     <CodeBlockContext.Provider value={{ code }}>
@@ -136,16 +129,22 @@ export const CodeBlock = ({
         {...props}
       >
         <div className="relative">
-          <div
-            className="dark:hidden [&>pre]:m-0 [&>pre]:p-4 [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed."
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-          <div
-            className="light:hidden dark:block [&>pre]:m-0 [&>pre]:p-4 [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed."
-            dangerouslySetInnerHTML={{ __html: darkHtml }}
-          />
+          {shouldShowFallback ? (
+            plainFallback
+          ) : (
+            <>
+              <div
+                className="dark:hidden [&>pre]:m-0 [&>pre]:p-4 [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed."
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+              <div
+                className="light:hidden dark:block [&>pre]:m-0 [&>pre]:p-4 [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed."
+                dangerouslySetInnerHTML={{ __html: darkHtml }}
+              />
+            </>
+          )}
           {children && (
             <div className="absolute top-2 right-2 flex items-center gap-2">
               {children}

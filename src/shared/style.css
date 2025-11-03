@@ -91,37 +91,37 @@
 }
 
 .dark {
-    --background: oklch(0.18 0 0);
-    --foreground: oklch(0.95 0 0);
-    --card: oklch(0.22 0 0);
-    --card-foreground: oklch(0.95 0 0);
-    --popover: oklch(0.22 0 0);
-    --popover-foreground: oklch(0.95 0 0);
-    --primary: oklch(0.75 0.2 300);
-    --primary-foreground: oklch(0.98 0 0);
-    --secondary: oklch(0.28 0 0);
-    --secondary-foreground: oklch(0.95 0 0);
-    --muted: oklch(0.25 0 0);
-    --muted-foreground: oklch(0.65 0 0);
-    --accent: oklch(0.28 0 0);
-    --accent-foreground: oklch(0.95 0 0);
+    --background: #23262f;
+    --foreground: #f4f6fb;
+    --card: #2a2d37;
+    --card-foreground: #f4f6fb;
+    --popover: #2f323d;
+    --popover-foreground: #f4f6fb;
+    --primary: oklch(0.5731 0.2161 357.87);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: #353946;
+    --secondary-foreground: #f4f6fb;
+    --muted: #303440;
+    --muted-foreground: #c7ccd9;
+    --accent: #373b48;
+    --accent-foreground: #f4f6fb;
     --destructive: oklch(0.6 0.22 25);
-    --border: oklch(0.35 0 0);
-    --input: oklch(0.25 0 0);
-    --ring: oklch(0.75 0.2 300);
+    --border: #444855;
+    --input: #2d303b;
+    --ring: #6366f1;
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.18 0 0);
-    --sidebar-foreground: oklch(0.95 0 0);
-    --sidebar-primary: oklch(0.75 0.2 300);
-    --sidebar-primary-foreground: oklch(0.98 0 0);
-    --sidebar-accent: oklch(0.28 0 0);
-    --sidebar-accent-foreground: oklch(0.95 0 0);
-    --sidebar-border: oklch(0.35 0 0);
-    --sidebar-ring: oklch(0.75 0.2 300);
+    --sidebar: #23262f;
+    --sidebar-foreground: #f4f6fb;
+    --sidebar-primary: #6366f1;
+    --sidebar-primary-foreground: #f4f6fb;
+    --sidebar-accent: #343843;
+    --sidebar-accent-foreground: #f4f6fb;
+    --sidebar-border: #3c3f4a;
+    --sidebar-ring: #6366f1;
 }
 
 @layer base {
@@ -130,6 +130,124 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  textarea[data-slot="textarea"],
+  .editor-styles-wrapper textarea[data-slot="textarea"],
+  .block-editor-block-list__layout textarea[data-slot="textarea"] {
+    background-color: var(--input) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
+    background-image: none !important;
+  }
+
+  textarea[data-slot="textarea"]::placeholder,
+  .editor-styles-wrapper textarea[data-slot="textarea"]::placeholder,
+  .block-editor-block-list__layout textarea[data-slot="textarea"]::placeholder {
+    color: var(--muted-foreground) !important;
+  }
+
+  textarea[data-slot="textarea"]:focus-visible,
+  .editor-styles-wrapper textarea[data-slot="textarea"]:focus-visible,
+  .block-editor-block-list__layout textarea[data-slot="textarea"]:focus-visible {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
+    background-color: var(--input) !important;
+  }
+
+  .dark textarea[data-slot="textarea"],
+  .dark .editor-styles-wrapper textarea[data-slot="textarea"],
+  .dark .block-editor-block-list__layout textarea[data-slot="textarea"] {
+    background-color: var(--input) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
+  }
+
+  .dark textarea[data-slot="textarea"]::placeholder,
+  .dark .editor-styles-wrapper textarea[data-slot="textarea"]::placeholder,
+  .dark .block-editor-block-list__layout textarea[data-slot="textarea"]::placeholder {
+    color: var(--muted-foreground) !important;
+  }
+
+  .dark input[type="color"],
+  .dark input[type="date"],
+  .dark input[type="datetime-local"],
+  .dark input[type="datetime"],
+  .dark input[type="email"],
+  .dark input[type="month"],
+  .dark input[type="number"],
+  .dark input[type="password"],
+  .dark input[type="search"],
+  .dark input[type="tel"],
+  .dark input[type="text"],
+  .dark input[type="time"],
+  .dark input[type="url"],
+  .dark input[type="week"],
+  .dark select,
+  .dark textarea {
+    background-color: var(--input) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+  }
+
+  .dark select option {
+    background-color: var(--card);
+    color: var(--card-foreground);
+  }
+
+  .suggerence-context-popover .components-popover__content {
+    background-color: var(--popover) !important;
+    color: var(--popover-foreground) !important;
+    border-color: var(--border) !important;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0;
+    box-shadow: 0 16px 40px -24px rgba(8, 10, 18, 0.9);
+  }
+
+  .dark .suggerence-context-popover .components-popover__content {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+    border-color: var(--border);
+  }
+
+  .suggerence-context-menu {
+    color: var(--popover-foreground) !important;
+    background-color: var(--popover);
+  }
+
+  .suggerence-context-menu .components-menu-group__label,
+  .suggerence-context-menu .components-menu-item__button,
+  .suggerence-context-menu .components-button {
+    color: inherit !important;
+  }
+
+  .suggerence-context-menu .components-menu-item__button:hover,
+  .suggerence-context-menu .components-menu-item__button:focus-visible {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .dark .suggerence-context-menu .components-menu-item__button {
+    background-color: transparent;
+    color: var(--popover-foreground) !important;
+  }
+
+  .suggerence-context-menu .components-menu-item__button svg {
+    fill: currentColor;
+  }
+
+  .suggerence-context-menu .components-menu-group,
+  .suggerence-context-menu .components-menu-group__label {
+    background-color: inherit;
+  }
+
+  .dark .suggerence-context-menu .components-menu-item__button:hover,
+  .dark .suggerence-context-menu .components-menu-item__button:focus-visible {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
   }
 }
 
@@ -147,4 +265,3 @@
 .editor-styles-wrapper [id^="block-"].suggerence-block-highlight {
     box-shadow: 0 0 0 2px #d22178 !important;
 }
-

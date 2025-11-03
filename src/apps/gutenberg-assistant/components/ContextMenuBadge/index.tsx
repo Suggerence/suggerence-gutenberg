@@ -142,7 +142,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
         <>
             {/* Dropdown with @ button - appears first */}
             <Dropdown
-                popoverProps={{ placement: 'top-start' }}
+                popoverProps={{ placement: 'top-start', className: 'suggerence-context-popover' }}
                 renderToggle={({ isOpen, onToggle }) => (
                     <Button
                         onClick={onToggle}
@@ -153,9 +153,9 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                             justifyContent: 'center',
                             width: '24px',
                             height: '20px',
-                            backgroundColor: isOpen ? '#f1f5f9' : '#f8fafc',
-                            color: '#475569',
-                            border: '1px solid #e2e8f0',
+                            backgroundColor: isOpen ? 'var(--muted)' : 'var(--card)',
+                            color: 'var(--muted-foreground)',
+                            border: '1px solid var(--border)',
                             borderRadius: '4px',
                             fontSize: '12px',
                             fontWeight: 600,
@@ -169,7 +169,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                     </Button>
                 )}
                 renderContent={() => (
-                    <>
+                    <div className="suggerence-context-menu">
                         {currentView === 'menu' && (
                             <MenuGroup>
                                 {contextOptions.map(option => (
@@ -187,13 +187,18 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                         )}
 
                         {currentView === 'content-selector' && (
-                            <div>
+                            <div
+                                style={{
+                                    backgroundColor: 'var(--card)',
+                                    color: 'var(--card-foreground)'
+                                }}
+                            >
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
                                     padding: '8px 16px 0 16px',
-                                    borderBottom: '1px solid #e5e7eb',
+                                    borderBottom: '1px solid var(--border)',
                                     marginBottom: '8px'
                                 }}>
                                     <Button
@@ -219,13 +224,18 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                         )}
 
                         {currentView === 'block-selector' && (
-                            <div>
+                            <div
+                                style={{
+                                    backgroundColor: 'var(--card)',
+                                    color: 'var(--card-foreground)'
+                                }}
+                            >
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
                                     padding: '8px 16px 0 16px',
-                                    borderBottom: '1px solid #e5e7eb',
+                                    borderBottom: '1px solid var(--border)',
                                     marginBottom: '8px'
                                 }}>
                                     <Button
@@ -246,7 +256,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                                 />
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             />
 

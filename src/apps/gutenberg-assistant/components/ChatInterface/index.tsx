@@ -36,7 +36,7 @@ export const ChatInterface = () => {
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto p-2"
+                    className="flex-1 overflow-y-auto p-2 sugg-scrollbar"
                 >
                     <Conversation
                         messages={messages}

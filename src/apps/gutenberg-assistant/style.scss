@@ -3,6 +3,7 @@
     flex-direction: column;
     overflow: hidden;
     width: 100% !important;
+    position: relative;
 
     & > .components-panel {
         flex: 1;
@@ -31,11 +32,61 @@
 /* Only when your plugin sidebar is inside the complementary area */
 @media (min-width: 782px) {
     .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
-        width: 500px !important; /* new width */
+        width: var(--suggerence-sidebar-width, 500px) !important;
+        position: relative;
     }
 
     .interface-interface-skeleton__sidebar:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
         margin-bottom: -25px !important;
+        flex: 0 0 var(--suggerence-sidebar-width, 500px);
+        width: var(--suggerence-sidebar-width, 500px) !important;
+        max-width: var(--suggerence-sidebar-width, 500px);
+        min-width: var(--suggerence-sidebar-width, 500px);
+    }
+
+    .interface-interface-skeleton__complementary-area:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+        width: var(--suggerence-sidebar-width, 500px) !important;
+        max-width: none !important;
+        min-width: var(--suggerence-sidebar-width, 500px);
+        flex: 0 0 var(--suggerence-sidebar-width, 500px);
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer {
+        position: absolute;
+        inset: 0 auto 0 -6px;
+        width: 12px;
+        cursor: col-resize;
+        z-index: 10;
+        touch-action: none;
+        background: rgba(0, 0, 0, 0.04);
+        transition: background-color 0.2s ease;
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 2px;
+        height: 40px;
+        border-radius: 999px;
+        background-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:hover,
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:active {
+        background: rgba(0, 0, 0, 0.08);
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:hover::before,
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:active::before {
+        background-color: rgba(0, 0, 0, 0.35);
+    }
+
+    body.is-resizing-suggerence-sidebar {
+        cursor: col-resize;
+        user-select: none;
     }
 }
 

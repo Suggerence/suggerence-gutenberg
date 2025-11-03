@@ -8,7 +8,7 @@ export const PanelHeader = () => {
 
     return (
         <div className="flex items-center justify-between p-4 border-b border-border bg-card">
-            <h2 className="!text-base !font-semibold !text-foreground !m-0">{__("AI Assistant", "suggerence")}</h2>
+            <h2 className="!text-base !font-semibold !text-foreground !m-0">{__("Suggie", "suggerence")}</h2>
             <Button
                 variant="ghost"
                 size="sm"

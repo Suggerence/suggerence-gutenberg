@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { useCallback, useRef, useState } from '@wordpress/element';
+import { useCallback, useState } from '@wordpress/element';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
@@ -62,8 +62,6 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
     const hasHistory = messages.length > 1;
     const [isCanvasOpen, setCanvasOpen] = useState(false);
     const [isMediaOpen, setMediaOpen] = useState(false);
-
-    const toolQueueRef = useRef<Promise<void>>(Promise.resolve());
 
     const runConversation = useCallback(async (conversation: MCPClientMessage[], existingController?: AbortController) => {
         if (!isGutenbergServerReady) {
@@ -131,53 +129,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
                             upsertContentMessage(chunk.accumulated, defaultModel.id);
                         }
                     },
-                    (functionCall) => {
-                        toolQueueRef.current = toolQueueRef.current
-                            .catch(() => {})
-                            .then(async () => {
-                                ensureThinkingMessage();
-                                finishThinkingMessage();
-
-                                const toolArgs = functionCall.args ?? {};
-                                const tool = tools.find((t: any) => t.name === functionCall.name);
-
-                                if (tool?.dangerous) {
-                                    enqueueToolCall({
-                                        toolCallId: functionCall.id,
-                                        toolName: functionCall.name,
-                                        toolArgs,
-                                        timestamp: new Date().toISOString()
-                                    });
-                                    addMessage({
-                                        role: 'tool_confirmation',
-                                        content: '',
-                                        date: new Date().toISOString(),
-                                        toolCallId: functionCall.id,
-                                        toolName: functionCall.name,
-                                        toolArgs
-                                    } as any);
-                                    highlightBlocksFromToolData(toolArgs, undefined);
-                                    return;
-                                }
-
-                                upsertToolMessage(functionCall.id, functionCall.name, toolArgs, `Calling ${functionCall.name}...`);
-
-                                try {
-                                    const toolResult = await callGutenbergTool(functionCall.name, toolArgs, controller.signal);
-                                    completeToolMessage(toolResult.response);
-                                } catch (toolError) {
-                                    const errorMsg = toolError instanceof DOMException && toolError.name === 'AbortError'
-                                        ? 'Stopped by user'
-                                        : `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`;
-                                    completeToolMessage(errorMsg);
-                                    if (toolError instanceof DOMException && toolError.name === 'AbortError') {
-                                        throw toolError;
-                                    }
-                                }
-                            });
-
-                        return toolQueueRef.current;
-                    },
+                    undefined,
                     (signature) => {
                         ensureThinkingMessage();
                         finishThinkingMessage(signature);
@@ -187,7 +139,51 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
                 finishThinkingMessage();
             }
 
-            await toolQueueRef.current;
+            const functionCalls: Array<{ id: string; name: string; args: any }> = response?.allFunctionCalls ?? [];
+            let processedFunctionCall = false;
+
+            for (const functionCall of functionCalls) {
+                processedFunctionCall = true;
+                ensureThinkingMessage();
+                finishThinkingMessage();
+
+                const toolArgs = functionCall.args ?? {};
+                const tool = tools.find((t: any) => t.name === functionCall.name);
+
+                if (tool?.dangerous) {
+                    enqueueToolCall({
+                        toolCallId: functionCall.id,
+                        toolName: functionCall.name,
+                        toolArgs,
+                        timestamp: new Date().toISOString()
+                    });
+                    addMessage({
+                        role: 'tool_confirmation',
+                        content: '',
+                        date: new Date().toISOString(),
+                        toolCallId: functionCall.id,
+                        toolName: functionCall.name,
+                        toolArgs
+                    } as any);
+                    highlightBlocksFromToolData(toolArgs, undefined);
+                    continue;
+                }
+
+                upsertToolMessage(functionCall.id, functionCall.name, toolArgs, `Calling ${functionCall.name}...`);
+
+                try {
+                    const toolResult = await callGutenbergTool(functionCall.name, toolArgs, controller.signal);
+                    completeToolMessage(toolResult.response);
+                } catch (toolError) {
+                    const errorMsg = toolError instanceof DOMException && toolError.name === 'AbortError'
+                        ? 'Stopped by user'
+                        : `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`;
+                    completeToolMessage(errorMsg);
+                    if (toolError instanceof DOMException && toolError.name === 'AbortError') {
+                        throw toolError;
+                    }
+                }
+            }
 
             if (!response || controller.signal.aborted) {
                 return;
@@ -200,7 +196,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
                 lastMessage.toolResult === 'Stopped by user'
             );
             const hasPendingConfirmation = useToolConfirmationStore.getState().hasPending();
-            const shouldContinue = response.lastStreamType === 'function_calls' &&
+            const shouldContinue = processedFunctionCall &&
                 !toolWasStopped &&
                 !hasPendingConfirmation;
 

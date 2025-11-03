@@ -7,7 +7,6 @@ const initialMessages = [] as MCPClientMessage[];
 type MessageTracker = {
     thinking?: number;  // Index of current thinking message
     content?: number;   // Index of current content message
-    tool?: number;      // Index of current tool message
 };
 
 // Unified store with message management and conversation state
@@ -150,55 +149,61 @@ export const useGutenbergAssistantMessagesStore = create<GutenbergAssistantMessa
             // Start or update tool message
             upsertToolMessage: (toolCallId: string, toolName: string, toolArgs: any, content: string, toolResult?: string) => {
                 const state = get();
-                const tracker = state._currentTracker;
+                const existingIndex = state.messages.findIndex(
+                    (message: any) =>
+                        message?.role === 'tool' &&
+                        message?.toolCallId === toolCallId
+                );
 
-                if (tracker.tool !== undefined) {
-                    // Update existing
+                if (existingIndex !== -1) {
                     const updated = [...state.messages];
-                    updated[tracker.tool] = {
-                        ...updated[tracker.tool],
+                    updated[existingIndex] = {
+                        ...updated[existingIndex],
                         content,
                         toolResult,
                         loading: !toolResult
                     };
                     set({ messages: updated });
-                } else {
-                    // Create new
-                    const newMessage = {
-                        role: 'tool' as const,
-                        content,
-                        date: new Date().toISOString(),
-                        toolCallId,
-                        toolName,
-                        toolArgs,
-                        toolResult,
-                        loading: true
-                    } as any;
-                    set({
-                        messages: [...state.messages, newMessage],
-                        _currentTracker: { ...tracker, tool: state.messages.length }
-                    });
+                    return;
                 }
+
+                const newMessage = {
+                    role: 'tool' as const,
+                    content,
+                    date: new Date().toISOString(),
+                    toolCallId,
+                    toolName,
+                    toolArgs,
+                    toolResult,
+                    loading: !toolResult
+                } as any;
+
+                set({
+                    messages: [...state.messages, newMessage]
+                });
             },
 
             // Complete tool message
-            completeToolMessage: (toolResult: string) => {
+            completeToolMessage: (toolCallId: string, toolResult: string) => {
                 const state = get();
-                const tracker = state._currentTracker;
+                const messageIndex = state.messages.findIndex(
+                    (message: any) =>
+                        message?.role === 'tool' &&
+                        message?.toolCallId === toolCallId
+                );
 
-                if (tracker.tool !== undefined) {
-                    const updated = [...state.messages];
-                    updated[tracker.tool] = {
-                        ...updated[tracker.tool],
-                        content: toolResult,
-                        toolResult,
-                        loading: false
-                    };
-                    set({
-                        messages: updated,
-                        _currentTracker: { ...tracker, tool: undefined }
-                    });
+                if (messageIndex === -1) {
+                    return;
                 }
+
+                const updated = [...state.messages];
+                updated[messageIndex] = {
+                    ...updated[messageIndex],
+                    content: toolResult,
+                    toolResult,
+                    loading: false
+                };
+                set({ messages: updated });
             },
 
             // Reset tracker (call when starting new conversation turn)

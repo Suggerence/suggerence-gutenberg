@@ -141,6 +141,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
             const functionCalls: Array<{ id: string; name: string; args: any }> = response?.allFunctionCalls ?? [];
             let processedFunctionCall = false;
+            const parallelToolRuns: Promise<void>[] = [];
 
             for (const functionCall of functionCalls) {
                 processedFunctionCall = true;
@@ -171,17 +172,32 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
                 upsertToolMessage(functionCall.id, functionCall.name, toolArgs, `Calling ${functionCall.name}...`);
 
+                const toolPromise = (async () => {
+                    try {
+                        const toolResult = await callGutenbergTool(functionCall.name, toolArgs, controller.signal);
+                        completeToolMessage(functionCall.id, toolResult.response);
+                    } catch (toolError) {
+                        const errorMsg = toolError instanceof DOMException && toolError.name === 'AbortError'
+                            ? 'Stopped by user'
+                            : `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`;
+                        completeToolMessage(functionCall.id, errorMsg);
+                        if (toolError instanceof DOMException && toolError.name === 'AbortError') {
+                            throw toolError;
+                        }
+                    }
+                })();
+
+                parallelToolRuns.push(toolPromise);
+            }
+
+            if (parallelToolRuns.length > 0) {
                 try {
-                    const toolResult = await callGutenbergTool(functionCall.name, toolArgs, controller.signal);
-                    completeToolMessage(toolResult.response);
+                    await Promise.all(parallelToolRuns);
                 } catch (toolError) {
-                    const errorMsg = toolError instanceof DOMException && toolError.name === 'AbortError'
-                        ? 'Stopped by user'
-                        : `Error: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`;
-                    completeToolMessage(errorMsg);
                     if (toolError instanceof DOMException && toolError.name === 'AbortError') {
                         throw toolError;
                     }
+                    console.error('Tool execution error:', toolError);
                 }
             }
 
@@ -357,12 +373,12 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
         try {
             const result = await callGutenbergTool(toolCall.toolName, toolCall.toolArgs, controller.signal);
-            completeToolMessage(result.response);
+            completeToolMessage(toolCall.toolCallId, result.response);
         } catch (error) {
             const errorMsg = error instanceof DOMException && error.name === 'AbortError'
                 ? 'Stopped by user'
                 : `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            completeToolMessage(errorMsg);
+            completeToolMessage(toolCall.toolCallId, errorMsg);
             if (!(error instanceof DOMException && error.name === 'AbortError')) {
                 console.error('Tool execution error:', error);
             }

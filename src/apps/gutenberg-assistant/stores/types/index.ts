@@ -50,12 +50,11 @@ export interface GutenbergAssistantMessagesStore {
     _currentTracker: {
         thinking?: number;
         content?: number;
-        tool?: number;
     };
     upsertThinkingMessage: (content: string, aiModel: string) => void;
     completeThinkingMessage: (thinkingDuration?: number, thinkingSignature?: string) => void;
     upsertContentMessage: (content: string, aiModel: string) => void;
     upsertToolMessage: (toolCallId: string, toolName: string, toolArgs: any, content: string, toolResult?: string) => void;
-    completeToolMessage: (toolResult: string) => void;
+    completeToolMessage: (toolCallId: string, toolResult: string) => void;
     resetTracker: () => void;
 }

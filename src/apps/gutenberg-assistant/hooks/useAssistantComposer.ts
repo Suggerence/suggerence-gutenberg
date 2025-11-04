@@ -264,9 +264,28 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         }
     }, [addMessage, runConversation]);
 
+    const clearPendingToolConfirmations = useCallback(() => {
+        const pending = [...useToolConfirmationStore.getState().pendingToolCalls];
+        if (pending.length === 0) return;
+
+        pending.forEach((call) => {
+            removeBlockHighlightsFromToolData(call.toolArgs, undefined);
+            removeToolCall(call.toolCallId);
+        });
+
+        const pendingIds = new Set(pending.map((call) => call.toolCallId));
+        const currentMessages = useGutenbergAssistantMessagesStore.getState().messages;
+        const filteredMessages = currentMessages.filter(
+            (msg) => !(msg.role === 'tool_confirmation' && msg.toolCallId && pendingIds.has(msg.toolCallId as string))
+        );
+        setMessages(filteredMessages);
+    }, [removeToolCall, setMessages]);
+
     const sendMessage = useCallback(async (overrideContent?: string) => {
         const content = (overrideContent ?? inputValue).trim();
         if (!content || isLoading || !isGutenbergServerReady) return;
+
+        clearPendingToolConfirmations();
 
         const userMessage: MCPClientMessage = {
             role: 'user',
@@ -287,7 +306,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         isGutenbergServerReady,
         addMessage,
         startTurn,
-        hasPendingToolCalls
+        hasPendingToolCalls,
+        clearPendingToolConfirmations
     ]);
 
     const stop = useCallback(() => {
@@ -337,6 +357,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
     const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
         if (isLoading || !isGutenbergServerReady) return;
 
+        clearPendingToolConfirmations();
+
         addMessage(audioMessage);
         setInputValue('');
 
@@ -349,7 +371,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         isGutenbergServerReady,
         addMessage,
         startTurn,
-        hasPendingToolCalls
+        hasPendingToolCalls,
+        clearPendingToolConfirmations
     ]);
 
     const acceptToolCall = useCallback(async (toolCallId: string) => {

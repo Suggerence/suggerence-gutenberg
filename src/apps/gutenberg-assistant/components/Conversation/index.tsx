@@ -1,4 +1,5 @@
 import { __ } from '@wordpress/i18n';
+import { useState } from '@wordpress/element';
 import { UserMessage } from '@/apps/gutenberg-assistant/components/UserMessage';
 import { ToolMessage } from '@/apps/gutenberg-assistant/components/ToolMessage';
 import { ActionMessage } from '@/apps/gutenberg-assistant/components/ActionMessage';
@@ -7,6 +8,8 @@ import { ThinkingMessage } from '@/apps/gutenberg-assistant/components/ThinkingM
 import { ThinkToolMessage } from '@/apps/gutenberg-assistant/components/ThinkToolMessage';
 import { ToolConfirmationMessage } from '@/apps/gutenberg-assistant/components/ToolConfirmationMessage';
 import { AssistantMessageGroup } from '@/apps/gutenberg-assistant/components/AssistantMessageGroup';
+import { ConfirmationAction } from '@/components/ai-elements/confirmation';
+import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 
 interface ConversationProps {
     messages: MCPClientMessage[];
@@ -43,6 +46,18 @@ const groupMessages = (messages: MCPClientMessage[]) => {
 };
 
 export const Conversation = ({ messages, onAcceptTool, onRejectTool, onAcceptAllTools }: ConversationProps) => {
+    const [isAllowAllProcessing, setIsAllowAllProcessing] = useState(false);
+    const pendingToolCalls = useToolConfirmationStore((state) => state.pendingToolCalls);
+
+    const handleAllowAll = async () => {
+        setIsAllowAllProcessing(true);
+        try {
+            await onAcceptAllTools();
+        } finally {
+            setIsAllowAllProcessing(false);
+        }
+    };
+
     return (
         <div className="space-y-0">
             {groupMessages(messages).map((group, groupIndex) => {
@@ -66,7 +81,6 @@ export const Conversation = ({ messages, onAcceptTool, onRejectTool, onAcceptAll
                                         message={message}
                                         onAccept={onAcceptTool}
                                         onReject={onRejectTool}
-                                        onAcceptAll={onAcceptAllTools}
                                     />
                                 );
                             }
@@ -144,6 +158,16 @@ export const Conversation = ({ messages, onAcceptTool, onRejectTool, onAcceptAll
                     </AssistantMessageGroup>
                 );
             })}
+            {pendingToolCalls.length > 1 && (
+                <div className="flex justify-end pt-3">
+                    <ConfirmationAction
+                        onClick={handleAllowAll}
+                        disabled={isAllowAllProcessing}
+                    >
+                        {__('Allow All', 'suggerence')}
+                    </ConfirmationAction>
+                </div>
+            )}
         </div>
     );
 };

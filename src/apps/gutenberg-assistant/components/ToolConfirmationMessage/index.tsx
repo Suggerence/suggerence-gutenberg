@@ -9,20 +9,16 @@ import {
     ConfirmationActions,
     ConfirmationAction,
 } from '@/components/ai-elements/confirmation';
-import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import type { ToolConfirmationMessageProps } from './types';
 
 export const ToolConfirmationMessage = ({
     message,
     onAccept,
-    onReject,
-    onAcceptAll
+    onReject
 }: ToolConfirmationMessageProps) => {
     const [isArgsExpanded, setIsArgsExpanded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const cleanToolName = getToolDisplayName(message.toolName || '');
-
-    const pendingToolCalls = useToolConfirmationStore((state) => state.pendingToolCalls);
 
     const handleAccept = useCallback(async () => {
         if (!message.toolCallId) return;
@@ -37,12 +33,6 @@ export const ToolConfirmationMessage = ({
         await onReject(message.toolCallId);
         setIsProcessing(false);
     }, [onReject, message.toolCallId]);
-
-    const handleAcceptAll = useCallback(async () => {
-        setIsProcessing(true);
-        await onAcceptAll();
-        setIsProcessing(false);
-    }, [onAcceptAll]);
 
     return (
         <Confirmation
@@ -93,15 +83,6 @@ export const ToolConfirmationMessage = ({
                     >
                         {__('Reject', 'suggerence')}
                     </ConfirmationAction>
-                    {pendingToolCalls.length > 1 && (
-                        <ConfirmationAction
-                            variant="outline"
-                            onClick={handleAcceptAll}
-                            disabled={isProcessing}
-                        >
-                            {__('Allow All', 'suggerence')}
-                        </ConfirmationAction>
-                    )}
                     <ConfirmationAction
                         onClick={handleAccept}
                         disabled={isProcessing}

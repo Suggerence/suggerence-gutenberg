@@ -4,7 +4,7 @@ import { ChatInterface } from '@/apps/gutenberg-assistant/components/ChatInterfa
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient } from '@tanstack/react-query';
-import { select, subscribe as dataSubscribe, useDispatch } from '@wordpress/data';
+import { useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
 import { WebSocketProvider } from '@/shared/context/WebSocketContext';
@@ -40,20 +40,11 @@ export const GutenbergAssistant = () => {
             return;
         }
 
-        const SIDEBAR_PLUGIN_NAME = 'suggerence-gutenberg-assistant/suggerence-chat-sidebar';
         const SIDEBAR_DOM_ID = 'suggerence-gutenberg-assistant:suggerence-chat-sidebar';
 
         let cleanup: (() => void) | undefined;
         let observer: MutationObserver | undefined;
         let isEffectActive = true;
-
-        type WidthContext = {
-            applyWidth: (value: number) => number;
-            resetWidth: () => void;
-        };
-
-        let widthContext: WidthContext | undefined;
-        let isResizingSidebar = false;
 
         const getStoredWidth = () => {
             const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
@@ -61,44 +52,11 @@ export const GutenbergAssistant = () => {
             return Number.isFinite(parsedWidth) ? parsedWidth : SIDEBAR_DEFAULT_WIDTH;
         };
 
-        const getIsSidebarActive = () => {
-            const editPostStore = select('core/edit-post') as {
-                isPluginSidebarOpened?: (name: string) => boolean;
-                getActiveGeneralSidebarName?: () => string | undefined;
-            } | undefined;
-
-            if (!editPostStore) {
-                return false;
-            }
-
-            if (typeof editPostStore.isPluginSidebarOpened === 'function' && editPostStore.isPluginSidebarOpened(SIDEBAR_PLUGIN_NAME)) {
-                return true;
-            }
-
-            if (typeof editPostStore.getActiveGeneralSidebarName === 'function') {
-                return editPostStore.getActiveGeneralSidebarName() === SIDEBAR_PLUGIN_NAME;
-            }
-
-            return false;
+        const applyWidthToDocument = (value: number) => {
+            const clampedValue = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, value));
+            document.documentElement.style.setProperty('--suggerence-sidebar-width', `${clampedValue}px`);
+            return clampedValue;
         };
-
-        const syncWidthWithState = (forceActive?: boolean) => {
-            if (!widthContext || isResizingSidebar) {
-                return;
-            }
-
-            const shouldBeActive = forceActive ?? getIsSidebarActive();
-
-            if (shouldBeActive) {
-                widthContext.applyWidth(getStoredWidth());
-            } else {
-                widthContext.resetWidth();
-            }
-        };
-
-        const unsubscribe = dataSubscribe(() => {
-            syncWidthWithState();
-        });
 
         const setupResize = () => {
             const sidebarElement = document.getElementById(SIDEBAR_DOM_ID) as HTMLElement | null;
@@ -109,70 +67,32 @@ export const GutenbergAssistant = () => {
 
             cleanup?.();
 
-            const fillElement = sidebarElement.closest('.interface-complementary-area__fill') as HTMLElement | null;
             const resizerElement = sidebarElement.querySelector('.suggerence-sidebar-resizer') as HTMLElement | null;
             const sidebarShell = sidebarElement.closest('.interface-interface-skeleton__sidebar') as HTMLElement | null;
 
-            if (!fillElement || !resizerElement || !sidebarShell) {
+            if (!resizerElement || !sidebarShell) {
                 return false;
             }
 
-            const applyWidth = (value: number) => {
-                const clampedValue = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, value));
-                document.documentElement.style.setProperty('--suggerence-sidebar-width', `${clampedValue}px`);
-                fillElement.style.setProperty('--suggerence-sidebar-width', `${clampedValue}px`);
-                fillElement.style.setProperty('width', `${clampedValue}px`, 'important');
-                fillElement.style.setProperty('max-width', `${clampedValue}px`, 'important');
-                fillElement.style.setProperty('min-width', `${clampedValue}px`, 'important');
-                sidebarElement.style.setProperty('width', `${clampedValue}px`, 'important');
-                sidebarElement.style.setProperty('max-width', `${clampedValue}px`, 'important');
-                sidebarElement.style.setProperty('min-width', `${clampedValue}px`, 'important');
-                sidebarShell.style.setProperty('--suggerence-sidebar-width', `${clampedValue}px`);
-                sidebarShell.style.setProperty('width', `${clampedValue}px`, 'important');
-                sidebarShell.style.setProperty('max-width', `${clampedValue}px`, 'important');
-                sidebarShell.style.setProperty('min-width', `${clampedValue}px`, 'important');
-                sidebarShell.style.setProperty('flex-basis', `${clampedValue}px`, 'important');
-                sidebarShell.style.setProperty('flex', `0 0 ${clampedValue}px`, 'important');
-                return clampedValue;
-            };
-
-            const resetWidth = () => {
-                document.documentElement.style.removeProperty('--suggerence-sidebar-width');
-                [fillElement, sidebarElement, sidebarShell].forEach((element) => {
-                    element.style.removeProperty('--suggerence-sidebar-width');
-                    element.style.removeProperty('width');
-                    element.style.removeProperty('max-width');
-                    element.style.removeProperty('min-width');
-                    element.style.removeProperty('flex-basis');
-                    element.style.removeProperty('flex');
-                });
-            };
-
-            const context: WidthContext = { applyWidth, resetWidth };
-            widthContext = context;
-
-            syncWidthWithState();
+            applyWidthToDocument(getStoredWidth());
 
             const preventSelection = (selectEvent: Event) => {
                 selectEvent.preventDefault();
             };
 
             const beginResize = (startClientX: number) => {
-                isResizingSidebar = true;
-
                 const startWidth = sidebarShell.getBoundingClientRect().width;
 
                 const handlePointerMove = (clientX: number) => {
                     const delta = startClientX - clientX;
-                    applyWidth(startWidth + delta);
+                    applyWidthToDocument(startWidth + delta);
                 };
 
                 const finishResize = () => {
                     document.removeEventListener('selectstart', preventSelection);
-                    isResizingSidebar = false;
                     document.body.classList.remove('is-resizing-suggerence-sidebar');
                     const finalWidth = Math.round(sidebarShell.getBoundingClientRect().width);
-                    const clampedFinalWidth = applyWidth(finalWidth);
+                    const clampedFinalWidth = applyWidthToDocument(finalWidth);
                     window.localStorage.setItem(SIDEBAR_WIDTH_KEY, `${clampedFinalWidth}`);
                 };
 
@@ -285,13 +205,6 @@ export const GutenbergAssistant = () => {
                 resizerElement.removeEventListener('touchstart', handleTouchStart);
                 document.removeEventListener('selectstart', preventSelection);
                 document.body.classList.remove('is-resizing-suggerence-sidebar');
-                isResizingSidebar = false;
-                if (widthContext === context) {
-                    widthContext.resetWidth();
-                    widthContext = undefined;
-                } else {
-                    context.resetWidth();
-                }
             };
 
             return true;
@@ -320,9 +233,6 @@ export const GutenbergAssistant = () => {
             isEffectActive = false;
             cleanup?.();
             observer?.disconnect();
-            unsubscribe();
-            widthContext?.resetWidth();
-            widthContext = undefined;
         };
     }, []);
 

@@ -4,7 +4,7 @@ import { ChatInterface } from '@/apps/gutenberg-assistant/components/ChatInterfa
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient } from '@tanstack/react-query';
-import { useDispatch } from '@wordpress/data';
+import { select, subscribe as dataSubscribe, useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
 import { WebSocketProvider } from '@/shared/context/WebSocketContext';
@@ -40,13 +40,68 @@ export const GutenbergAssistant = () => {
             return;
         }
 
-        const sidebarId = 'suggerence-gutenberg-assistant:suggerence-chat-sidebar';
+        const SIDEBAR_PLUGIN_NAME = 'suggerence-gutenberg-assistant/suggerence-chat-sidebar';
+        const SIDEBAR_DOM_ID = 'suggerence-gutenberg-assistant:suggerence-chat-sidebar';
+
         let cleanup: (() => void) | undefined;
         let observer: MutationObserver | undefined;
-        let isActive = true;
+        let isEffectActive = true;
+
+        type WidthContext = {
+            applyWidth: (value: number) => number;
+            resetWidth: () => void;
+        };
+
+        let widthContext: WidthContext | undefined;
+        let isResizingSidebar = false;
+
+        const getStoredWidth = () => {
+            const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
+            const parsedWidth = storedWidth ? Number.parseInt(storedWidth, 10) : NaN;
+            return Number.isFinite(parsedWidth) ? parsedWidth : SIDEBAR_DEFAULT_WIDTH;
+        };
+
+        const getIsSidebarActive = () => {
+            const editPostStore = select('core/edit-post') as {
+                isPluginSidebarOpened?: (name: string) => boolean;
+                getActiveGeneralSidebarName?: () => string | undefined;
+            } | undefined;
+
+            if (!editPostStore) {
+                return false;
+            }
+
+            if (typeof editPostStore.isPluginSidebarOpened === 'function' && editPostStore.isPluginSidebarOpened(SIDEBAR_PLUGIN_NAME)) {
+                return true;
+            }
+
+            if (typeof editPostStore.getActiveGeneralSidebarName === 'function') {
+                return editPostStore.getActiveGeneralSidebarName() === SIDEBAR_PLUGIN_NAME;
+            }
+
+            return false;
+        };
+
+        const syncWidthWithState = (forceActive?: boolean) => {
+            if (!widthContext || isResizingSidebar) {
+                return;
+            }
+
+            const shouldBeActive = forceActive ?? getIsSidebarActive();
+
+            if (shouldBeActive) {
+                widthContext.applyWidth(getStoredWidth());
+            } else {
+                widthContext.resetWidth();
+            }
+        };
+
+        const unsubscribe = dataSubscribe(() => {
+            syncWidthWithState();
+        });
 
         const setupResize = () => {
-            const sidebarElement = document.getElementById(sidebarId);
+            const sidebarElement = document.getElementById(SIDEBAR_DOM_ID) as HTMLElement | null;
 
             if (!sidebarElement) {
                 return false;
@@ -81,15 +136,30 @@ export const GutenbergAssistant = () => {
                 return clampedValue;
             };
 
-            const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
-            const initialWidth = storedWidth ? Number.parseInt(storedWidth, 10) : SIDEBAR_DEFAULT_WIDTH;
-            applyWidth(Number.isFinite(initialWidth) ? initialWidth : SIDEBAR_DEFAULT_WIDTH);
+            const resetWidth = () => {
+                document.documentElement.style.removeProperty('--suggerence-sidebar-width');
+                [fillElement, sidebarElement, sidebarShell].forEach((element) => {
+                    element.style.removeProperty('--suggerence-sidebar-width');
+                    element.style.removeProperty('width');
+                    element.style.removeProperty('max-width');
+                    element.style.removeProperty('min-width');
+                    element.style.removeProperty('flex-basis');
+                    element.style.removeProperty('flex');
+                });
+            };
+
+            const context: WidthContext = { applyWidth, resetWidth };
+            widthContext = context;
+
+            syncWidthWithState();
 
             const preventSelection = (selectEvent: Event) => {
                 selectEvent.preventDefault();
             };
 
             const beginResize = (startClientX: number) => {
+                isResizingSidebar = true;
+
                 const startWidth = sidebarShell.getBoundingClientRect().width;
 
                 const handlePointerMove = (clientX: number) => {
@@ -99,6 +169,7 @@ export const GutenbergAssistant = () => {
 
                 const finishResize = () => {
                     document.removeEventListener('selectstart', preventSelection);
+                    isResizingSidebar = false;
                     document.body.classList.remove('is-resizing-suggerence-sidebar');
                     const finalWidth = Math.round(sidebarShell.getBoundingClientRect().width);
                     const clampedFinalWidth = applyWidth(finalWidth);
@@ -214,6 +285,13 @@ export const GutenbergAssistant = () => {
                 resizerElement.removeEventListener('touchstart', handleTouchStart);
                 document.removeEventListener('selectstart', preventSelection);
                 document.body.classList.remove('is-resizing-suggerence-sidebar');
+                isResizingSidebar = false;
+                if (widthContext === context) {
+                    widthContext.resetWidth();
+                    widthContext = undefined;
+                } else {
+                    context.resetWidth();
+                }
             };
 
             return true;
@@ -223,7 +301,7 @@ export const GutenbergAssistant = () => {
 
         if (!initialized) {
             observer = new MutationObserver(() => {
-                if (!isActive) {
+                if (!isEffectActive) {
                     return;
                 }
 
@@ -239,9 +317,12 @@ export const GutenbergAssistant = () => {
         }
 
         return () => {
-            isActive = false;
+            isEffectActive = false;
             cleanup?.();
             observer?.disconnect();
+            unsubscribe();
+            widthContext?.resetWidth();
+            widthContext = undefined;
         };
     }, []);
 

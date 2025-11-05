@@ -29,6 +29,7 @@ interface UseAssistantComposerReturn {
     addContext: (context: SelectedContext) => void;
     acceptToolCall: (toolCallId: string) => Promise<void>;
     rejectToolCall: (toolCallId: string) => Promise<void>;
+    alwaysAllowToolCall: (toolCallId: string) => Promise<void>;
     acceptAllToolCalls: () => Promise<void>;
 }
 
@@ -53,6 +54,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
     const removeToolCall = useToolConfirmationStore((state) => state.removeToolCall);
     const getToolCall = useToolConfirmationStore((state) => state.getToolCall);
     const hasPendingToolCalls = useToolConfirmationStore((state) => state.hasPending);
+    const addAlwaysAllowTool = useToolConfirmationStore((state) => state.addAlwaysAllowTool);
+    const isToolAlwaysAllowed = useToolConfirmationStore((state) => state.isToolAlwaysAllowed);
 
     const { addContext } = useContextStore();
     const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
@@ -150,8 +153,9 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
                 const toolArgs = functionCall.args ?? {};
                 const tool = tools.find((t: any) => t.name === functionCall.name);
+                const shouldRequestConfirmation = Boolean(tool?.dangerous) && !isToolAlwaysAllowed(functionCall.name);
 
-                if (tool?.dangerous) {
+                if (shouldRequestConfirmation) {
                     enqueueToolCall({
                         toolCallId: functionCall.id,
                         toolName: functionCall.name,
@@ -307,7 +311,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         addMessage,
         startTurn,
         hasPendingToolCalls,
-        clearPendingToolConfirmations
+        clearPendingToolConfirmations,
+        isToolAlwaysAllowed
     ]);
 
     const stop = useCallback(() => {
@@ -427,6 +432,20 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         startTurn
     ]);
 
+    const alwaysAllowToolCall = useCallback(async (toolCallId: string) => {
+        const toolCall = getToolCall(toolCallId);
+        if (!toolCall) return;
+
+        addAlwaysAllowTool(toolCall.toolName);
+
+        const pendingCalls = [...useToolConfirmationStore.getState().pendingToolCalls]
+            .filter((call) => call.toolName === toolCall.toolName);
+
+        for (const call of pendingCalls) {
+            await acceptToolCall(call.toolCallId);
+        }
+    }, [getToolCall, addAlwaysAllowTool, acceptToolCall]);
+
     const rejectToolCall = useCallback(async (toolCallId: string) => {
         const toolCall = getToolCall(toolCallId);
         if (!toolCall) return;
@@ -475,6 +494,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         addContext,
         acceptToolCall,
         rejectToolCall,
+        alwaysAllowToolCall,
         acceptAllToolCalls
     };
 };

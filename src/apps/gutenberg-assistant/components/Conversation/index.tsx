@@ -16,6 +16,7 @@ interface ConversationProps {
     onAcceptTool: (toolCallId: string) => Promise<void>;
     onRejectTool: (toolCallId: string) => Promise<void>;
     onAcceptAllTools: () => Promise<void>;
+    onAlwaysAllowTool: (toolCallId: string) => Promise<void>;
 }
 
 // Group consecutive assistant messages together
@@ -45,7 +46,7 @@ const groupMessages = (messages: MCPClientMessage[]) => {
     return groups;
 };
 
-export const Conversation = ({ messages, onAcceptTool, onRejectTool, onAcceptAllTools }: ConversationProps) => {
+export const Conversation = ({ messages, onAcceptTool, onRejectTool, onAcceptAllTools, onAlwaysAllowTool }: ConversationProps) => {
     const [isAllowAllProcessing, setIsAllowAllProcessing] = useState(false);
     const pendingToolCalls = useToolConfirmationStore((state) => state.pendingToolCalls);
 
@@ -81,6 +82,7 @@ export const Conversation = ({ messages, onAcceptTool, onRejectTool, onAcceptAll
                                         message={message}
                                         onAccept={onAcceptTool}
                                         onReject={onRejectTool}
+                                        onAlwaysAllow={onAlwaysAllowTool}
                                     />
                                 );
                             }

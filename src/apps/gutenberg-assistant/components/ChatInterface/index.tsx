@@ -42,6 +42,7 @@ export const ChatInterface = () => {
                         messages={messages}
                         onAcceptTool={composer.acceptToolCall}
                         onRejectTool={composer.rejectToolCall}
+                        onAlwaysAllowTool={composer.alwaysAllowToolCall}
                         onAcceptAllTools={composer.acceptAllToolCalls}
                     />
 

@@ -14,7 +14,8 @@ import type { ToolConfirmationMessageProps } from './types';
 export const ToolConfirmationMessage = ({
     message,
     onAccept,
-    onReject
+    onReject,
+    onAlwaysAllow
 }: ToolConfirmationMessageProps) => {
     const [isArgsExpanded, setIsArgsExpanded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -33,6 +34,16 @@ export const ToolConfirmationMessage = ({
         await onReject(message.toolCallId);
         setIsProcessing(false);
     }, [onReject, message.toolCallId]);
+
+    const handleAlwaysAllow = useCallback(async () => {
+        if (!message.toolCallId) return;
+        setIsProcessing(true);
+        try {
+            await onAlwaysAllow(message.toolCallId);
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [onAlwaysAllow, message.toolCallId]);
 
     return (
         <Confirmation
@@ -82,6 +93,13 @@ export const ToolConfirmationMessage = ({
                         disabled={isProcessing}
                     >
                         {__('Reject', 'suggerence')}
+                    </ConfirmationAction>
+                    <ConfirmationAction
+                        variant="outline"
+                        onClick={handleAlwaysAllow}
+                        disabled={isProcessing}
+                    >
+                        {__('Always Allow', 'suggerence')}
                     </ConfirmationAction>
                     <ConfirmationAction
                         onClick={handleAccept}

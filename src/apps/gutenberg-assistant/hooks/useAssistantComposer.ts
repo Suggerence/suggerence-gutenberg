@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { useCallback, useState } from '@wordpress/element';
+import { useCallback, useEffect, useState } from '@wordpress/element';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
@@ -311,8 +311,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         addMessage,
         startTurn,
         hasPendingToolCalls,
-        clearPendingToolConfirmations,
-        isToolAlwaysAllowed
+        clearPendingToolConfirmations
     ]);
 
     const stop = useCallback(() => {
@@ -465,6 +464,46 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
             date: new Date().toISOString()
         });
     }, [getToolCall, removeToolCall, setMessages, addMessage]);
+
+    useEffect(() => {
+        const confirmationMessages = messages.filter(
+            (msg): msg is MCPClientMessage & { toolCallId: string } =>
+                msg.role === 'tool_confirmation' && typeof msg.toolCallId === 'string'
+        );
+
+        if (confirmationMessages.length === 0) {
+            return;
+        }
+
+        const pendingIds = new Set(
+            useToolConfirmationStore.getState().pendingToolCalls.map((call) => call.toolCallId)
+        );
+
+        const staleConfirmations = confirmationMessages.filter(
+            (msg) => !pendingIds.has(msg.toolCallId!)
+        );
+
+        if (staleConfirmations.length === 0) {
+            return;
+        }
+
+        staleConfirmations.forEach((msg) => {
+            removeBlockHighlightsFromToolData(msg.toolArgs ?? {}, undefined);
+        });
+
+        const staleIds = new Set(staleConfirmations.map((msg) => msg.toolCallId));
+        const currentMessages = useGutenbergAssistantMessagesStore.getState().messages;
+        const filteredMessages = currentMessages.filter(
+            (msg) => !(msg.role === 'tool_confirmation' && msg.toolCallId && staleIds.has(msg.toolCallId as string))
+        );
+        setMessages(filteredMessages);
+
+        addMessage({
+            role: 'assistant',
+            content: __('Tool execution cancelled.', 'suggerence'),
+            date: new Date().toISOString()
+        });
+    }, [messages]);
 
     const acceptAllToolCalls = useCallback(async () => {
         const pending = [...useToolConfirmationStore.getState().pendingToolCalls];

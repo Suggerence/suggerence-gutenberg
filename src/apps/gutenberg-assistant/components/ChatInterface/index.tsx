@@ -5,6 +5,8 @@ import { Conversation } from '@/apps/gutenberg-assistant/components/Conversation
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { InputArea } from '@/apps/gutenberg-assistant/components/InputArea';
 import { useAssistantComposer } from '@/apps/gutenberg-assistant/hooks/useAssistantComposer';
+import { useEffect } from '@wordpress/element';
+import { useSelect } from '@wordpress/data';
 import { BrainIcon } from 'lucide-react';
 import { ThinkingWords } from '@/components/ai-elements/thinking-words';
 import { useAutoScroll } from '@/apps/gutenberg-assistant/hooks/useAutoScroll';
@@ -12,7 +14,21 @@ import { useAutoScroll } from '@/apps/gutenberg-assistant/hooks/useAutoScroll';
 export const ChatInterface = () => {
     const { isGutenbergServerReady } = useGutenbergMCP();
     const composer = useAssistantComposer();
-    const { messages, isLoading } = useGutenbergAssistantMessagesStore();
+    const { messages, isLoading, setPostId } = useGutenbergAssistantMessagesStore();
+
+    const currentPostId = useSelect(
+        (select) => {
+            const editorStore = select('core/editor') as any;
+            const rawId = editorStore?.getCurrentPostId?.() ?? editorStore?.getEditedPostAttribute?.('id');
+            const numericId = Number(rawId);
+            return Number.isFinite(numericId) && numericId >= 0 ? numericId : 0;
+        },
+        []
+    );
+
+    useEffect(() => {
+        setPostId(currentPostId);
+    }, [currentPostId, setPostId]);
 
     const { scrollContainerRef, messagesEndCallbackRef, handleScroll } = useAutoScroll(messages);
 

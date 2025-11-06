@@ -1,8 +1,58 @@
-import { dispatch, select } from '@wordpress/data';
+import { dispatch, select, subscribe } from '@wordpress/data';
 import { parse } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 
 declare const SuggerenceData: SuggerenceData;
+
+/**
+ * Wait for the WordPress data store to finish resolving block patterns.
+ * Prevents the first search from running before patterns are available.
+ */
+async function waitForBlockPatternsResolution(blockEditorSelect: any): Promise<void> {
+    if (!blockEditorSelect?.__experimentalGetAllowedPatterns) {
+        return;
+    }
+
+    const initialResult = blockEditorSelect.__experimentalGetAllowedPatterns(undefined);
+    if (Array.isArray(initialResult) && initialResult.length > 0) {
+        return;
+    }
+
+    const dataStore = select('core/data') as any;
+    const alreadyResolved = dataStore?.hasFinishedResolution?.(
+        'core/block-editor',
+        '__experimentalGetAllowedPatterns',
+        [undefined]
+    );
+
+    if (alreadyResolved) {
+        return;
+    }
+
+    await new Promise<void>((resolve) => {
+        let unsubscribe = () => {};
+        const timeout = setTimeout(() => {
+            unsubscribe();
+            resolve();
+        }, 2000);
+
+        unsubscribe = subscribe(() => {
+            const latestPatterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined);
+            const latestDataStore = select('core/data') as any;
+            const finished = latestDataStore?.hasFinishedResolution?.(
+                'core/block-editor',
+                '__experimentalGetAllowedPatterns',
+                [undefined]
+            );
+
+            if ((Array.isArray(latestPatterns) && latestPatterns.length > 0) || finished) {
+                clearTimeout(timeout);
+                unsubscribe();
+                resolve();
+            }
+        });
+    });
+}
 
 /**
  * Get available pattern categories from WordPress
@@ -170,6 +220,8 @@ export async function searchPattern(args: {
             }));
         } else {
             // Fallback to WordPress patterns
+            await waitForBlockPatternsResolution(blockEditorSelect);
+
             // Get settings first (needed for categories)
             const settings = blockEditorSelect?.getSettings?.();
 
@@ -177,14 +229,26 @@ export async function searchPattern(args: {
             if (blockEditorSelect?.__experimentalGetAllowedPatterns) {
                 try {
                     // Call with rootClientId = undefined to get all patterns (same as Gutenberg)
-                    patterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined) || [];
+                    const allowedPatterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined);
+                    if (Array.isArray(allowedPatterns)) {
+                        patterns = allowedPatterns;
+                    } else if (allowedPatterns && typeof (allowedPatterns as Promise<any>).then === 'function') {
+                        try {
+                            const resolvedPatterns = await allowedPatterns;
+                            if (Array.isArray(resolvedPatterns)) {
+                                patterns = resolvedPatterns;
+                            }
+                        } catch (patternError) {
+                            console.warn('__experimentalGetAllowedPatterns promise rejected:', patternError);
+                        }
+                    }
                 } catch (e) {
                     console.warn('__experimentalGetAllowedPatterns failed:', e);
                 }
             }
 
             // Fallback: Get patterns from settings if the method above failed
-            if (patterns.length === 0 && settings?.__experimentalBlockPatterns) {
+            if (patterns.length === 0 && Array.isArray(settings?.__experimentalBlockPatterns)) {
                 patterns = settings.__experimentalBlockPatterns || [];
             }
 

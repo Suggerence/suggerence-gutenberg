@@ -18,7 +18,8 @@ import {
     FileText,
     ScrollText,
     SquareStack,
-    X
+    X,
+    Check
 } from 'lucide-react';
 
 const contextOptions: ContextOption[] = [
@@ -44,9 +45,11 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [currentView, setCurrentView] = useState<'menu' | 'content-selector' | 'block-selector'>('menu');
     const [selectedContentId, setSelectedContentId] = useState<number>();
-    const [selectedBlockId, setSelectedBlockId] = useState<string>();
     const [contentType, setContentType] = useState<ContentType>('post');
     const [hoveredContextId, setHoveredContextId] = useState<string>();
+    const selectedBlockIds = selectedContexts
+        .filter(context => context.type === 'block')
+        .map(context => context.data?.clientId || context.id.replace('block-', ''));
 
     const handleContextClick = (contextId: string) => {
         if (contextId === 'post' || contextId === 'page') {
@@ -136,7 +139,6 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
         };
 
         addContext(context);
-        setSelectedBlockId(block.clientId);
         onContextSelect?.(context);
         setCurrentView('menu');
         setIsMenuOpen(false);
@@ -147,9 +149,6 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
         const removedContext = selectedContexts.find(ctx => ctx.id === contextId);
         if (removedContext?.type === 'post' || removedContext?.type === 'page') {
             setSelectedContentId(undefined);
-        }
-        if (removedContext?.type === 'block') {
-            setSelectedBlockId(undefined);
         }
         setHoveredContextId(undefined);
 
@@ -186,19 +185,30 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                 >
                     {currentView === 'menu' && (
                         <div className="py-1">
-                            {contextOptions.map((option) => (
-                                <DropdownMenuItem
-                                    key={option.id}
-                                    onSelect={(event) => {
-                                        event.preventDefault();
-                                        handleContextClick(option.id);
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium"
-                                >
-                                    <option.icon className="h-4 w-4 text-muted-foreground" />
-                                    <span className="flex-1">{option.label}</span>
-                                </DropdownMenuItem>
-                            ))}
+                            {contextOptions.map((option) => {
+                                const isOptionSelected = selectedContexts.some(ctx => ctx.type === option.id);
+
+                                return (
+                                    <DropdownMenuItem
+                                        key={option.id}
+                                        data-selected={isOptionSelected}
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            handleContextClick(option.id);
+                                        }}
+                                        className={cn(
+                                            'flex items-center gap-2 px-3 py-2 text-sm font-medium',
+                                            isOptionSelected && 'bg-muted text-foreground'
+                                        )}
+                                    >
+                                        <option.icon className="h-4 w-4 text-muted-foreground" />
+                                        <span className="flex-1">{option.label}</span>
+                                        {isOptionSelected && (
+                                            <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                                        )}
+                                    </DropdownMenuItem>
+                                );
+                            })}
                         </div>
                     )}
 
@@ -245,7 +255,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                             </div>
                             <BlockSelector
                                 onBlockSelect={handleBlockSelect}
-                                selectedBlockId={selectedBlockId}
+                                selectedBlockIds={selectedBlockIds}
                                 showBlockHierarchy={true}
                                 className="flex-1 overflow-y-auto px-3 py-2"
                             />

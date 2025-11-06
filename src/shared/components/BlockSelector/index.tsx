@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import type { ChangeEvent } from 'react';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
@@ -19,28 +19,64 @@ import { Check, FileAudio, Film } from 'lucide-react';
 
 export const BlockSelector = ({
     onBlockSelect,
-    selectedBlockId,
+    selectedBlockIds = [],
     className,
     showBlockHierarchy = true
 }: BlockSelectorProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const selectedBlockIdSet = useMemo(() => new Set(selectedBlockIds.filter(Boolean)), [selectedBlockIds]);
 
     // Get blocks from WordPress data store
     const blocks = useSelect((select) => {
         return getBlocksWithHierarchy();
     }, []);
 
+    const getBlockSearchText = (block: BlockInstance): string => {
+        // Simple search text extraction for filtering
+        const attributes = block.attributes || {};
+        const textFields = ['content', 'text', 'value', 'title', 'caption', 'alt'];
+
+        for (const field of textFields) {
+            if (attributes[field] && typeof attributes[field] === 'string') {
+                const tmp = document.createElement('div');
+                tmp.innerHTML = attributes[field];
+                return tmp.textContent || tmp.innerText || '';
+            }
+        }
+
+        return '';
+    };
+
     // Filter blocks based on search term
     const filteredBlocks = blocks.filter((block) => {
-        if (!debouncedSearchTerm) return true;
+        const normalizedSearch = (debouncedSearchTerm || '').trim().toLowerCase();
+        if (!normalizedSearch) return true;
 
-        const searchLower = debouncedSearchTerm.toLowerCase();
-        const blockName = block.name.toLowerCase();
+        const blockType = getBlockType(block.name);
+        const rawTitle = blockType?.title;
+        const blockName = block.name?.toLowerCase() ?? '';
+        const blockLabel = typeof rawTitle === 'string'
+            ? rawTitle.toLowerCase()
+            : typeof rawTitle === 'function'
+                ? String(rawTitle({})).toLowerCase()
+                : '';
+        const blockKeywords = Array.isArray(blockType?.keywords)
+            ? blockType.keywords.join(' ').toLowerCase()
+            : '';
         const blockContent = getBlockSearchText(block).toLowerCase();
+        const blockClientId = block.clientId?.toLowerCase?.() ?? '';
 
-        return blockName.includes(searchLower) || blockContent.includes(searchLower);
+        const searchableText = [
+            blockName,
+            blockLabel,
+            blockKeywords,
+            blockContent,
+            blockClientId
+        ].join(' ');
+
+        return searchableText.includes(normalizedSearch);
     });
 
     const handleBlockClick = (block: BlockInstance) => {
@@ -63,22 +99,6 @@ export const BlockSelector = ({
     const handleBlockLeave = (blockId: string) => {
         setHoveredBlockId(null);
         unhighlightBlock(blockId);
-    };
-
-    const getBlockSearchText = (block: BlockInstance): string => {
-        // Simple search text extraction for filtering
-        const attributes = block.attributes || {};
-        const textFields = ['content', 'text', 'value', 'title', 'caption', 'alt'];
-
-        for (const field of textFields) {
-            if (attributes[field] && typeof attributes[field] === 'string') {
-                const tmp = document.createElement('div');
-                tmp.innerHTML = attributes[field];
-                return tmp.textContent || tmp.innerText || '';
-            }
-        }
-
-        return '';
     };
 
     useEffect(() => {
@@ -116,16 +136,20 @@ export const BlockSelector = ({
 
             {filteredBlocks.length > 0 && (
                 <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
-                    {filteredBlocks.map(block => (
+                    {filteredBlocks.map(block => {
+                        const blockType = getBlockType(block.name);
+                        const isSelected = selectedBlockIdSet.has(block.clientId);
+
+                        return (
                         <Button
                             key={block.clientId}
                             onClick={() => handleBlockClick(block)}
                             onMouseEnter={() => handleBlockHover(block.clientId)}
                             onMouseLeave={() => handleBlockLeave(block.clientId)}
-                            variant={selectedBlockId === block.clientId ? 'default' : 'ghost'}
+                            variant={isSelected ? 'default' : 'ghost'}
                             className={cn(
                                 'w-full justify-start gap-2 px-2 py-2 text-sm transition-colors',
-                                selectedBlockId === block.clientId
+                                isSelected
                                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                                     : 'text-foreground hover:bg-muted',
                             )}
@@ -135,7 +159,7 @@ export const BlockSelector = ({
                         >
                             <div className="flex flex-1 items-center gap-2">
                                 <BlockIcon
-                                    icon={getBlockType(block.name)?.icon}
+                                    icon={blockType?.icon}
                                     showColors={true}
                                     style={{
                                         width: '16px',
@@ -169,11 +193,12 @@ export const BlockSelector = ({
                                     </div>
                                 )}
                             </div>
-                            {selectedBlockId === block.clientId && (
+                            {isSelected && (
                                 <Check className="h-4 w-4 flex-shrink-0" />
                             )}
                         </Button>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

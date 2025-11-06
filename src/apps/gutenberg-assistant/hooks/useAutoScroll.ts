@@ -1,114 +1,106 @@
 import { useRef, useEffect, useCallback } from '@wordpress/element';
 
-export const useAutoScroll = (messages: MCPClientMessage[], isLoading: boolean) => {
+const SCROLL_BOTTOM_THRESHOLD = 4;
+const PROGRAMMATIC_SCROLL_RESET_DELAY = 400;
+
+export const useAutoScroll = (messages: MCPClientMessage[]) => {
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-    const messagesEndRef = useRef<HTMLDivElement | null>(null);
-    const isUserScrollingRef = useRef(false);
-    const scrollTimeoutRef = useRef<number | null>(null);
-    const lastAutoScrollTimeRef = useRef(0);
+    const autoScrollEnabledRef = useRef(true);
+    const programmaticScrollRef = useRef(false);
+    const programmaticTimeoutRef = useRef<number | null>(null);
     const lastMessageCountRef = useRef(messages.length);
     const lastContentLengthRef = useRef(0);
 
-    // Detect when user is manually scrolling
-    const handleScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return;
+    const isNearBottom = useCallback((container: HTMLDivElement) => {
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        return distanceFromBottom <= SCROLL_BOTTOM_THRESHOLD;
+    }, []);
 
-        const now = Date.now();
-        // Ignore scroll events that happen too soon after auto-scroll
-        if (now - lastAutoScrollTimeRef.current < 300) return;
+    const clearProgrammaticTimeout = useCallback(() => {
+        if (programmaticTimeoutRef.current) {
+            window.clearTimeout(programmaticTimeoutRef.current);
+            programmaticTimeoutRef.current = null;
+        }
+    }, []);
 
-        const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const markProgrammaticScroll = useCallback(() => {
+        programmaticScrollRef.current = true;
+        clearProgrammaticTimeout();
 
-        // If user scrolled up more than 50px from bottom, they're manually scrolling
-        isUserScrollingRef.current = distanceFromBottom > 50;
+        programmaticTimeoutRef.current = window.setTimeout(() => {
+            programmaticScrollRef.current = false;
+            programmaticTimeoutRef.current = null;
+        }, PROGRAMMATIC_SCROLL_RESET_DELAY);
+    }, [clearProgrammaticTimeout]);
 
-        // Clear any existing timeout
-        if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
+    // Smooth scroll to bottom if auto-scroll is enabled
+    const scrollToBottom = useCallback(() => {
+        if (!autoScrollEnabledRef.current || !scrollContainerRef.current) {
+            return;
         }
 
-        // Reset after 1.5 seconds of no scrolling if near bottom
-        scrollTimeoutRef.current = window.setTimeout(() => {
-            if (scrollContainerRef.current) {
-                const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-                const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-                if (distanceFromBottom < 50) {
-                    isUserScrollingRef.current = false;
-                }
-            }
-        }, 1500);
-    }, []);
-
-    // Smooth scroll to bottom
-    const scrollToBottom = useCallback(() => {
-        if (isUserScrollingRef.current || !scrollContainerRef.current) return;
-
         const container = scrollContainerRef.current;
-        const targetScroll = container.scrollHeight - container.clientHeight;
-        const currentScroll = container.scrollTop;
+        if (isNearBottom(container)) {
+            return;
+        }
 
-        // If already at bottom, no need to scroll
-        if (Math.abs(targetScroll - currentScroll) < 10) return;
+        markProgrammaticScroll();
 
-        // Record auto-scroll time to ignore immediate scroll events
-        lastAutoScrollTimeRef.current = Date.now();
-
-        // Use smooth scrolling
         container.scrollTo({
-            top: targetScroll,
+            top: container.scrollHeight - container.clientHeight,
             behavior: 'smooth'
         });
-    }, []);
+    }, [isNearBottom, markProgrammaticScroll]);
+
+    // Detect manual scrolling
+    const handleScroll = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        if (isNearBottom(container)) {
+            autoScrollEnabledRef.current = true;
+            return;
+        }
+
+        if (!programmaticScrollRef.current) {
+            autoScrollEnabledRef.current = false;
+        }
+    }, [isNearBottom]);
 
     // Callback ref for messages end marker
     const messagesEndCallbackRef = useCallback((node: HTMLDivElement | null) => {
-        messagesEndRef.current = node;
-        if (node && !isUserScrollingRef.current) {
+        if (node && autoScrollEnabledRef.current) {
             scrollToBottom();
         }
     }, [scrollToBottom]);
 
     // Track new messages and content updates (for streaming)
     useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (container && isNearBottom(container)) {
+            autoScrollEnabledRef.current = true;
+        }
+
         const hasNewMessage = messages.length > lastMessageCountRef.current;
         lastMessageCountRef.current = messages.length;
 
-        // Calculate total content length to detect streaming updates
         const currentContentLength = messages.reduce((sum, msg) =>
             sum + (msg.content?.length || 0), 0
         );
         const contentChanged = currentContentLength !== lastContentLengthRef.current;
-        const hadContent = lastContentLengthRef.current > 0;
         lastContentLengthRef.current = currentContentLength;
 
-        // Auto-scroll on new messages or content updates (streaming)
-        // Skip first render (hadContent will be false)
-        if (hadContent && (hasNewMessage || contentChanged)) {
+        if (autoScrollEnabledRef.current && (hasNewMessage || contentChanged)) {
             scrollToBottom();
         }
-    }, [messages, scrollToBottom]);
-
-    // Auto-scroll while loading/streaming
-    useEffect(() => {
-        if (!isLoading) return;
-
-        // Scroll every 100ms while loading to handle streaming content
-        const interval = setInterval(() => {
-            scrollToBottom();
-        }, 100);
-
-        return () => clearInterval(interval);
-    }, [isLoading, scrollToBottom]);
+    }, [isNearBottom, messages, scrollToBottom]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (scrollTimeoutRef.current) {
-                clearTimeout(scrollTimeoutRef.current);
-            }
+            clearProgrammaticTimeout();
         };
-    }, []);
+    }, [clearProgrammaticTimeout]);
 
     return {
         scrollContainerRef,

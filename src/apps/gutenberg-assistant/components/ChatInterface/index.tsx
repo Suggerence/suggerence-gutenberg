@@ -14,7 +14,7 @@ export const ChatInterface = () => {
     const composer = useAssistantComposer();
     const { messages, isLoading } = useGutenbergAssistantMessagesStore();
 
-    const { scrollContainerRef, messagesEndCallbackRef, handleScroll } = useAutoScroll(messages, isLoading);
+    const { scrollContainerRef, messagesEndCallbackRef, handleScroll } = useAutoScroll(messages);
 
     if (!isGutenbergServerReady) {
         return (

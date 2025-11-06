@@ -1,34 +1,47 @@
 import { useState } from '@wordpress/element';
-import { Icon, MenuGroup, MenuItem, Dropdown, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { page, post, blockDefault, edit, chevronLeft, close } from '@wordpress/icons';
 import { PostSelector } from '@/shared/components/PostSelector';
 import { BlockSelector } from '@/shared/components/BlockSelector';
-import { BlockTitle } from '@wordpress/block-editor';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
 import type { BlockInstance } from '@wordpress/blocks';
 import { Badge } from '@/components/ui/badge';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import {
+    ArrowLeft,
+    FileText,
+    ScrollText,
+    SquareStack,
+    X
+} from 'lucide-react';
 
 const contextOptions: ContextOption[] = [
     {
         id: 'post',
         label: __('Post', 'suggerence-gutenberg'),
-        icon: post,
+        icon: FileText,
     },
     {
         id: 'page',
         label: __('Page', 'suggerence-gutenberg'),
-        icon: page,
+        icon: ScrollText,
     },
     {
         id: 'block',
         label: __('Block', 'suggerence-gutenberg'),
-        icon: blockDefault,
+        icon: SquareStack,
     }
 ];
 
 export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => {
     const { selectedContexts, addContext, removeContext } = useContextStore();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [currentView, setCurrentView] = useState<'menu' | 'content-selector' | 'block-selector'>('menu');
     const [selectedContentId, setSelectedContentId] = useState<number>();
     const [selectedBlockId, setSelectedBlockId] = useState<string>();
@@ -56,9 +69,15 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
 
         addContext(context);
         onContextSelect?.(context);
+        setCurrentView('menu');
+        setIsMenuOpen(false);
     };
 
     const handleContentSelect = (content: WPContent) => {
+        if (!content) {
+            return;
+        }
+
         const context: SelectedContext = {
             id: `${contentType}-${content.id}`,
             type: contentType,
@@ -70,6 +89,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
         setSelectedContentId(content.id);
         onContextSelect?.(context);
         setCurrentView('menu');
+        setIsMenuOpen(false);
     };
 
     const getBlockTitleForBadge = (block: BlockInstance): string => {
@@ -107,6 +127,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
 
     const handleBlockSelect = (block: BlockInstance) => {
         const blockTitle = getBlockTitleForBadge(block);
+
         const context: SelectedContext = {
             id: `block-${block.clientId}`,
             type: 'block',
@@ -118,6 +139,7 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
         setSelectedBlockId(block.clientId);
         onContextSelect?.(context);
         setCurrentView('menu');
+        setIsMenuOpen(false);
     };
 
     const handleRemoveContext = (contextId: string) => {
@@ -141,129 +163,102 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
     return (
         <>
             {/* Dropdown with @ button - appears first */}
-            <Dropdown
-                popoverProps={{ placement: 'top-start', className: 'suggerence-context-popover' }}
-                renderToggle={({ isOpen, onToggle }) => (
-                    <Button
-                        onClick={onToggle}
-                        aria-expanded={isOpen}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '24px',
-                            height: '20px',
-                            backgroundColor: isOpen ? 'var(--muted)' : 'var(--card)',
-                            color: 'var(--muted-foreground)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                            minHeight: 'unset',
-                            padding: '0'
-                        }}
-                        title={__('Add context', 'suggerence-gutenberg')}
-                    >
-                        @
-                    </Button>
-                )}
-                renderContent={() => (
-                    <div className="suggerence-context-menu">
-                        {currentView === 'menu' && (
-                            <MenuGroup>
-                                {contextOptions.map(option => (
-                                    <MenuItem
-                                        key={option.id}
-                                        icon={option.icon}
-                                        onClick={() => handleContextClick(option.id)}
-                                        isSelected={selectedContexts.some(ctx => ctx.type === option.id)}
-                                        info={option.description}
-                                    >
-                                        {option.label}
-                                    </MenuItem>
-                                ))}
-                            </MenuGroup>
-                        )}
+            <DropdownMenu open={isMenuOpen} onOpenChange={(open) => {
+                setIsMenuOpen(open);
+                if (!open) {
+                    setCurrentView('menu');
+                }
+            }}>
+                <DropdownMenuTrigger
+                    className={cn(
+                        buttonVariants({ variant: 'outline', size: 'icon-sm' }),
+                        'h-6 w-7 min-w-0 rounded-[4px] border bg-card text-[12px] font-semibold font-mono leading-none text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                    type="button"
+                    aria-label={__('Add context', 'suggerence-gutenberg')}
+                >
+                    @
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                    side="top"
+                    align="start"
+                    className="w-[320px] border border-border bg-card p-0 text-card-foreground shadow-lg"
+                >
+                    {currentView === 'menu' && (
+                        <div className="py-1">
+                            {contextOptions.map((option) => (
+                                <DropdownMenuItem
+                                    key={option.id}
+                                    onSelect={(event) => {
+                                        event.preventDefault();
+                                        handleContextClick(option.id);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium"
+                                >
+                                    <option.icon className="h-4 w-4 text-muted-foreground" />
+                                    <span className="flex-1">{option.label}</span>
+                                </DropdownMenuItem>
+                            ))}
+                        </div>
+                    )}
 
-                        {currentView === 'content-selector' && (
-                            <div
-                                style={{
-                                    backgroundColor: 'var(--card)',
-                                    color: 'var(--card-foreground)'
-                                }}
-                            >
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '8px 16px 0 16px',
-                                    borderBottom: '1px solid var(--border)',
-                                    marginBottom: '8px'
-                                }}>
-                                    <Button
-                                        onClick={handleBackToMenu}
-                                        icon={chevronLeft}
-                                        size="small"
-                                        variant="tertiary"
-                                        style={{ minWidth: 'auto', padding: '4px' }}
-                                    />
-                                    <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                                        {contentType === 'page'
-                                            ? __('Select a Page', 'suggerence-gutenberg')
-                                            : __('Select a Post', 'suggerence-gutenberg')
-                                        }
-                                    </span>
-                                </div>
-                                <PostSelector
-                                    onContentSelect={handleContentSelect}
-                                    selectedContentId={selectedContentId}
-                                    contentType={contentType}
-                                />
+                    {currentView === 'content-selector' && (
+                        <div className="flex max-h-[360px] flex-col">
+                            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="h-7 w-7"
+                                    onClick={handleBackToMenu}
+                                >
+                                    <ArrowLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm font-medium">
+                                    {contentType === 'page'
+                                        ? __('Select a Page', 'suggerence-gutenberg')
+                                        : __('Select a Post', 'suggerence-gutenberg')}
+                                </span>
                             </div>
-                        )}
+                            <PostSelector
+                                onContentSelect={handleContentSelect}
+                                selectedContentId={selectedContentId}
+                                contentType={contentType}
+                                className="flex-1 overflow-y-auto px-3 py-2"
+                            />
+                        </div>
+                    )}
 
-                        {currentView === 'block-selector' && (
-                            <div
-                                style={{
-                                    backgroundColor: 'var(--card)',
-                                    color: 'var(--card-foreground)'
-                                }}
-                            >
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '8px 16px 0 16px',
-                                    borderBottom: '1px solid var(--border)',
-                                    marginBottom: '8px'
-                                }}>
-                                    <Button
-                                        onClick={handleBackToMenu}
-                                        icon={chevronLeft}
-                                        size="small"
-                                        variant="tertiary"
-                                        style={{ minWidth: 'auto', padding: '4px' }}
-                                    />
-                                    <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                                        {__('Select a Block', 'suggerence-gutenberg')}
-                                    </span>
-                                </div>
-                                <BlockSelector
-                                    onBlockSelect={handleBlockSelect}
-                                    selectedBlockId={selectedBlockId}
-                                    showBlockHierarchy={true}
-                                />
+                    {currentView === 'block-selector' && (
+                        <div className="flex max-h-[360px] flex-col">
+                            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="h-7 w-7"
+                                    onClick={handleBackToMenu}
+                                >
+                                    <ArrowLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm font-medium">
+                                    {__('Select a Block', 'suggerence-gutenberg')}
+                                </span>
                             </div>
-                        )}
-                    </div>
-                )}
-            />
+                            <BlockSelector
+                                onBlockSelect={handleBlockSelect}
+                                selectedBlockId={selectedBlockId}
+                                showBlockHierarchy={true}
+                                className="flex-1 overflow-y-auto px-3 py-2"
+                            />
+                        </div>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Selected context badges - styled like BlockBadge - appear after @ and block */}
             {selectedContexts.map(context => {
                 const contextOption = contextOptions.find(opt => opt.id === context.type);
                 const isHovered = hoveredContextId === context.id;
+                const IconComponent = contextOption?.icon || FileText;
 
                 return (
                     <Badge
@@ -273,13 +268,13 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
                         onMouseEnter={() => setHoveredContextId(context.id)}
                         onMouseLeave={() => setHoveredContextId(undefined)}
                         onClick={() => handleRemoveContext(context.id)}
-                        title="Click to remove context"
+                        title={__('Click to remove context', 'suggerence-gutenberg')}
                     >
-                        <Icon
-                            icon={isHovered ? close : (contextOption?.icon || post)}
-                            size={12}
-                            className={isHovered ? 'fill-destructive' : 'fill-muted-foreground'}
-                        />
+                        {isHovered ? (
+                            <X className="h-3 w-3 text-destructive" />
+                        ) : (
+                            <IconComponent className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
                         {context.label}
                     </Badge>
                 );

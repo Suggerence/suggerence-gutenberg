@@ -1,10 +1,34 @@
-import { useState, useMemo } from '@wordpress/element';
-import { SearchControl, Spinner, Button, Icon } from '@wordpress/components';
+import { useMemo, useState } from '@wordpress/element';
+import type { ChangeEvent } from 'react';
 import { __ } from '@wordpress/i18n';
-import { post as postIcon, page as pageIcon, check } from '@wordpress/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { contentListOptions } from '@/shared/components/PostSelector/query-options';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Check, Loader2, FileText, ScrollText } from 'lucide-react';
+
+const iconByType: Record<ContentType, typeof FileText> = {
+    post: FileText,
+    page: ScrollText
+};
+
+const getContentTypeLabel = (type: ContentType) => {
+    switch (type) {
+        case 'page':
+            return __('pages', 'suggerence-gutenberg');
+        case 'post':
+        default:
+            return __('posts', 'suggerence-gutenberg');
+    }
+};
+
+const stripHtml = (html: string) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+};
 
 export const PostSelector = ({
     onContentSelect,
@@ -33,45 +57,14 @@ export const PostSelector = ({
         onContentSelect(item);
     };
 
-    const getContentIcon = (type: ContentType) => {
-        switch (type) {
-            case 'page':
-                return pageIcon;
-            case 'post':
-            default:
-                return postIcon;
-        }
-    };
-
-    const getContentTypeLabel = (type: ContentType) => {
-        switch (type) {
-            case 'page':
-                return __('pages', 'suggerence-gutenberg');
-            case 'post':
-            default:
-                return __('posts', 'suggerence-gutenberg');
-        }
-    };
-
-    const stripHtml = (html: string) => {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || '';
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString();
+    const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(event.target.value);
     };
 
     if (error) {
         return (
-            <div className={className} style={{ padding: '16px', minWidth: '320px', maxWidth: '400px' }}>
-                <div style={{
-                    textAlign: 'center',
-                    padding: '20px',
-                    color: '#dc2626',
-                    fontSize: '14px'
-                }}>
+            <div className={cn('flex w-full flex-col gap-3', className)}>
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
                     {__('Error loading content. Please try again.', 'suggerence-gutenberg')}
                 </div>
             </div>
@@ -79,27 +72,22 @@ export const PostSelector = ({
     }
 
     return (
-        <div className={className} style={{ padding: '16px', minWidth: '320px', maxWidth: '400px' }}>
-            <SearchControl
+        <div className={cn('flex w-full flex-col gap-3', className)}>
+            <Input
                 value={searchTerm}
-                onChange={setSearchTerm}
+                onChange={handleSearchChange}
                 placeholder={placeholder || __(`Search ${getContentTypeLabel(contentType)}...`, 'suggerence-gutenberg')}
-                style={{ marginBottom: '12px' }}
+                className="h-9 text-sm"
             />
 
             {isLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <Spinner />
+                <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
             )}
 
             {!isLoading && content.length === 0 && (
-                <div style={{
-                    textAlign: 'center',
-                    padding: '20px',
-                    color: '#6b7280',
-                    fontSize: '14px'
-                }}>
+                <div className="rounded-md border border-dashed border-border bg-muted/50 px-4 py-6 text-center text-xs text-muted-foreground">
                     {debouncedSearchTerm
                         ? __(`No ${getContentTypeLabel(contentType)} found matching your search.`, 'suggerence-gutenberg')
                         : __(`No ${getContentTypeLabel(contentType)} found.`, 'suggerence-gutenberg')
@@ -108,97 +96,52 @@ export const PostSelector = ({
             )}
 
             {!isLoading && content.length > 0 && (
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {content.map(item => (
-                        <Button
-                            key={item.id}
-                            onClick={() => handleContentClick(item)}
-                            className={`content-selector-item ${selectedContentId === item.id ? 'is-selected' : ''}`}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                width: '100%',
-                                padding: '8px',
-                                marginBottom: '0px',
-                                backgroundColor: selectedContentId === item.id ? '#2271b1' : 'transparent',
-                                border: 'none',
-                                borderRadius: '2px',
-                                textAlign: 'left',
-                                cursor: 'pointer',
-                                minHeight: '44px',
-                                color: selectedContentId === item.id ? 'white' : '#1e1e1e',
-                                justifyContent: 'flex-start'
-                            }}
-                            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                                if (selectedContentId !== item.id) {
-                                    (e.currentTarget as HTMLElement).style.backgroundColor = '#f6f7f7';
-                                }
-                            }}
-                            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                                if (selectedContentId !== item.id) {
-                                    (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                                }
-                            }}
-                        >
-                            <Icon
-                                icon={getContentIcon(contentType)}
-                                size={16}
-                                style={{
-                                    color: selectedContentId === item.id ? 'white' : '#6b7280',
-                                    flexShrink: 0
-                                }}
-                            />
-                            <div style={{
-                                flex: 1,
-                                minWidth: 0,
-                                overflow: 'hidden'
-                            }}>
-                                <div style={{
-                                    fontWeight: '500',
-                                    fontSize: '13px',
-                                    lineHeight: '20px',
-                                    marginBottom: '2px',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
-                                }}>
-                                    {stripHtml(item.title.rendered) || __('(No title)', 'suggerence-gutenberg')}
-                                </div>
-                                {item.excerpt.rendered && stripHtml(item.excerpt.rendered).trim() && (
-                                    <div style={{
-                                        fontSize: '11px',
-                                        color: selectedContentId === item.id ? 'rgba(255,255,255,0.8)' : '#666666',
-                                        lineHeight: '16px',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
-                                    }}>
-                                        {stripHtml(item.excerpt.rendered)}
-                                    </div>
+                <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                    {content.map(item => {
+                        const IconComponent = iconByType[contentType];
+                        const isSelected = selectedContentId === item.id;
+
+                        return (
+                            <Button
+                                key={item.id}
+                                onClick={() => handleContentClick(item)}
+                                variant={isSelected ? 'default' : 'ghost'}
+                                className={cn(
+                                    'w-full justify-start gap-3 px-3 py-2 text-sm transition-colors',
+                                    isSelected
+                                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                        : 'text-foreground hover:bg-muted'
                                 )}
-                            </div>
-                            <div style={{
-                                fontSize: '11px',
-                                color: selectedContentId === item.id ? 'rgba(255,255,255,0.7)' : '#999999',
-                                flexShrink: 0,
-                                marginLeft: '8px'
-                            }}>
-                                #{item.id}
-                            </div>
-                            {selectedContentId === item.id && (
-                                <Icon
-                                    icon={check}
-                                    size={16}
-                                    style={{
-                                        color: 'white',
-                                        flexShrink: 0,
-                                        marginLeft: '4px'
-                                    }}
+                            >
+                                <IconComponent
+                                    className={cn(
+                                        'h-4 w-4 flex-shrink-0',
+                                        isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
+                                    )}
                                 />
-                            )}
-                        </Button>
-                    ))}
+                                <div className="min-w-0 flex-1">
+                                    <div className="truncate text-sm font-medium leading-5">
+                                        {stripHtml(item.title.rendered) || __('(No title)', 'suggerence-gutenberg')}
+                                    </div>
+                                    {item.excerpt.rendered && stripHtml(item.excerpt.rendered).trim() && (
+                                        <div className={cn(
+                                            'truncate text-xs',
+                                            isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                                        )}>
+                                            {stripHtml(item.excerpt.rendered)}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={cn(
+                                    'text-xs font-medium text-muted-foreground',
+                                    isSelected && 'text-primary-foreground/80'
+                                )}>
+                                    #{item.id}
+                                </div>
+                                {isSelected && <Check className="h-4 w-4 flex-shrink-0" />}
+                            </Button>
+                        );
+                    })}
                 </div>
             )}
         </div>

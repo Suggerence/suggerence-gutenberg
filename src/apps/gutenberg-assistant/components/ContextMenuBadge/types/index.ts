@@ -1,7 +1,9 @@
+import type { LucideIcon } from 'lucide-react';
+
 interface ContextOption {
     id: string;
     label: string;
-    icon: any;
+    icon: LucideIcon;
     description?: string;
 }
 

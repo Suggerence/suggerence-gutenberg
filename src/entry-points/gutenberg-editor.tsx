@@ -7,11 +7,17 @@ import { createRoot } from '@wordpress/element';
 
 import { GutenbergAssistant } from '@/apps/gutenberg-assistant';
 import { GutenbergToolbar } from '@/apps/gutenberg-toolbar';
+import { PostCustomCssPanel } from '@/apps/gutenberg-custom-css-panel';
 import { GutenbergAutocomplete } from '@/apps/gutenberg-autocomplete';
 // import { GutenbergSuggestions } from '@/apps/gutenberg-suggestions';
 
 registerPlugin('suggerence-gutenberg-assistant', {
     render: GutenbergAssistant,
+    icon: <SuggerenceIcon />,
+});
+
+registerPlugin('suggerence-post-custom-css-panel', {
+    render: PostCustomCssPanel,
     icon: <SuggerenceIcon />,
 });
 

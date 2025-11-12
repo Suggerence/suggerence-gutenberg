@@ -31,7 +31,8 @@ import {
     updatePostExcerptTool, updatePostExcerpt,
     setFeaturedImageTool, setFeaturedImage,
     removeFeaturedImageTool, removeFeaturedImage,
-    getPostContentTool, getPostContent
+    getPostContentTool, getPostContent,
+    generateCustomCssTool, generateCustomCss
 } from '@/shared/mcps/tools/document-tools';
 import {
     thinkTool, think
@@ -78,7 +79,8 @@ export class GutenbergMCPServer {
         updatePostExcerptTool,
         setFeaturedImageTool,
         removeFeaturedImageTool,
-        getPostContentTool
+        getPostContentTool,
+        generateCustomCssTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -200,6 +202,9 @@ export class GutenbergMCPServer {
 
                 case 'get_post_content':
                     return getPostContent(args.post_id, args.post_type, args.context);
+                
+                case 'generate_custom_css':
+                    return generateCustomCss(args.css_rules, args.mode, args.description);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

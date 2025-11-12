@@ -10,6 +10,8 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
         selectedBlockClientId,
         blocks,
         postTitle,
+        postMeta,
+        postId,
         selectedBlockType
     } = useSelect((select: any) => {
         const {
@@ -20,6 +22,7 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
 
         const {
             getEditedPostAttribute,
+            getCurrentPostId
         } = select('core/editor');
 
         const {
@@ -34,6 +37,8 @@ export const useGutenbergAI = (): UseGutenbergAITools => {
             selectedBlockClientId: getSelectedBlockClientId(),
             blocks: getBlocks(),
             postTitle: getEditedPostAttribute('title'),
+            postMeta: getEditedPostAttribute('meta'),
+            postId: getCurrentPostId?.(),
             selectedBlockType
         };
     }, []);
@@ -102,6 +107,13 @@ ${selectedBlockInfo.typeDefinition?.supports ? Object.entries(selectedBlockInfo.
 ).join('\n') : 'No capability information available'}`;
             }
 
+            const existingCustomCss = typeof postMeta?.suggerence_custom_css === 'string'
+                ? postMeta.suggerence_custom_css.trim()
+                : '';
+            const customCssSummary = existingCustomCss
+                ? `Current per-post CSS (${existingCustomCss.length} chars, scoped to body.postid-${postId ?? '[ID]'}):\n${existingCustomCss.substring(0, 500)}${existingCustomCss.length > 500 ? '…' : ''}`
+                : 'No per-post custom CSS has been saved yet.';
+
             // Create message for AI with comprehensive block-aware context
             let messages: MCPClientMessage[];
 
@@ -114,6 +126,8 @@ ${selectedBlockInfo.typeDefinition?.supports ? Object.entries(selectedBlockInfo.
 - Post Title: ${postTitle || 'Untitled'}
 - Total Blocks: ${blocks.length}
 - Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+${customCssSummary ? `Post-specific Custom CSS:\n${customCssSummary}` : ''}
 
 All Blocks in Post (with IDs for reference):
 ${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
@@ -133,6 +147,8 @@ Instructions: You have complete information about the selected ${selectedBlockIn
 - Post Title: ${postTitle || 'Untitled'}
 - Total Blocks: ${blocks.length}
 - Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+${customCssSummary ? `Post-specific Custom CSS:\n${customCssSummary}` : ''}
 
 All Blocks in Post (with IDs for reference):
 ${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
@@ -180,6 +196,8 @@ Instructions: You have complete information about the selected ${selectedBlockIn
 - Post Title: ${postTitle || 'Untitled'}
 - Total Blocks: ${blocks.length}
 - Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+${customCssSummary ? `Post-specific Custom CSS:\n${customCssSummary}` : ''}
 
 All Blocks in Post (with IDs for reference):
 ${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}

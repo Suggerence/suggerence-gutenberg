@@ -71,14 +71,35 @@ class PostCustomCss
             return;
         }
 
-        $scoped_css = $this->scope_css($css, "body.postid-{$post->ID}");
-        $scoped_css = str_ireplace('</style', '<\\/style', $scoped_css);
+        $scope_selector = $this->get_scope_selector($post);
+
+        if (!$this->is_css_scoped($css, $scope_selector)) {
+            $css = $this->scope_css($css, $scope_selector);
+        }
+
+        $scoped_css = str_ireplace('</style', '<\\/style', $css);
 
         printf(
             '<style data-suggerence-custom-css="%s">%s</style>',
             esc_attr($post->ID),
             $scoped_css
         );
+    }
+
+    private function get_scope_selector(\WP_Post $post): string
+    {
+        $post_type = get_post_type($post);
+
+        if ($post_type === 'page') {
+            return "body.page-id-{$post->ID}";
+        }
+
+        return "body.postid-{$post->ID}";
+    }
+
+    private function is_css_scoped(string $css, string $scope): bool
+    {
+        return strpos($css, $scope) !== false;
     }
 
     private function scope_css(string $css, string $scope): string

@@ -49,11 +49,16 @@ class RegisterScripts
          */
 
         $asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/gutenberg-editor.asset.php');
+        $script_dependencies = $asset_file['dependencies'];
+
+        if (!in_array('code-editor', $script_dependencies, true)) {
+            $script_dependencies[] = 'code-editor';
+        }
 
         wp_register_script(
             $this->plugin_name . '-gutenberg-editor',
             SUGGERENCEGUTENBERG_URL . 'build/gutenberg-editor.js',
-            $asset_file['dependencies'],
+            $script_dependencies,
             $asset_file['version'],
             array(
                 'in_footer' => true,

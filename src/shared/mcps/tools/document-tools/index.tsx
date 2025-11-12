@@ -1,6 +1,8 @@
 import { select, dispatch } from '@wordpress/data';
 import { fetchContentById } from '@/shared/components/PostSelector/api';
 
+type CustomCssMode = 'replace' | 'append' | 'prepend' | 'clear';
+
 export const getDocumentStructureTool: SuggerenceMCPResponseTool = {
     name: 'get_document_structure',
     description: 'Retrieves a complete outline of all blocks in the current document, including their IDs, types, positions, and content previews. Use this when you need to understand the document structure, find specific blocks, or determine what content exists before making changes. Essential for complex operations that need to know the full context of the document.',
@@ -109,6 +111,31 @@ export const removeFeaturedImageTool: SuggerenceMCPResponseTool = {
     inputSchema: {
         type: 'object',
         properties: {}
+    }
+};
+
+export const generateCustomCssTool: SuggerenceMCPResponseTool = {
+    name: 'generate_custom_css',
+    description: 'Creates or updates per-post custom CSS stored in the Suggerence sidebar. Use this when the user asks to apply styling changes that cannot be achieved with existing blocks or settings. Provide the exact CSS rules you want applied—this tool will persist them to the current post so they are scoped to body.postid-{POST_ID}.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            css_rules: {
+                type: 'string',
+                description: 'The full CSS rules (already formatted) that should be applied. Keep selectors specific to the current post content when possible. Required unless mode is "clear".'
+            },
+            mode: {
+                type: 'string',
+                enum: ['replace', 'append', 'prepend', 'clear'],
+                description: 'How to apply the CSS. "replace" overwrites the existing CSS, "append" adds to the end, "prepend" adds to the beginning, and "clear" removes all custom CSS.',
+                default: 'replace'
+            },
+            description: {
+                type: 'string',
+                description: 'Optional explanation of the change for logging/debugging (not stored with the CSS).'
+            }
+        },
+        required: ['css_rules']
     }
 };
 
@@ -512,6 +539,102 @@ export function removeFeaturedImage(): { content: Array<{ type: string, text: st
     }
 }
 
+export function generateCustomCss(
+    cssRules: string,
+    mode: CustomCssMode = 'replace',
+    description?: string
+): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+
+        if (!post) {
+            throw new Error('No post is currently loaded in the editor.');
+        }
+
+        const normalizedMode: CustomCssMode = (['replace', 'append', 'prepend', 'clear'].includes(mode)
+            ? mode
+            : 'replace') as CustomCssMode;
+
+        const trimmedCss = (cssRules || '').trim();
+        if (normalizedMode !== 'clear' && trimmedCss === '') {
+            throw new Error('CSS rules are required unless mode is set to "clear".');
+        }
+
+        const existingMeta = typeof post.meta === 'object' && post.meta !== null ? post.meta : {};
+        const existingCss = typeof existingMeta.suggerence_custom_css === 'string'
+            ? existingMeta.suggerence_custom_css
+            : '';
+
+        let updatedCss = '';
+
+        switch (normalizedMode) {
+            case 'append':
+                updatedCss = existingCss
+                    ? `${existingCss.trim()}\n\n${trimmedCss}`
+                    : trimmedCss;
+                break;
+            case 'prepend':
+                updatedCss = existingCss
+                    ? `${trimmedCss}\n\n${existingCss.trim()}`
+                    : trimmedCss;
+                break;
+            case 'clear':
+                updatedCss = '';
+                break;
+            case 'replace':
+            default:
+                updatedCss = trimmedCss;
+                break;
+        }
+
+        // Normalize line endings for consistency
+        updatedCss = updatedCss.replace(/\r\n/g, '\n');
+
+        editPost({
+            meta: {
+                ...existingMeta,
+                suggerence_custom_css: updatedCss
+            }
+        });
+
+        const preview =
+            updatedCss.length > 400
+                ? `${updatedCss.substring(0, 400)}…`
+                : updatedCss;
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'custom_css_updated',
+                    data: {
+                        post_id: post.id,
+                        mode: normalizedMode,
+                        previous_length: existingCss.length,
+                        new_length: updatedCss.length,
+                        description,
+                        applied_css_preview: preview
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'custom_css_update_failed',
+                    error: `Error applying custom CSS: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
 export async function getPostContent(
     postId: number,
     postType: ContentType = 'post',
@@ -579,4 +702,3 @@ export async function getPostContent(
         };
     }
 }
-

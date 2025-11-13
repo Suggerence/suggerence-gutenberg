@@ -125,75 +125,66 @@
 }
 
 @layer base {
-  * {
+  :where(.suggerence-app *) {
     @apply border-border outline-ring/50;
   }
-  body {
+
+  :where(.suggerence-app) {
     @apply bg-background text-foreground;
   }
 }
 
 @layer components {
-  textarea[data-slot="textarea"],
-  .editor-styles-wrapper textarea[data-slot="textarea"],
-  .block-editor-block-list__layout textarea[data-slot="textarea"] {
+  .suggerence-app textarea[data-slot="textarea"] {
     background-color: var(--input) !important;
     color: var(--foreground) !important;
     border-color: var(--border) !important;
     background-image: none !important;
   }
 
-  textarea[data-slot="textarea"]::placeholder,
-  .editor-styles-wrapper textarea[data-slot="textarea"]::placeholder,
-  .block-editor-block-list__layout textarea[data-slot="textarea"]::placeholder {
+  .suggerence-app textarea[data-slot="textarea"]::placeholder {
     color: var(--muted-foreground) !important;
   }
 
-  textarea[data-slot="textarea"]:focus-visible,
-  .editor-styles-wrapper textarea[data-slot="textarea"]:focus-visible,
-  .block-editor-block-list__layout textarea[data-slot="textarea"]:focus-visible {
+  .suggerence-app textarea[data-slot="textarea"]:focus-visible {
     border-color: var(--primary) !important;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
     background-color: var(--input) !important;
   }
 
-  .dark textarea[data-slot="textarea"],
-  .dark .editor-styles-wrapper textarea[data-slot="textarea"],
-  .dark .block-editor-block-list__layout textarea[data-slot="textarea"] {
+  .dark .suggerence-app textarea[data-slot="textarea"] {
     background-color: var(--input) !important;
     color: var(--foreground) !important;
     border-color: var(--border) !important;
   }
 
-  .dark textarea[data-slot="textarea"]::placeholder,
-  .dark .editor-styles-wrapper textarea[data-slot="textarea"]::placeholder,
-  .dark .block-editor-block-list__layout textarea[data-slot="textarea"]::placeholder {
+  .dark .suggerence-app textarea[data-slot="textarea"]::placeholder {
     color: var(--muted-foreground) !important;
   }
 
-  .dark input[type="color"],
-  .dark input[type="date"],
-  .dark input[type="datetime-local"],
-  .dark input[type="datetime"],
-  .dark input[type="email"],
-  .dark input[type="month"],
-  .dark input[type="number"],
-  .dark input[type="password"],
-  .dark input[type="search"],
-  .dark input[type="tel"],
-  .dark input[type="text"],
-  .dark input[type="time"],
-  .dark input[type="url"],
-  .dark input[type="week"],
-  .dark select,
-  .dark textarea {
+  .dark .suggerence-app input[type="color"],
+  .dark .suggerence-app input[type="date"],
+  .dark .suggerence-app input[type="datetime-local"],
+  .dark .suggerence-app input[type="datetime"],
+  .dark .suggerence-app input[type="email"],
+  .dark .suggerence-app input[type="month"],
+  .dark .suggerence-app input[type="number"],
+  .dark .suggerence-app input[type="password"],
+  .dark .suggerence-app input[type="search"],
+  .dark .suggerence-app input[type="tel"],
+  .dark .suggerence-app input[type="text"],
+  .dark .suggerence-app input[type="time"],
+  .dark .suggerence-app input[type="url"],
+  .dark .suggerence-app input[type="week"],
+  .dark .suggerence-app select,
+  .dark .suggerence-app textarea {
     background-color: var(--input) !important;
     color: var(--foreground) !important;
     border-color: var(--border) !important;
     box-shadow: none !important;
   }
 
-  .dark select option {
+  .dark .suggerence-app select option {
     background-color: var(--card);
     color: var(--card-foreground);
   }
@@ -244,39 +235,39 @@
     background-color: inherit;
   }
 
-  .sugg-scrollbar {
+  .suggerence-app .sugg-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: var(--muted-foreground) transparent;
   }
 
-  .sugg-scrollbar::-webkit-scrollbar {
+  .suggerence-app .sugg-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
 
-  .sugg-scrollbar::-webkit-scrollbar-track {
+  .suggerence-app .sugg-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .sugg-scrollbar::-webkit-scrollbar-thumb {
+  .suggerence-app .sugg-scrollbar::-webkit-scrollbar-thumb {
     background-color: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
 
-  .sugg-scrollbar::-webkit-scrollbar-thumb:hover {
+  .suggerence-app .sugg-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: color-mix(in srgb, var(--muted-foreground) 90%, transparent);
   }
 
-  .dark .sugg-scrollbar {
+  .dark .suggerence-app .sugg-scrollbar {
     scrollbar-color: color-mix(in srgb, var(--muted-foreground) 80%, transparent) transparent;
   }
 
-  .dark .sugg-scrollbar::-webkit-scrollbar-thumb {
+  .dark .suggerence-app .sugg-scrollbar::-webkit-scrollbar-thumb {
     background-color: color-mix(in srgb, var(--muted-foreground) 80%, transparent);
   }
 
-  .dark .sugg-scrollbar::-webkit-scrollbar-thumb:hover {
+  .dark .suggerence-app .sugg-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
   }
 

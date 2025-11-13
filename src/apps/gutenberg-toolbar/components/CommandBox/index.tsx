@@ -105,7 +105,7 @@ export const CommandBox = ({
 
     return (
         <div
-            className="suggerence-command-box"
+            className="suggerence-command-box suggerence-app"
             style={{
                 width: '320px',
                 padding: '4px',

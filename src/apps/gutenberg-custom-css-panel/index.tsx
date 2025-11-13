@@ -116,11 +116,11 @@ export const PostCustomCssPanel = () => {
 	}, [currentCss]);
 
 	return (
-		<PluginDocumentSettingPanel
-			name="suggerence-post-custom-css"
-			title={__('Suggerence: Custom CSS', 'suggerence')}
-			className="suggerence-post-custom-css-panel"
-		>
+	<PluginDocumentSettingPanel
+		name="suggerence-post-custom-css"
+		title={__('Suggerence: Custom CSS', 'suggerence')}
+		className="suggerence-post-custom-css-panel"
+	>
 			{canUseCodeEditor ? (
 				<BaseControl
 					label={__('Per-post CSS', 'suggerence')}

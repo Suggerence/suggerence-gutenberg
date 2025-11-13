@@ -9,6 +9,7 @@ import { useEffect } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
 import { WebSocketProvider } from '@/shared/context/WebSocketContext';
 import { ThemeProvider } from 'next-themes';
+import { SuggerenceSurface } from '@/shared/components/SuggerenceSurface';
 
 import './style.scss';
 
@@ -248,18 +249,20 @@ export const GutenbergAssistant = () => {
                 name="suggerence-chat-sidebar"
                 title={__("Suggerence Chat", "suggerence")}
             >
-                <div
-                    className="suggerence-sidebar-resizer"
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label={__("Resize Suggerence chat sidebar", "suggerence")}
-                />
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-                    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-                        <WebSocketProvider>
-                            <ChatInterface />
-                        </WebSocketProvider>
-                    </PersistQueryClientProvider>
+                    <SuggerenceSurface className="flex h-full flex-col">
+                        <div
+                            className="suggerence-sidebar-resizer"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={__("Resize Suggerence chat sidebar", "suggerence")}
+                        />
+                        <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+                            <WebSocketProvider>
+                                <ChatInterface />
+                            </WebSocketProvider>
+                        </PersistQueryClientProvider>
+                    </SuggerenceSurface>
                 </ThemeProvider>
             </PluginSidebar>
         </>

@@ -292,7 +292,7 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
             }}
             isDismissible={!isCapturing}
             shouldCloseOnClickOutside={!isCapturing}
-            className="suggerence-screenshot-modal"
+            className="suggerence-screenshot-modal suggerence-app"
         >
             <VStack spacing={3}>
                 <p className="text-sm text-muted-foreground">

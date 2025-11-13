@@ -302,7 +302,7 @@ export const DrawingCanvas = ({ isOpen, onClose, onSave, onGeneratePage }: Drawi
             onRequestClose={onClose}
             isFullScreen
             shouldCloseOnClickOutside={false}
-            className="suggerence-gutenberg-assistant-modal"
+            className="suggerence-gutenberg-assistant-modal suggerence-app"
         >
             <VStack spacing={4}>
                 <CanvasToolbar

@@ -1,5 +1,7 @@
 import { select, dispatch } from '@wordpress/data';
 import { fetchContentById } from '@/shared/components/PostSelector/api';
+import { useScreenshotCaptureStore } from '@/apps/gutenberg-assistant/stores/screenshotCaptureStore';
+import type { ScreenshotViewportPreset } from '@/apps/gutenberg-assistant/components/ScreenshotCapture/types';
 
 type CustomCssMode = 'replace' | 'append' | 'prepend' | 'clear';
 
@@ -167,6 +169,31 @@ export const getPostContentTool: SuggerenceMCPResponseTool = {
     }
 };
 
+export const captureFrontendScreenshotTool: SuggerenceMCPResponseTool = {
+    name: 'capture_frontend_screenshot',
+    description: 'Loads the public preview of the current post/page (or a provided URL) and captures a screenshot for visual context. Use this to give the AI an up-to-date rendering of the frontend so it can make accurate styling decisions.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            viewport: {
+                type: 'string',
+                enum: ['desktop', 'tablet', 'mobile'],
+                description: 'Viewport preset to emulate. Defaults to desktop.',
+                default: 'desktop'
+            },
+            url: {
+                type: 'string',
+                description: 'Optional absolute URL to capture instead of the current post preview.'
+            },
+            full_height: {
+                type: 'boolean',
+                description: 'If true, capture the full scrollable height of the page. Defaults to true.',
+                default: true
+            }
+        }
+    }
+};
+
 export function getDocumentStructure(
     includeContent: boolean = true,
     maxContentLength: number = 100
@@ -234,6 +261,58 @@ export function getDocumentStructure(
                     success: false,
                     action: 'document_structure_failed',
                     error: `Error retrieving document structure: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function captureFrontendScreenshot(params: {
+    viewport?: ScreenshotViewportPreset;
+    url?: string;
+    full_height?: boolean;
+}): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const store = useScreenshotCaptureStore.getState();
+        if (!store.startToolCapture) {
+            throw new Error('Screenshot capture store is unavailable.');
+        }
+
+        const allowedViewports: ScreenshotViewportPreset[] = ['desktop', 'tablet', 'mobile'];
+        const viewport = allowedViewports.includes(params.viewport as ScreenshotViewportPreset)
+            ? params.viewport as ScreenshotViewportPreset
+            : 'desktop';
+
+        const result = await store.startToolCapture({
+            device: viewport,
+            url: params.url,
+            fullHeight: params.full_height ?? true
+        });
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'screenshot_captured',
+                    data: {
+                        preview_url: result.previewUrl,
+                        width: result.width,
+                        height: result.height,
+                        captured_at: result.capturedAt,
+                        viewport
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'screenshot_capture_failed',
+                    error: error instanceof Error ? error.message : 'Unknown error'
                 })
             }]
         };

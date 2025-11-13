@@ -32,7 +32,8 @@ import {
     setFeaturedImageTool, setFeaturedImage,
     removeFeaturedImageTool, removeFeaturedImage,
     getPostContentTool, getPostContent,
-    generateCustomCssTool, generateCustomCss
+    generateCustomCssTool, generateCustomCss,
+    captureFrontendScreenshotTool, captureFrontendScreenshot
 } from '@/shared/mcps/tools/document-tools';
 import {
     thinkTool, think
@@ -80,7 +81,8 @@ export class GutenbergMCPServer {
         setFeaturedImageTool,
         removeFeaturedImageTool,
         getPostContentTool,
-        generateCustomCssTool
+        generateCustomCssTool,
+        captureFrontendScreenshotTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -205,6 +207,13 @@ export class GutenbergMCPServer {
                 
                 case 'generate_custom_css':
                     return generateCustomCss(args.css_rules, args.mode, args.description);
+
+                case 'capture_frontend_screenshot':
+                    return captureFrontendScreenshot({
+                        viewport: args.viewport,
+                        url: args.url,
+                        full_height: args.full_height
+                    });
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

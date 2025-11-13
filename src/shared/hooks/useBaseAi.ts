@@ -43,8 +43,9 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             const isDrawing = ctx.type === 'drawing';
             const isImage = ctx.type === 'image';
             const isImageBlock = ctx.type === 'block' && (ctx.data?.name === 'core/image' || ctx.data?.name === 'core/cover');
+            const isScreenshot = ctx.type === 'screenshot';
             
-            return isDrawing || isImage || isImageBlock;
+            return isDrawing || isImage || isImageBlock || isScreenshot;
         }) || [];
 
         let convertedMessages;
@@ -113,6 +114,18 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
                                     console.error('Error converting image block to base64:', error);
                                     return null;
                                 }
+                            }
+                        } else if (ctx.type === 'screenshot') {
+                            const screenshotDataUrl = ctx.data?.dataUrl;
+                            if (typeof screenshotDataUrl === 'string' && screenshotDataUrl.startsWith('data:image')) {
+                                return {
+                                    type: 'image',
+                                    source: {
+                                        type: 'base64',
+                                        media_type: 'image/png',
+                                        data: screenshotDataUrl.split(',')[1]
+                                    }
+                                };
                             }
                         }
                         return null;

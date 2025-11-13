@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { RotateCcw } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { Button } from '@/components/ui/button';
 
@@ -16,7 +16,7 @@ export const PanelHeader = () => {
                 title={__("Reset conversation", "suggerence")}
                 className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
             >
-                <RotateCcw className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
             </Button>
         </div>
     );

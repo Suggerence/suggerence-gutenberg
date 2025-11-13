@@ -19,7 +19,10 @@ import {
     ScrollText,
     SquareStack,
     X,
-    Check
+    Check,
+    Brush,
+    ImageIcon,
+    Camera
 } from 'lucide-react';
 
 const contextOptions: ContextOption[] = [
@@ -39,6 +42,15 @@ const contextOptions: ContextOption[] = [
         icon: SquareStack,
     }
 ];
+
+const contextIconMap: Record<string, LucideIcon> = {
+    post: FileText,
+    page: ScrollText,
+    block: SquareStack,
+    drawing: Brush,
+    image: ImageIcon,
+    screenshot: Camera
+};
 
 export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => {
     const { selectedContexts, addContext, removeContext } = useContextStore();
@@ -266,9 +278,8 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
 
             {/* Selected context badges - styled like BlockBadge - appear after @ and block */}
             {selectedContexts.map(context => {
-                const contextOption = contextOptions.find(opt => opt.id === context.type);
                 const isHovered = hoveredContextId === context.id;
-                const IconComponent = contextOption?.icon || FileText;
+                const IconComponent = contextIconMap[context.type] || FileText;
 
                 return (
                     <Badge

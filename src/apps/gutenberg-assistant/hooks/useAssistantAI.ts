@@ -209,6 +209,22 @@ export const useAssistantAI = (): UseAITools => {
   → For "based on this": Use generate_image tool with input_images parameter
   → For editing: Use generate_edited_image tool with image_url: "${imageUrl}"`;
 
+            case 'screenshot':
+                const screenshot = context.data || {};
+                const screenshotUrl = screenshot.previewUrl || 'N/A';
+                const screenshotSize = screenshot.width && screenshot.height
+                    ? `${screenshot.width}x${screenshot.height}px`
+                    : 'unknown size';
+                const viewport = screenshot.viewportWidth
+                    ? `${screenshot.viewportWidth}px viewport`
+                    : '';
+                return `${info}
+  🖥️ **FRONTEND SCREENSHOT PROVIDED**
+  → Preview URL: ${screenshotUrl}
+  → Captured: ${screenshot.capturedAt || 'N/A'}
+  → Dimensions: ${screenshotSize}${viewport ? ` (${viewport})` : ''}
+  Analyze the actual spacing, typography, colors, and component states visible in the screenshot when generating CSS tweaks or layout changes.`;
+
             case 'post':
             case 'page':
                 const data = context.data;
@@ -498,7 +514,7 @@ ${gutenberg.blocks?.map((b: any) => formatBlockInfo(b)).join('\n') || 'No blocks
             ? `<user_context>
 ${selectedContexts.map(formatSelectedContext).join('\n\n')}
 
-CRITICAL: If drawing/image context exists above, user has attached visual content that MUST be analyzed!
+CRITICAL: If drawing/image/screenshot context exists above, user has attached visual content that MUST be analyzed!
 </user_context>`
             : '';
 

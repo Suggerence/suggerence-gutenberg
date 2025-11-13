@@ -7,6 +7,7 @@ import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMc
 import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI';
 import { highlightBlocksFromToolData, removeBlockHighlightsFromToolData } from '@/shared/utils/block-highlight';
 import type { SelectedContext } from '@/apps/gutenberg-assistant/stores/types';
+import type { ScreenshotCaptureResult } from '@/apps/gutenberg-assistant/components/ScreenshotCapture/types';
 
 interface UseAssistantComposerReturn {
     inputValue: string;
@@ -31,6 +32,7 @@ interface UseAssistantComposerReturn {
     rejectToolCall: (toolCallId: string) => Promise<void>;
     alwaysAllowToolCall: (toolCallId: string) => Promise<void>;
     acceptAllToolCalls: () => Promise<void>;
+    handleScreenshotCapture: (result: ScreenshotCaptureResult) => void;
 }
 
 export const useAssistantComposer = (): UseAssistantComposerReturn => {
@@ -358,6 +360,16 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         setMediaOpen(false);
     }, [addContext]);
 
+    const handleScreenshotCapture = useCallback((result: ScreenshotCaptureResult) => {
+        addContext({
+            id: `screenshot-${Date.now()}`,
+            type: 'screenshot',
+            label: __('Frontend screenshot', 'suggerence'),
+            data: result,
+            timestamp: new Date().toISOString()
+        });
+    }, [addContext]);
+
     const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
         if (isLoading || !isGutenbergServerReady) return;
 
@@ -534,6 +546,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         acceptToolCall,
         rejectToolCall,
         alwaysAllowToolCall,
-        acceptAllToolCalls
+        acceptAllToolCalls,
+        handleScreenshotCapture
     };
 };

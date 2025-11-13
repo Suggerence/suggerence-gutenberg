@@ -100,6 +100,7 @@ export const ChatInterface = () => {
                     openMedia={composer.openMedia}
                     closeMedia={composer.closeMedia}
                     handleMediaSelect={composer.handleMediaSelect}
+                    handleScreenshotCapture={composer.handleScreenshotCapture}
                     addContext={composer.addContext}
                 />
             </div>

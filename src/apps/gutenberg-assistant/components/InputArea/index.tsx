@@ -4,6 +4,8 @@ import type { KeyboardEvent } from 'react';
 import { BlockBadge } from '@/apps/gutenberg-assistant/components/BlockBadge';
 import { ContextMenuBadge } from '@/apps/gutenberg-assistant/components/ContextMenuBadge';
 import { DrawingCanvas } from '@/apps/gutenberg-assistant/components/DrawingCanvas';
+import { ScreenshotCapture } from '@/apps/gutenberg-assistant/components/ScreenshotCapture';
+import type { ScreenshotCaptureResult } from '@/apps/gutenberg-assistant/components/ScreenshotCapture/types';
 import { MediaSelector } from '@/apps/gutenberg-assistant/components/MediaSelector';
 import type { SelectedContext } from '@/apps/gutenberg-assistant/stores/types';
 import {
@@ -14,7 +16,8 @@ import {
     PromptInputButton,
     PromptInputSubmit
 } from '@/components/ai-elements/prompt-input';
-import { Brush, ImageIcon, Send, SquareIcon } from 'lucide-react';
+import { Brush, Camera, ImageIcon, Send, SquareIcon } from 'lucide-react';
+import { useScreenshotCaptureStore } from '@/apps/gutenberg-assistant/stores/screenshotCaptureStore';
 
 interface InputAreaProps {
     inputValue: string;
@@ -34,6 +37,7 @@ interface InputAreaProps {
     closeMedia: () => void;
     handleMediaSelect: (imageData: any) => void;
     addContext: (context: SelectedContext) => void;
+    handleScreenshotCapture: (result: ScreenshotCaptureResult) => void;
 }
 
 export const InputArea = ({
@@ -53,10 +57,12 @@ export const InputArea = ({
     openMedia,
     closeMedia,
     handleMediaSelect,
-    addContext
+    addContext,
+    handleScreenshotCapture
 }: InputAreaProps) => {
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const openScreenshotModal = useScreenshotCaptureStore((state) => state.openManual);
 
     useEffect(() => {
         inputRef.current?.focus();
@@ -127,6 +133,15 @@ export const InputArea = ({
                         >
                             <Brush className="w-4 h-4" />
                         </PromptInputButton>
+                        <PromptInputButton
+                            onClick={openScreenshotModal}
+                            disabled={isLoading}
+                            aria-label={__("Capture preview screenshot", "suggerence")}
+                            title={__("Grab a screenshot of the frontend preview and attach it as context", "suggerence")}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <Camera className="w-4 h-4" />
+                        </PromptInputButton>
                     </PromptInputTools>
 
                     {isLoading ? (
@@ -162,6 +177,8 @@ export const InputArea = ({
                 onClose={closeMedia}
                 onSelect={handleMediaSelect}
             />
+
+            <ScreenshotCapture onCapture={handleScreenshotCapture} />
         </div>
     );
 };

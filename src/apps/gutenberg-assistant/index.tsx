@@ -10,6 +10,8 @@ import domReady from '@wordpress/dom-ready';
 import { WebSocketProvider } from '@/shared/context/WebSocketContext';
 import { ThemeProvider } from 'next-themes';
 import { SuggerenceSurface } from '@/shared/components/SuggerenceSurface';
+import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
+import { EditorThinkingOverlay } from '@/apps/gutenberg-assistant/components/EditorThinkingOverlay';
 
 import './style.scss';
 
@@ -27,6 +29,7 @@ const persister = createAsyncStoragePersister({
 export const GutenbergAssistant = () => {
 
     const { openGeneralSidebar } = useDispatch('core/edit-post');
+    const isAssistantBusy = useGutenbergAssistantMessagesStore((state) => state.isLoading);
     const SIDEBAR_WIDTH_KEY = 'suggerenceSidebarWidth';
     const SIDEBAR_DEFAULT_WIDTH = 500;
     const SIDEBAR_MIN_WIDTH = 320;
@@ -251,6 +254,7 @@ export const GutenbergAssistant = () => {
             >
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
                     <SuggerenceSurface className="flex h-full flex-col">
+                        <EditorThinkingOverlay active={true} />
                         <div
                             className="suggerence-sidebar-resizer"
                             role="separator"

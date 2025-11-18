@@ -93,3 +93,112 @@
 #suggerence-gutenberg-assistant\:suggerence-chat-sidebar .interface-complementary-area-header {
     display: none !important;
 }
+
+@keyframes suggerence-editor-overlay-shimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+@keyframes suggerence-editor-overlay-pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+}
+
+@keyframes suggerence-editor-overlay-indicator {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.85);
+        opacity: 0.6;
+    }
+}
+
+body.suggerence-editor-locked {
+    cursor: progress;
+}
+
+.suggerence-editor-overlay-container {
+    position: relative;
+    isolation: isolate;
+}
+
+.suggerence-editor-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 50;
+    border-radius: inherit;
+}
+
+.suggerence-editor-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(0,0,0,0.35) 0%,
+        rgba(255,255,255,0.18) 50%,
+        rgba(0,0,0,0.35) 100%
+    );
+    // background: linear-gradient(
+    //     90deg,
+    //     rgba(18, 18, 18, 0.55),
+    //     rgba(210, 33, 120, 0.25),
+    //     rgba(18, 18, 18, 0.55)
+    // );
+    background-size: 200% 100%;
+    animation: shimmer-simple 2.4s ease-in-out infinite;
+}
+
+@keyframes shimmer-simple {
+    0% { background-position: -100% 0; }
+    100% { background-position: 100% 0; }
+}
+
+
+
+.suggerence-editor-overlay__label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 999px;
+    background: rgba(13, 13, 13, 0.88);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-align: center;
+    animation: suggerence-editor-overlay-pulse 2.4s ease-in-out infinite;
+    pointer-events: none;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .suggerence-editor-overlay__backdrop {
+        animation-duration: 6s;
+    }
+
+    .suggerence-editor-overlay__label {
+        animation: none;
+    }
+}

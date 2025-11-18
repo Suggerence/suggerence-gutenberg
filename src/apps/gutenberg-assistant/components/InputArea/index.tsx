@@ -16,8 +16,7 @@ import {
     PromptInputButton,
     PromptInputSubmit
 } from '@/components/ai-elements/prompt-input';
-import { Brush, Camera, ImageIcon, Send, SquareIcon } from 'lucide-react';
-import { useScreenshotCaptureStore } from '@/apps/gutenberg-assistant/stores/screenshotCaptureStore';
+import { Brush, ImageIcon, Send, SquareIcon } from 'lucide-react';
 
 interface InputAreaProps {
     inputValue: string;
@@ -62,8 +61,6 @@ export const InputArea = ({
 }: InputAreaProps) => {
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
-    const openScreenshotModal = useScreenshotCaptureStore((state) => state.openManual);
-
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
@@ -132,15 +129,6 @@ export const InputArea = ({
                             className="text-muted-foreground hover:text-foreground"
                         >
                             <Brush className="w-4 h-4" />
-                        </PromptInputButton>
-                        <PromptInputButton
-                            onClick={openScreenshotModal}
-                            disabled={isLoading}
-                            aria-label={__("Capture preview screenshot", "suggerence")}
-                            title={__("Grab a screenshot of the frontend preview and attach it as context", "suggerence")}
-                            className="text-muted-foreground hover:text-foreground"
-                        >
-                            <Camera className="w-4 h-4" />
                         </PromptInputButton>
                     </PromptInputTools>
 

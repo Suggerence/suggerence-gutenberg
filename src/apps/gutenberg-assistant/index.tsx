@@ -254,7 +254,7 @@ export const GutenbergAssistant = () => {
             >
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
                     <SuggerenceSurface className="flex h-full flex-col">
-                        <EditorThinkingOverlay active={true} />
+                        <EditorThinkingOverlay active={isAssistantBusy} />
                         <div
                             className="suggerence-sidebar-resizer"
                             role="separator"

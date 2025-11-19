@@ -15,8 +15,15 @@ interface UseBaseMCPReturn {
     callTool: (toolName: string, args: Record<string, any>, signal?: AbortSignal) => Promise<any>;
 }
 
+interface PromptTemplateRequest {
+    promptId: string;
+    variables?: Record<string, any>;
+}
+
+type SystemPromptPayload = string | any[] | PromptTemplateRequest;
+
 interface UseBaseAIConfig {
-    getSystemPrompt: (siteContext: any) => string | any[];  // Support both string and array for multi-block system prompts
+    getSystemPrompt: (siteContext: any) => SystemPromptPayload;
     getSiteContext: () => any;
 }
 

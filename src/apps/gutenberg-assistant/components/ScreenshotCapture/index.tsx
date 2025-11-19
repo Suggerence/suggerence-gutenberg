@@ -14,6 +14,7 @@ const DEVICE_PRESETS: Array<{ id: ScreenshotViewportPreset; label: string; width
 ];
 
 const PREVIEW_CONTAINER_HEIGHT = 700;
+const RESULT_DISPLAY_DURATION = 1500;
 
 interface ScreenshotCaptureProps {
     onCapture: (result: ScreenshotCaptureResult) => void | Promise<void>;
@@ -116,7 +117,6 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
             setPreviewUrl(null);
             setIsPreviewLoading(false);
             setIsCapturing(false);
-            setCapturedResult(null);
             autoCaptureTriggeredRef.current = false;
         }
     }, [isOpen, loadPreview]);
@@ -243,7 +243,25 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
     }, [isOpen, mode, pendingRequest, isPreviewLoading, isCapturing, previewUrl, captureScreenshot]);
 
     useEffect(() => {
-        if (!isOpen || typeof document === 'undefined') {
+        if (!isOpen && capturedResult) {
+            const timeout = setTimeout(() => {
+                setCapturedResult(null);
+            }, RESULT_DISPLAY_DURATION);
+            return () => clearTimeout(timeout);
+        }
+    }, [isOpen, capturedResult]);
+
+    const shouldRenderOverlay = isOpen || Boolean(capturedResult);
+    const canDismissResult = Boolean(capturedResult) && !isOpen && !isCapturing && !isPreviewLoading;
+
+    const handleOverlayClick = () => {
+        if (canDismissResult) {
+            setCapturedResult(null);
+        }
+    };
+
+    useEffect(() => {
+        if (!shouldRenderOverlay || typeof document === 'undefined') {
             return;
         }
         const { body } = document;
@@ -252,9 +270,9 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
         return () => {
             body.style.overflow = previousOverflow;
         };
-    }, [isOpen]);
+    }, [shouldRenderOverlay]);
 
-    if (!isOpen || typeof document === 'undefined') {
+    if (!shouldRenderOverlay || typeof document === 'undefined') {
         return null;
     }
 
@@ -264,6 +282,7 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
             role="dialog"
             aria-modal="true"
             aria-label={__('Frontend screenshot preview', 'suggerence-gutenberg')}
+            onClick={handleOverlayClick}
         >
             <div className="suggerence-screenshot-modal__backdrop" />
             <div className="suggerence-screenshot-modal__content">

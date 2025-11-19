@@ -120,12 +120,12 @@ export const PostSelector = ({
                                     )}
                                 />
                                 <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm font-medium leading-5">
+                                    <div className="truncate text-sm font-medium leading-5 text-start">
                                         {stripHtml(item.title.rendered) || __('(No title)', 'suggerence-gutenberg')}
                                     </div>
                                     {item.excerpt.rendered && stripHtml(item.excerpt.rendered).trim() && (
                                         <div className={cn(
-                                            'truncate text-xs',
+                                            'truncate text-xs text-start',
                                             isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
                                         )}>
                                             {stripHtml(item.excerpt.rendered)}

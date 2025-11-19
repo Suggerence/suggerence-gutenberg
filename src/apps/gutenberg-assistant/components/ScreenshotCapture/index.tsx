@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { select } from '@wordpress/data';
-import { Modal } from '@wordpress/components';
 import { addQueryArgs } from '@wordpress/url';
+import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
 import { useScreenshotCaptureStore } from '@/apps/gutenberg-assistant/stores/screenshotCaptureStore';
 import type { ScreenshotCaptureResult, ScreenshotViewportPreset } from '@/apps/gutenberg-assistant/components/ScreenshotCapture/types';
@@ -50,10 +50,10 @@ const resolvePreviewLink = (): string => {
 export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const autoCaptureTriggeredRef = useRef(false);
-    const [basePreviewUrl, setBasePreviewUrl] = useState<string | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [isCapturing, setIsCapturing] = useState(false);
+    const [capturedResult, setCapturedResult] = useState<ScreenshotCaptureResult | null>(null);
 
     const {
         isOpen,
@@ -89,13 +89,13 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
 
     const loadPreview = useCallback(() => {
         setIsPreviewLoading(true);
+        setCapturedResult(null);
         autoCaptureTriggeredRef.current = false;
 
         const useRequestedUrl = requestedUrl && requestedUrl.trim().length > 0;
 
         try {
             const previewLink = useRequestedUrl ? requestedUrl as string : resolvePreviewLink();
-            setBasePreviewUrl(previewLink);
             setPreviewUrl(buildPreviewUrl(previewLink, !useRequestedUrl));
         } catch (error) {
             console.error('Suggerence: Unable to resolve preview URL', error);
@@ -114,9 +114,9 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
             loadPreview();
         } else {
             setPreviewUrl(null);
-            setBasePreviewUrl(null);
             setIsPreviewLoading(false);
             setIsCapturing(false);
+            setCapturedResult(null);
             autoCaptureTriggeredRef.current = false;
         }
     }, [isOpen, loadPreview]);
@@ -206,6 +206,7 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
                     capturedAt: new Date().toISOString()
                 };
 
+                setCapturedResult(result);
                 await Promise.resolve(onCapture(result));
 
                 if (mode === 'tool') {
@@ -241,36 +242,71 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
         }
     }, [isOpen, mode, pendingRequest, isPreviewLoading, isCapturing, previewUrl, captureScreenshot]);
 
-    if (!isOpen) {
+    useEffect(() => {
+        if (!isOpen || typeof document === 'undefined') {
+            return;
+        }
+        const { body } = document;
+        const previousOverflow = body.style.overflow;
+        body.style.overflow = 'hidden';
+        return () => {
+            body.style.overflow = previousOverflow;
+        };
+    }, [isOpen]);
+
+    if (!isOpen || typeof document === 'undefined') {
         return null;
     }
 
-    return (
-        <Modal
-            onRequestClose={() => undefined}
-            isDismissible={false}
-            shouldCloseOnClickOutside={false}
-            shouldCloseOnEsc={false}
+    return createPortal(
+        <div
             className="suggerence-screenshot-modal suggerence-app"
-            __experimentalHideHeader
+            role="dialog"
+            aria-modal="true"
+            aria-label={__('Frontend screenshot preview', 'suggerence-gutenberg')}
         >
+            <div className="suggerence-screenshot-modal__backdrop" />
+            <div className="suggerence-screenshot-modal__content">
+                {capturedResult ? (
+                    <img
+                        src={capturedResult.dataUrl}
+                        alt={__('Frontend screenshot preview', 'suggerence-gutenberg')}
+                        className="suggerence-screenshot-modal__image"
+                    />
+                ) : (
+                    <div className="suggerence-screenshot-modal__placeholder">
+                        <span className="suggerence-screenshot-modal__spinner" />
+                        <p className="suggerence-screenshot-modal__status">
+                            {isCapturing || isPreviewLoading
+                                ? __('Capturing screenshot...', 'suggerence-gutenberg')
+                                : __('Preparing preview...', 'suggerence-gutenberg')}
+                        </p>
+                    </div>
+                )}
+            </div>
             {previewUrl && (
                 <iframe
                     ref={iframeRef}
                     key={`${previewUrl}-${devicePreset}`}
                     src={previewUrl}
                     style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        pointerEvents: 'none',
                         width: `${viewportWidth}px`,
                         height: `${PREVIEW_CONTAINER_HEIGHT}px`,
                         border: '0',
-                        background: '#ffffff'
+                        background: '#ffffff',
+                        left: '-99999px',
+                        top: '-99999px'
                     }}
                     width={viewportWidth}
                     height={PREVIEW_CONTAINER_HEIGHT}
                     onLoad={() => setIsPreviewLoading(false)}
-                    loading="lazy"
+                    aria-hidden="true"
                 />
             )}
-        </Modal>
+        </div>,
+        document.body
     );
 };

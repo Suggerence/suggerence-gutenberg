@@ -71,11 +71,11 @@ class PostCustomCss
             return;
         }
 
-        $scope_selector = $this->get_scope_selector($post);
+        // $scope_selector = $this->get_scope_selector($post);
 
-        if (!$this->is_css_scoped($css, $scope_selector)) {
-            $css = $this->scope_css($css, $scope_selector);
-        }
+        // if (!$this->is_css_scoped($css, $scope_selector)) {
+        //     $css = $this->scope_css($css, $scope_selector);
+        // }
 
         $scoped_css = str_ireplace('</style', '<\\/style', $css);
 

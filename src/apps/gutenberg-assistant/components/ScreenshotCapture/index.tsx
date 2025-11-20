@@ -14,6 +14,7 @@ const DEVICE_PRESETS: Array<{ id: ScreenshotViewportPreset; label: string; width
 ];
 
 const PREVIEW_CONTAINER_HEIGHT = 700;
+const MAX_CANVAS_DIMENSION = 16384;
 const RESULT_DISPLAY_DURATION = 1500;
 
 interface ScreenshotCaptureProps {
@@ -131,6 +132,25 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
         }
     };
 
+    const getSafeCanvasScale = useCallback((width: number, height: number) => {
+        if (!width || !height) {
+            return { scale: 1, isScaledDown: false };
+        }
+
+        if (width <= MAX_CANVAS_DIMENSION && height <= MAX_CANVAS_DIMENSION) {
+            return { scale: 1, isScaledDown: false };
+        }
+
+        const widthScale = MAX_CANVAS_DIMENSION / width;
+        const heightScale = MAX_CANVAS_DIMENSION / height;
+        const safeScale = Math.min(1, widthScale, heightScale);
+
+        return {
+            scale: safeScale,
+            isScaledDown: safeScale < 1
+        };
+    }, []);
+
     const captureScreenshot = useCallback(async (autoTriggered: boolean = false) => {
         if (!iframeRef.current) {
             const message = __('Preview is not ready yet.', 'suggerence-gutenberg');
@@ -182,6 +202,15 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
             const backgroundStyles = (iframeWindow || window).getComputedStyle(body || target);
             const backgroundColor = backgroundStyles?.backgroundColor || '#ffffff';
 
+            const { scale, isScaledDown } = getSafeCanvasScale(viewportWidth, computedHeight);
+
+            if (isScaledDown) {
+                console.warn(
+                    'Suggerence: Large page detected, scaling screenshot down to stay within browser canvas limits.',
+                    { viewportWidth, computedHeight, appliedScale: scale }
+                );
+            }
+
             const canvas = await html2canvas(target, {
                 useCORS: true,
                 allowTaint: false,
@@ -190,7 +219,7 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
                 windowHeight: computedHeight,
                 width: viewportWidth,
                 height: computedHeight,
-                scale: 1
+                scale
             });
 
             const dataUrl = canvas.toDataURL('image/png', 0.98);
@@ -225,7 +254,7 @@ export const ScreenshotCapture = ({ onCapture }: ScreenshotCaptureProps) => {
                 autoCaptureTriggeredRef.current = false;
             }
         }
-    }, [fullHeight, isSameOrigin, mode, onCapture, previewUrl, rejectToolCapture, resolveToolCapture, viewportWidth]);
+    }, [fullHeight, getSafeCanvasScale, isSameOrigin, mode, onCapture, previewUrl, rejectToolCapture, resolveToolCapture, viewportWidth]);
 
     useEffect(() => {
         if (

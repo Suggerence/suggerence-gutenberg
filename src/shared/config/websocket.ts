@@ -2,7 +2,7 @@ declare const SuggerenceData: SuggerenceData;
 
 export const WEBSOCKET_CONFIG = {
     DEFAULT_URL: 'wss://api.suggerence.com/v1/gutenberg/claude-text-wss',
-    //DEFAULT_URL: 'ws://localhost:3000/v1/gutenberg/claude-text-wss',
+    // DEFAULT_URL: 'ws://localhost:3000/v1/gutenberg/claude-text-wss',
 
     getWebSocketUrl: (): string => {
         return WEBSOCKET_CONFIG.DEFAULT_URL;

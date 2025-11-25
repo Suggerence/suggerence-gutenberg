@@ -1,5 +1,14 @@
 import { __ } from '@wordpress/i18n';
 
+const codeExecutionToolNames = [
+    'list_workspace_files',
+    'read_workspace_file',
+    'write_workspace_file',
+    'run_workspace_script'
+] as const;
+
+export type CodeExecutionToolName = typeof codeExecutionToolNames[number];
+
 /**
  * Map of tool names to their translatable display names
  * This allows showing user-friendly names in the UI instead of technical identifiers
@@ -45,7 +54,26 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'generate_custom_css': __('Generate custom CSS', 'suggerence'),
     'get_post_content': __('Get post content', 'suggerence'),
     'capture_frontend_screenshot': __('Screenshot', 'suggerence'),
+
+    // Code execution workspace tools
+    'list_workspace_files': __('List workspace files', 'suggerence'),
+    'read_workspace_file': __('Read workspace file', 'suggerence'),
+    'write_workspace_file': __('Write workspace file', 'suggerence'),
+    'run_workspace_script': __('Run workspace script', 'suggerence')
 });
+
+export const getCleanToolName = (toolName: string = ''): string =>
+    toolName?.replace(/^[^_]*___/, '') || toolName;
+
+export const isCodeExecutionTool = (toolName: string = ''): boolean => {
+    if (!toolName) return false;
+    if (toolName.startsWith('codeexec___')) {
+        return true;
+    }
+
+    const cleanName = getCleanToolName(toolName);
+    return codeExecutionToolNames.includes(cleanName as CodeExecutionToolName);
+};
 
 /**
  * Get a translatable display name for a tool
@@ -54,11 +82,10 @@ export const getToolDisplayNames = (): Record<string, string> => ({
  */
 export const getToolDisplayName = (toolName: string): string => {
     // Remove server prefix if present (e.g., "gutenberg___add_block" -> "add_block")
-    const cleanToolName = toolName?.replace(/^[^_]*___/, '') || toolName;
+    const cleanToolName = getCleanToolName(toolName);
     
     const toolNames = getToolDisplayNames();
     
     // Return translated name if available, otherwise return cleaned tool name
     return toolNames[cleanToolName] || cleanToolName || __('Unknown Tool', 'suggerence');
 };
-

@@ -1,7 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useState, useCallback } from '@wordpress/element';
-import { getToolDisplayName } from '@/shared/utils/tool-names';
+import { getToolDisplayName, isCodeExecutionTool } from '@/shared/utils/tool-names';
 import {
     Confirmation,
     ConfirmationTitle,
@@ -9,6 +9,7 @@ import {
     ConfirmationActions,
     ConfirmationAction,
 } from '@/components/ai-elements/confirmation';
+import { Badge } from '@/components/ui/badge';
 import type { ToolConfirmationMessageProps } from './types';
 
 export const ToolConfirmationMessage = ({
@@ -20,6 +21,7 @@ export const ToolConfirmationMessage = ({
     const [isArgsExpanded, setIsArgsExpanded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const cleanToolName = getToolDisplayName(message.toolName || '');
+    const isWorkspaceTool = isCodeExecutionTool(message.toolName || '');
 
     const handleAccept = useCallback(async () => {
         if (!message.toolCallId) return;
@@ -58,9 +60,21 @@ export const ToolConfirmationMessage = ({
                 <div className="flex items-start gap-2">
                     <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 space-y-2">
-                        <ConfirmationTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                            {cleanToolName}
-                        </ConfirmationTitle>
+                        <div className="flex items-center gap-2">
+                            <ConfirmationTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                                {cleanToolName}
+                            </ConfirmationTitle>
+                            {isWorkspaceTool && (
+                                <Badge variant="outline" className="bg-white/70 text-xs uppercase tracking-wide text-yellow-800 border-yellow-300 dark:bg-transparent dark:text-yellow-200 dark:border-yellow-600">
+                                    {__('Workspace action', 'suggerence')}
+                                </Badge>
+                            )}
+                        </div>
+                        {isWorkspaceTool && (
+                            <p className="text-xs text-yellow-900/80 dark:text-yellow-200">
+                                {__('Runs code inside the secure workspace. Review paths and commands before approving.', 'suggerence')}
+                            </p>
+                        )}
 
                         {message.toolArgs && Object.keys(message.toolArgs).length > 0 && (
                             <div className="space-y-1 w-full">

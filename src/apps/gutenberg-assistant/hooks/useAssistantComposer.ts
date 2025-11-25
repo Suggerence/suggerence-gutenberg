@@ -3,7 +3,9 @@ import { useCallback, useEffect, useState } from '@wordpress/element';
 import { useGutenbergAssistantMessagesStore } from '@/apps/gutenberg-assistant/stores/messagesStores';
 import { useToolConfirmationStore } from '@/apps/gutenberg-assistant/stores/toolConfirmationStore';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
+import { useCodeExecutionStore } from '@/apps/gutenberg-assistant/stores/codeExecutionStore';
 import { useGutenbergMCP } from '@/apps/gutenberg-assistant/hooks/useGutenbergMcp';
+import { useCodeExecutionMCP } from '@/apps/gutenberg-assistant/hooks/useCodeExecutionMcp';
 import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI';
 import { highlightBlocksFromToolData, removeBlockHighlightsFromToolData } from '@/shared/utils/block-highlight';
 import type { SelectedContext } from '@/apps/gutenberg-assistant/stores/types';
@@ -61,7 +63,13 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
     const { addContext } = useContextStore();
     const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
+    const {
+        isGutenbergServerReady: isCodeExecutionServerReady,
+        getGutenbergTools: getCodeExecutionTools,
+        callGutenbergTool: callCodeExecutionTool
+    } = useCodeExecutionMCP();
     const { callAI } = useAssistantAI();
+    const areServersReady = isGutenbergServerReady && isCodeExecutionServerReady;
 
     const [inputValue, setInputValue] = useState('');
     const hasHistory = messages.length > 1;
@@ -69,8 +77,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
     const [isMediaOpen, setMediaOpen] = useState(false);
 
     const runConversation = useCallback(async (conversation: MCPClientMessage[], existingController?: AbortController) => {
-        if (!isGutenbergServerReady) {
-            throw new Error('Gutenberg MCP server not ready');
+        if (!areServersReady) {
+            throw new Error('Required MCP servers are not ready');
         }
 
         const controller = existingController ?? new AbortController();
@@ -114,7 +122,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         };
 
         try {
-            const tools = await getGutenbergTools();
+            const [gutenbergTools, codeExecTools] = await Promise.all([getGutenbergTools(), getCodeExecutionTools()]);
+            const tools = [...gutenbergTools, ...codeExecTools];
             let response: any;
 
             try {
@@ -156,6 +165,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
                 const toolArgs = functionCall.args ?? {};
                 const tool = tools.find((t: any) => t.name === functionCall.name);
                 const shouldRequestConfirmation = Boolean(tool?.dangerous) && !isToolAlwaysAllowed(functionCall.name);
+                const isCodeExecutionTool = functionCall.name.startsWith('codeexec___');
+                const toolExecutor = isCodeExecutionTool ? callCodeExecutionTool : callGutenbergTool;
 
                 if (shouldRequestConfirmation) {
                     enqueueToolCall({
@@ -172,7 +183,9 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
                         toolName: functionCall.name,
                         toolArgs
                     } as any);
-                    highlightBlocksFromToolData(toolArgs, undefined);
+                    if (!isCodeExecutionTool) {
+                        highlightBlocksFromToolData(toolArgs, undefined);
+                    }
                     continue;
                 }
 
@@ -180,7 +193,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
                 const toolPromise = (async () => {
                     try {
-                        const toolResult = await callGutenbergTool(functionCall.name, toolArgs, controller.signal);
+                        const toolResult = await toolExecutor(functionCall.name, toolArgs, controller.signal);
                         completeToolMessage(functionCall.id, toolResult.response);
                     } catch (toolError) {
                         const errorMsg = toolError instanceof DOMException && toolError.name === 'AbortError'
@@ -232,7 +245,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
             }
         }
     }, [
-        isGutenbergServerReady,
+        areServersReady,
         setAbortController,
         setIsLoading,
         resetTracker,
@@ -242,8 +255,10 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         upsertToolMessage,
         completeToolMessage,
         getGutenbergTools,
+        getCodeExecutionTools,
         callAI,
         callGutenbergTool,
+        callCodeExecutionTool,
         enqueueToolCall,
         addMessage
     ]);
@@ -289,7 +304,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
 
     const sendMessage = useCallback(async (overrideContent?: string) => {
         const content = (overrideContent ?? inputValue).trim();
-        if (!content || isLoading || !isGutenbergServerReady) return;
+        if (!content || isLoading || !areServersReady) return;
 
         clearPendingToolConfirmations();
 
@@ -309,7 +324,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
     }, [
         inputValue,
         isLoading,
-        isGutenbergServerReady,
+        areServersReady,
         addMessage,
         startTurn,
         hasPendingToolCalls,
@@ -360,6 +375,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         setMediaOpen(false);
     }, [addContext]);
 
+    const syncScreenshotResult = useCodeExecutionStore((state) => state.syncScreenshotResult);
+
     const handleScreenshotCapture = useCallback((result: ScreenshotCaptureResult) => {
         addContext({
             id: `screenshot-${Date.now()}`,
@@ -368,10 +385,11 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
             data: result,
             timestamp: new Date().toISOString()
         });
-    }, [addContext]);
+        void syncScreenshotResult(result);
+    }, [addContext, syncScreenshotResult]);
 
     const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
-        if (isLoading || !isGutenbergServerReady) return;
+        if (isLoading || !areServersReady) return;
 
         clearPendingToolConfirmations();
 
@@ -384,7 +402,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         }
     }, [
         isLoading,
-        isGutenbergServerReady,
+        areServersReady,
         addMessage,
         startTurn,
         hasPendingToolCalls,
@@ -396,7 +414,10 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         if (!toolCall) return;
 
         removeToolCall(toolCallId);
-        removeBlockHighlightsFromToolData(toolCall.toolArgs, undefined);
+        const isCodeExecutionTool = toolCall.toolName.startsWith('codeexec___');
+        if (!isCodeExecutionTool) {
+            removeBlockHighlightsFromToolData(toolCall.toolArgs, undefined);
+        }
 
         const currentMessages = useGutenbergAssistantMessagesStore.getState().messages;
         const filteredMessages = currentMessages.filter(
@@ -411,7 +432,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         setIsLoading(true);
 
         try {
-            const result = await callGutenbergTool(toolCall.toolName, toolCall.toolArgs, controller.signal);
+            const executor = isCodeExecutionTool ? callCodeExecutionTool : callGutenbergTool;
+            const result = await executor(toolCall.toolName, toolCall.toolArgs, controller.signal);
             completeToolMessage(toolCall.toolCallId, result.response);
         } catch (error) {
             const errorMsg = error instanceof DOMException && error.name === 'AbortError'
@@ -436,6 +458,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         setMessages,
         upsertToolMessage,
         callGutenbergTool,
+        callCodeExecutionTool,
         completeToolMessage,
         setAbortController,
         setIsLoading,
@@ -462,7 +485,9 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         if (!toolCall) return;
 
         removeToolCall(toolCallId);
-        removeBlockHighlightsFromToolData(toolCall.toolArgs, undefined);
+        if (!toolCall.toolName.startsWith('codeexec___')) {
+            removeBlockHighlightsFromToolData(toolCall.toolArgs, undefined);
+        }
 
         const currentMessages = useGutenbergAssistantMessagesStore.getState().messages;
         const filteredMessages = currentMessages.filter(
@@ -528,7 +553,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         inputValue,
         setInputValue,
         isLoading,
-        isServerReady: isGutenbergServerReady,
+        isServerReady: areServersReady,
         hasHistory,
         sendMessage,
         stop,

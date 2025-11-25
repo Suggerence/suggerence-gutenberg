@@ -1,8 +1,9 @@
-import { useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { PostSelector } from '@/shared/components/PostSelector';
 import { BlockSelector } from '@/shared/components/BlockSelector';
 import { useContextStore } from '@/apps/gutenberg-assistant/stores/contextStore';
+import { useCodeExecutionStore } from '@/apps/gutenberg-assistant/stores/codeExecutionStore';
 import type { BlockInstance } from '@wordpress/blocks';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -54,6 +55,7 @@ const contextIconMap: Record<string, LucideIcon> = {
 
 export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => {
     const { selectedContexts, addContext, removeContext } = useContextStore();
+    const syncSelectedContexts = useCodeExecutionStore((state) => state.syncSelectedContexts);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [currentView, setCurrentView] = useState<'menu' | 'content-selector' | 'block-selector'>('menu');
     const [selectedContentId, setSelectedContentId] = useState<number>();
@@ -62,6 +64,10 @@ export const ContextMenuBadge = ({ onContextSelect }: ContextMenuBadgeProps) => 
     const selectedBlockIds = selectedContexts
         .filter(context => context.type === 'block')
         .map(context => context.data?.clientId || context.id.replace('block-', ''));
+
+    useEffect(() => {
+        void syncSelectedContexts(selectedContexts);
+    }, [selectedContexts, syncSelectedContexts]);
 
     const handleContextClick = (contextId: string) => {
         if (contextId === 'post' || contextId === 'page') {

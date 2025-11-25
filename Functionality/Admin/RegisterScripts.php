@@ -22,7 +22,7 @@ class RegisterScripts
         $suggerence_config = get_option('suggerence_suggerence_config');
 
         $suggerence_data = 'const SuggerenceData = ' . wp_json_encode([
-            'suggerence_api_url' => 'https://api.suggerence.com/v1',
+            'suggerence_api_url' => 'http://localhost:3000/v1',
             'locale' => get_locale(),
             'nonce' => wp_create_nonce('wp_rest'),
             'wp_admin_dashboard_url' => admin_url('index.php'),

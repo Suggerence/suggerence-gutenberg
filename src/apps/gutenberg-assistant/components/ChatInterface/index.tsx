@@ -10,11 +10,13 @@ import { useSelect } from '@wordpress/data';
 import { BrainIcon } from 'lucide-react';
 import { ThinkingWords } from '@/components/ai-elements/thinking-words';
 import { useAutoScroll } from '@/apps/gutenberg-assistant/hooks/useAutoScroll';
+import { useCodeExecutionStore } from '@/apps/gutenberg-assistant/stores/codeExecutionStore';
 
 export const ChatInterface = () => {
     const { isGutenbergServerReady } = useGutenbergMCP();
     const composer = useAssistantComposer();
     const { messages, isLoading, setPostId } = useGutenbergAssistantMessagesStore();
+    const ensureCodeWorkspace = useCodeExecutionStore((state) => state.ensureSession);
 
     const currentPostId = useSelect(
         (select) => {
@@ -29,6 +31,10 @@ export const ChatInterface = () => {
     useEffect(() => {
         setPostId(currentPostId);
     }, [currentPostId, setPostId]);
+
+    useEffect(() => {
+        void ensureCodeWorkspace();
+    }, [ensureCodeWorkspace]);
 
     const { scrollContainerRef, messagesEndCallbackRef, handleScroll } = useAutoScroll(messages);
 

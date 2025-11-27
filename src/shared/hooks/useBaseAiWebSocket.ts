@@ -1,5 +1,6 @@
 import { convertImageUrlToBase64 } from "../utils/image-utils";
 import { useWebSocket } from "../context/WebSocketContext";
+import { buildAnthropicTools } from "../utils/tool-formatting";
 
 export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => {
     const { isConnected, sendRequest } = useWebSocket();
@@ -319,51 +320,8 @@ export const useBaseAIWebSocket = (config: UseBaseAIConfig): UseBaseAIReturn => 
             }
         }
 
-        // Convert tools to Claude format (inputSchema -> input_schema)
-        // Only include Claude-compatible fields (name, description, input_schema)
-        const claudeTools = (tools || []).map((tool: any) => {
-            const inputSchema = tool.inputSchema || tool.input_schema;
-
-            // Recursively clean up schema to be JSON Schema Draft 2020-12 compliant
-            const cleanSchema = (obj: any): any => {
-                if (obj === null || typeof obj !== 'object') return obj;
-
-                if (Array.isArray(obj)) {
-                    return obj.map(cleanSchema);
-                }
-
-                const cleaned: any = {};
-                for (const [key, value] of Object.entries(obj)) {
-                    // Skip invalid 'required' inside property definitions (should only be at schema level)
-                    if (key === 'required' && typeof value === 'boolean') {
-                        continue;
-                    }
-
-                    // Keep additionalProperties only if it's a boolean
-                    if (key === 'additionalProperties') {
-                        if (typeof value === 'boolean') {
-                            cleaned[key] = value;
-                        }
-                        continue;
-                    }
-
-                    // Recursively clean nested objects
-                    if (typeof value === 'object' && value !== null) {
-                        cleaned[key] = cleanSchema(value);
-                    } else {
-                        cleaned[key] = value;
-                    }
-                }
-                return cleaned;
-            };
-
-            return {
-                name: tool.name,
-                description: tool.description,
-                input_schema: cleanSchema(inputSchema)
-                // Exclude custom fields like 'dangerous' - Claude doesn't accept them
-            };
-        });
+        // Convert tools to Claude format with tool search metadata
+        const claudeTools = buildAnthropicTools(tools);
 
         // Claude format request body
         const requestBody: any = {

@@ -1,5 +1,6 @@
 import apiFetch from "@wordpress/api-fetch";
 import { convertImageUrlToBase64 } from "../utils/image-utils";
+import { buildAnthropicTools } from "../utils/tool-formatting";
 
 export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
     const callAI = async (
@@ -214,8 +215,9 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             messages: convertedMessages
         };
 
-        if (tools) {
-            requestBody.tools = tools;
+        const formattedTools = buildAnthropicTools(tools);
+        if (formattedTools.length > 0) {
+            requestBody.tools = formattedTools;
         }
 
         // Retry configuration

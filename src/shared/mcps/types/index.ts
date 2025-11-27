@@ -41,6 +41,9 @@ interface SuggerenceMCPResponseTool {
     metadata?: Record<string, any>;
     annotations?: Record<string, any>;
     dangerous?: boolean; // Flag to mark tools that require user confirmation
+    deferLoading?: boolean;
+    inputExamples?: Record<string, any>[];
+    type?: string;
 }
 
 interface MCPClientSession {

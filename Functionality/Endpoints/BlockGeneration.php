@@ -20,36 +20,36 @@ class BlockGeneration extends BaseApiEndpoints
         $get_blocks_endpoint = new GetEndpoint(
             $this->namespace,
             'blocks',
-            [ $this, 'get_blocks' ]
-            // TODO: Add admin permissions check
+            [ $this, 'get_blocks' ],
+            [ $this, 'admin_permissions_check' ]
         );
 
         $get_block_endpoint = new GetEndpoint(
             $this->namespace,
             'blocks/{blockId:uuid}',
-            [ $this, 'get_block' ]
-            // TODO: Add admin permissions check
+            [ $this, 'get_block' ],
+            [ $this, 'admin_permissions_check' ]
         );
 
         $store_block_endpoint = new PostEndpoint(
             $this->namespace,
             'blocks',
-            [ $this, 'store_block' ]
-            // TODO: Add admin permissions check
+            [ $this, 'store_block' ],
+            [ $this, 'admin_permissions_check' ]
         );
 
         $update_block_endpoint = new PostEndpoint(
             $this->namespace,
             'blocks/{blockId:uuid}/update',
-            [ $this, 'update_block' ]
-            // TODO: Add admin permissions check
+            [ $this, 'update_block' ],
+            [ $this, 'admin_permissions_check' ]
         );
 
         $delete_block_endpoint = new PostEndpoint(
             $this->namespace,
             'blocks/{blockId:uuid}/delete',
-            [ $this, 'delete_block' ]
-            // TODO: Add admin permissions check
+            [ $this, 'delete_block' ],
+            [ $this, 'admin_permissions_check' ]
         );
 
         return [

@@ -18,7 +18,6 @@ export const BlockEditorCode = () =>
 
     const conversation = getConversation(selectedBlockId ?? '');
 
-    // TODO: If the user currently is on the AI selected path, and the AI creates a new file, select the new file
     useEffect(() => {
         if (!block) return;
 

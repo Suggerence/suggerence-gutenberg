@@ -79,10 +79,13 @@ class RegisterScripts
          */
         $asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/block-generator.asset.php');
 
+        // Remove wp-admin-ui from dependencies
+        $script_dependencies = array_diff($script_dependencies, ['wp-admin-ui']);
+
         $result = wp_register_script(
             $this->plugin_name . '-block-generator',
             SUGGERENCEGUTENBERG_URL . 'build/block-generator.js',
-            $asset_file['dependencies'],
+            $script_dependencies,
             $asset_file['version'],
             ['in_footer' => true]
         );

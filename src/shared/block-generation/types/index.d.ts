@@ -2,7 +2,7 @@ import { IconType } from '@wordpress/components';
 
 declare global
 {
-    const suggerenceData: suggerenceData;
+    const SuggerenceData: SuggerenceData;
 
     interface BlockSuggestion {
         title: string;

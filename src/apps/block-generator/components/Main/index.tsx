@@ -21,7 +21,7 @@ export const Main = () =>
     const { connect, disconnect } = useWebsocketStore();
 
     // Refetch blocks periodically when a block is being generated (and we're on the main screen)
-    const { data: blocks = [], isLoading: isLoadingBlocks } = useQuery({
+    const { data: blocks = [], isLoading: isLoadingBlocks, error } = useQuery({
         ...getBlocksQueryOptions(),
         refetchInterval: blockId && !selectedBlockId ? 1000 : false
     });

@@ -36,10 +36,10 @@ const FileTreeNodeFolder = ({ node }: { node: FolderNode }) =>
 
 const FileTreeNodeFile = ({ node }: { node: FileNode }) =>
 {
-    const { blockId } = useBlocksStore();
+    const { selectedBlockId } = useBlocksStore();
     const { getConversation, setSelectedFilePath } = useConversationsStore();
 
-    const conversation = getConversation(blockId ?? '');
+    const conversation = getConversation(selectedBlockId ?? '');
 
     const isSelected = conversation?.selectedFilePath === node.path;
     const beingEdited = conversation?.aiEditingFile === node.path;

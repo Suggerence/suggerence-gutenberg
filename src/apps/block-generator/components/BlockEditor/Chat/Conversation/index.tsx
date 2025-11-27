@@ -10,10 +10,10 @@ import { BlockEditorChatConversationMessage } from '@/apps/block-generator/compo
 
 export const BlockEditorChatConversation = () =>
 {
-    const { blockId } = useBlocksStore();
+    const { selectedBlockId } = useBlocksStore();
     const { getConversation } = useConversationsStore();
 
-    const conversation = getConversation(blockId ?? '');
+    const conversation = getConversation(selectedBlockId ?? '');
 
     return (
         <Conversation className='w-full min-h-0'>

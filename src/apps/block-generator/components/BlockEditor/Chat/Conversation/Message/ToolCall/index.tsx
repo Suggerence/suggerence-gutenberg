@@ -106,7 +106,7 @@ export const ReplaceInFileToolCall = ({ toolCall }: { toolCall: ToolCallMessage 
                         <TaskItemFile>
                             <FileIcon filePath={toolCall.content.arguments.path} />
                             <FileName filePath={toolCall.content.arguments.path} />
-                            <span className={cn('pl-2', sizeDiff > 0 ? 'text-chart-2' : sizeDiff < 0 ? 'text-destructive' : 'text-foreground')}>{sizeDiff > 0 ? '+' : sizeDiff < 0 ? '-' : ''}{sizeDiff}</span>
+                            <span className={cn('pl-2', sizeDiff > 0 ? 'text-chart-2' : sizeDiff < 0 ? 'text-destructive' : 'text-foreground')}>{sizeDiff > 0 ? '+' : ''}{sizeDiff}</span>
                         </TaskItemFile>
                     </>
                 )

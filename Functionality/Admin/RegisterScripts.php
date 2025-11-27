@@ -73,5 +73,27 @@ class RegisterScripts
             [$this->plugin_name . '-components'],
             $asset_file['version'],
         );
+
+        /**
+         * Block generator
+         */
+        $asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/block-generator.asset.php');
+
+        $result = wp_register_script(
+            $this->plugin_name . '-block-generator',
+            SUGGERENCEGUTENBERG_URL . 'build/block-generator.js',
+            $asset_file['dependencies'],
+            $asset_file['version'],
+            ['in_footer' => true]
+        );
+
+        wp_register_style(
+            $this->plugin_name . '-block-generator',
+            SUGGERENCEGUTENBERG_URL . 'build/style-block-generator.css',
+            [$this->plugin_name . '-components'],
+            $this->plugin_version
+        );
+
+        wp_add_inline_script($this->plugin_name . '-block-generator', $suggerence_data);
     }
 }

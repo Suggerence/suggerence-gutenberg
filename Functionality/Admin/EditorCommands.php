@@ -53,5 +53,9 @@ class EditorCommands
         // Enqueue the gutenberg editor script
         wp_enqueue_script($this->plugin_name . '-gutenberg-editor');
         wp_enqueue_style($this->plugin_name . '-gutenberg-editor');
+
+        // Enqueue the block generator script
+        wp_enqueue_script($this->plugin_name . '-block-generator');
+        wp_enqueue_style($this->plugin_name . '-block-generator');
     }
 }

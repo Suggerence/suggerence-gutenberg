@@ -45,7 +45,7 @@ const FileTreeNodeFile = ({ node }: { node: FileNode }) =>
     const beingEdited = conversation?.aiEditingFile === node.path;
 
     return (
-        <div className={cn('flex items-center gap-2 px-1 py-0.5 cursor-pointer hover:bg-block-generation-muted-foreground/10 rounded', isSelected || beingEdited ? 'bg-block-generation-muted-foreground' : '', beingEdited ? 'animate-pulse' : '')} onClick={() => setSelectedFilePath(selectedBlockId ?? '', node.path)}>
+        <div className={cn('flex items-center gap-2 px-1 py-0.5 cursor-pointer hover:bg-block-generation-muted-foreground/10 rounded', isSelected || beingEdited ? 'bg-block-generation-muted-foreground/20' : '', beingEdited ? 'animate-pulse' : '')} onClick={() => setSelectedFilePath(selectedBlockId ?? '', node.path)}>
             {beingEdited ? <Loader className='size-4 animate-spin' /> : <FileIcon filePath={node.path} />}
             <span className='text-sm flex-1'>{node.name}</span>
         </div>
@@ -59,8 +59,8 @@ const FileTreeNode = ({ node }: { node: FileTreeNode }) =>
 
 export const BlockEditorCodeFileTree = () =>
 {
-    const { blockId } = useBlocksStore();
-    const { data: block } = useQuery(getBlockQueryOptions(blockId ?? ''));
+    const { selectedBlockId } = useBlocksStore();
+    const { data: block } = useQuery(getBlockQueryOptions(selectedBlockId ?? ''));
 
     return (
         <div className="min-w-fit border-r border-block-generation-border flex flex-col p-3 overflow-auto min-h-0">

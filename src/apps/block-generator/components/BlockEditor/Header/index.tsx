@@ -41,26 +41,28 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
                     <Icon icon={arrowLeft} fill='currentColor' className='size-6' />
                 </Button>
 
-                <div className="py-2 box-content flex items-center justify-center min-w-[60px]">
-                    {
-                        block?.icon ? (
-                            <Dashicon icon={block.icon as any} size={48} />
-                        ) : (
-                            <span className="size-12 bg-block-generation-muted-foreground animate-pulse rounded block"></span>
-                        )
-                    }
-                </div>
+                <div className="flex items-center gap-1">
+                    <div className="py-2 box-content flex items-center justify-center min-w-[60px]">
+                        {
+                            block?.icon ? (
+                                <Dashicon icon={block.icon as any} size={48} />
+                            ) : (
+                                <span className="size-12 bg-block-generation-muted-foreground/20 animate-pulse rounded block"></span>
+                            )
+                        }
+                    </div>
 
-                <div>
-                    {
-                        block?.title ? (
-                            <p className="m-0! text-lg font-bold">{block.title}</p>
-                        ) : (
-                            <span className="h-5 w-40 bg-block-generation-muted-foreground animate-pulse rounded block"></span>
-                        )
-                    }
+                    <div>
+                        {
+                            block?.title ? (
+                                <p className="m-0! text-lg font-bold">{block.title}</p>
+                            ) : (
+                                <span className="h-5 w-40 bg-block-generation-muted-foreground/20 animate-pulse rounded block"></span>
+                            )
+                        }
 
-                    <p className="m-0! text-sm">{block?.description}</p>
+                        <p className="m-0! text-sm">{block?.description}</p>
+                    </div>
                 </div>
             </div>
 

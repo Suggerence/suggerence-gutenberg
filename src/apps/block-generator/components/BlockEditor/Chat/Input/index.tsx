@@ -4,7 +4,7 @@ import { ChatStatus } from 'ai';
 
 import { useBlocksStore } from '@/apps/block-generator/stores/blocks';
 
-import { PromptInput, PromptInputBody, PromptInputTextarea, PromptInputSubmit, type PromptInputMessage } from '@/components/ai-elements/prompt-input';
+import { PromptInput, PromptInputBody, PromptInputTextarea, PromptInputSubmit, type PromptInputMessage } from '@/components/ai-elements/block-generation-prompt-input';
 
 interface BlockEditorChatInputProps {
     onSubmit: (message: PromptInputMessage) => void;
@@ -27,17 +27,17 @@ export const BlockEditorChatInput = ({ onSubmit }: BlockEditorChatInputProps) =>
     };
 
     return (
-        <div className='bg-input'>
+        <div className='bg-block-generation-input'>
             <PromptInput onSubmit={handleSubmit} className='shrink-0'>
                 <PromptInputBody>
-                    <PromptInputTextarea 
+                    <PromptInputTextarea
                         placeholder={isGenerating ? __('A block is being generated...', 'suggerence-blocks') : __('Ask me anything...', 'suggerence-blocks')} 
-                        className='outline-none! ring-0! border-0! resize-none! p-2!'
+                        className='outline-none! ring-0! border-0! resize-none! p-2! bg-transparent! text-block-generation-foreground! placeholder:text-block-generation-muted-foreground!'
                         disabled={isGenerating}
                     />
                 </PromptInputBody>
 
-                <PromptInputSubmit className='h-8! cursor-pointer! mr-2!' status={status} disabled={isGenerating} />
+                <PromptInputSubmit variant='block-generation-primary' className='h-8! cursor-pointer! mr-2!' status={status} disabled={isGenerating} />
             </PromptInput>
         </div>
     )

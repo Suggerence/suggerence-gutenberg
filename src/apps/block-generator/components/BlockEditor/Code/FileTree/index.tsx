@@ -17,7 +17,7 @@ const FileTreeNodeFolder = ({ node }: { node: FolderNode }) =>
 
     return (
         <div className='w-full'>
-            <div className='flex items-center gap-2 px-1 py-0.5 cursor-pointer hover:bg-muted-foreground/10 rounded select-none text-sm' onClick={() => setIsOpen(!isOpen)}>
+            <div className='flex items-center gap-2 px-1 py-0.5 cursor-pointer hover:bg-block-generation-muted-foreground/10 rounded select-none text-sm' onClick={() => setIsOpen(!isOpen)}>
                 {isOpen ? <ChevronDown className='size-4' /> : <ChevronRight className='size-4' />}
                 {isOpen ? <FolderOpen className='size-4' /> : <Folder className='size-4' />}
                 <span className='text-sm font-medium'>{node.name}</span>
@@ -25,7 +25,7 @@ const FileTreeNodeFolder = ({ node }: { node: FolderNode }) =>
 
             {
                 isOpen && (
-                    <div className='pl-4 border-l border-border ml-3'>
+                    <div className='pl-4 border-l border-block-generation-border ml-3'>
                         {node.children.map(child => <FileTreeNode key={child.path} node={child} />)}
                     </div>
                 )
@@ -45,7 +45,7 @@ const FileTreeNodeFile = ({ node }: { node: FileNode }) =>
     const beingEdited = conversation?.aiEditingFile === node.path;
 
     return (
-        <div className={cn('flex items-center gap-2 px-1 py-0.5 cursor-pointer hover:bg-muted-foreground/10 rounded', isSelected || beingEdited ? 'bg-muted-foreground' : '', beingEdited ? 'animate-pulse' : '')} onClick={() => setSelectedFilePath(blockId ?? '', node.path)}>
+        <div className={cn('flex items-center gap-2 px-1 py-0.5 cursor-pointer hover:bg-block-generation-muted-foreground/10 rounded', isSelected || beingEdited ? 'bg-block-generation-muted-foreground' : '', beingEdited ? 'animate-pulse' : '')} onClick={() => setSelectedFilePath(selectedBlockId ?? '', node.path)}>
             {beingEdited ? <Loader className='size-4 animate-spin' /> : <FileIcon filePath={node.path} />}
             <span className='text-sm flex-1'>{node.name}</span>
         </div>
@@ -63,7 +63,7 @@ export const BlockEditorCodeFileTree = () =>
     const { data: block } = useQuery(getBlockQueryOptions(blockId ?? ''));
 
     return (
-        <div className="min-w-fit border-r border-border flex flex-col p-3 overflow-auto min-h-0">
+        <div className="min-w-fit border-r border-block-generation-border flex flex-col p-3 overflow-auto min-h-0">
             <div className="flex flex-col gap-1">
                 {block?.file_tree?.map(node => <FileTreeNode key={node.path} node={node} />)}
             </div>

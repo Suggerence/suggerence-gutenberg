@@ -7,7 +7,7 @@ interface SuggerenceLogoProps {
 export const SuggerenceLogo = ({ className }: SuggerenceLogoProps) => {
     return (
         <svg
-            className={cn("text-foreground", className)}
+            className={cn("text-block-generation-foreground", className)}
             width="100%"
             viewBox="0 0 994.46002 142.813"
             fill="none"

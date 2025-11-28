@@ -1,7 +1,9 @@
 import { useState } from '@wordpress/element';
 import { Button } from '@wordpress/components';
+import { Button as ButtonUI } from '@/components/ui/button';
 import { blockDefault } from '@wordpress/icons';
 import { useQuery } from '@tanstack/react-query';
+import { XIcon } from 'lucide-react';
 
 import { getBlocksQueryOptions } from '@/shared/block-generation/query-options';
 
@@ -42,7 +44,11 @@ export const Main = () =>
                 <Button icon={blockDefault}></Button>
             </DialogTrigger>
 
-            <DialogContent className='size-full max-w-[calc(100%-4rem)]! max-h-[calc(100%-4rem)]! p-0! border-none! flex! flex-col! overflow-hidden! block-generator-dialog dark:text-white! font-[sans-serif]!'>
+            <DialogContent className='size-full max-w-[calc(100%-4rem)]! max-h-[calc(100%-4rem)]! p-0! border-none! flex! flex-col! overflow-hidden! block-generator-dialog dark:text-white! font-[sans-serif]! bg-block-generation-background! text-block-generation-foreground!'>
+                <ButtonUI variant='ghost' className='absolute z-10 top-4! right-4! size-8! p-0! text-block-generation-foreground! hover:text-block-generation-accent-foreground! dark:hover:text-block-generation-accent-foreground! cursor-pointer!' onClick={() => setIsOpen(false)}>
+                    <XIcon className='size-6' />
+                </ButtonUI>
+                
                 <DialogTitle className='sr-only!'>Block Generator</DialogTitle>
                 <DialogDescription className='sr-only!'>Unblock your creativity</DialogDescription>
 

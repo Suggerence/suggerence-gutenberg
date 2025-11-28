@@ -20,8 +20,8 @@ export const BlockSelector = ({ blocks }: BlockSelectorProps) =>
             <SuggerenceLogo className='max-w-40 absolute top-10' />
 
             <div className='text-center!'>
-                <h1 className='text-4xl! text-primary! font-bold m-0!'>{__('Unblock your creativity', 'suggerence-blocks')}</h1>
-                <p className='text-base! text-muted-foreground! m-0!'>{__('Describe a block and Suggie will generate it for you', 'suggerence-blocks')}</p>
+                <h1 className='text-4xl! text-block-generation-primary! font-bold m-0!'>{__('Unblock your creativity', 'suggerence-blocks')}</h1>
+                <p className='text-base! text-block-generation-muted-foreground! m-0!'>{__('Describe a block and Suggie will generate it for you', 'suggerence-blocks')}</p>
             </div>
 
             <BlockSelectorTextarea ref={textareaRef} />

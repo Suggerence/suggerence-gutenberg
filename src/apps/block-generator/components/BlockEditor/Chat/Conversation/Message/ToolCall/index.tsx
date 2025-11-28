@@ -27,7 +27,7 @@ export const ReadFileToolCall = ({ toolCall }: { toolCall: ToolCallMessage }) =>
         <TaskItem className='flex items-center gap-2'>
             {
                 error && fileNotExists ? (
-                    <div className='flex items-center gap-2 text-destructive'>
+                    <div className='flex items-center gap-2 text-block-generation-destructive'>
                         {__('File not found', 'suggerence-blocks')}
                         <TaskItemFile>
                             <FileIcon filePath={toolCall.content.arguments.path} />
@@ -64,7 +64,7 @@ export const WriteFileToolCall = ({ toolCall }: { toolCall: ToolCallMessage }) =
                             <FileName filePath={toolCall.content.arguments.path} />
                             {
                                 contentLength > 0 && (
-                                    <span className='text-chart-2 pl-2'>+{contentLength}</span>
+                                    <span className='text-block-generation-chart-2 pl-2'>+{contentLength}</span>
                                 )
                             }
                         </TaskItemFile>
@@ -75,7 +75,7 @@ export const WriteFileToolCall = ({ toolCall }: { toolCall: ToolCallMessage }) =
                         <TaskItemFile>
                             <FileIcon filePath={toolCall.content.arguments.path} />
                             <FileName filePath={toolCall.content.arguments.path} />
-                            <span className='text-chart-2 pl-2'>+{contentLength}</span>
+                            <span className='text-block-generation-chart-2 pl-2'>+{contentLength}</span>
                         </TaskItemFile>
                     </>
                 )
@@ -106,7 +106,7 @@ export const ReplaceInFileToolCall = ({ toolCall }: { toolCall: ToolCallMessage 
                         <TaskItemFile>
                             <FileIcon filePath={toolCall.content.arguments.path} />
                             <FileName filePath={toolCall.content.arguments.path} />
-                            <span className={cn('pl-2', sizeDiff > 0 ? 'text-chart-2' : sizeDiff < 0 ? 'text-destructive' : 'text-foreground')}>{sizeDiff > 0 ? '+' : ''}{sizeDiff}</span>
+                            <span className={cn('pl-2', sizeDiff > 0 ? 'text-block-generation-chart-2' : sizeDiff < 0 ? 'text-block-generation-destructive' : 'text-block-generation-foreground')}>{sizeDiff > 0 ? '+' : ''}{sizeDiff}</span>
                         </TaskItemFile>
                     </>
                 )
@@ -136,8 +136,8 @@ export const BuildBlockToolCall = ({ toolCall }: { toolCall: ToolCallMessage }) 
                         </>
                     ) : (
                         <>
-                            <Hammer className='size-4 text-destructive' />
-                            <span className='text-destructive'>{__('Failed to build block', 'suggerence-blocks')}</span>
+                            <Hammer className='size-4 text-block-generation-destructive' />
+                            <span className='text-block-generation-destructive'>{__('Failed to build block', 'suggerence-blocks')}</span>
                         </>
                     )
                 }
@@ -147,13 +147,13 @@ export const BuildBlockToolCall = ({ toolCall }: { toolCall: ToolCallMessage }) 
                 error && (
                     <Task defaultOpen={false} className='mt-2'>
                         <TaskTrigger title={__('View error details', 'suggerence-blocks')}>
-                            <div className='flex w-full cursor-pointer items-center gap-2 text-muted-foreground text-xs transition-colors hover:text-destructive'>
+                            <div className='flex w-full cursor-pointer items-center gap-2 text-block-generation-muted-foreground text-xs transition-colors hover:text-block-generation-destructive'>
                                 <ChevronDown className='size-3 transition-transform group-data-[state=open]:rotate-180' />
                                 <span>{__('View error details', 'suggerence-blocks')}</span>
                             </div>
                         </TaskTrigger>
                         <TaskContent>
-                            <pre className='text-xs text-destructive whitespace-pre-wrap wrap-break-word bg-destructive/10 p-2 rounded border border-destructive/20 overflow-x-auto'>
+                            <pre className='text-xs text-block-generation-destructive whitespace-pre-wrap wrap-break-word bg-block-generation-destructive/10 p-2 rounded border border-block-generation-destructive/20 overflow-x-auto'>
                                 {buildOutput}
                             </pre>
                         </TaskContent>
@@ -181,8 +181,8 @@ export const LoadBlockToolCall = ({ toolCall }: { toolCall: ToolCallMessage }) =
                     </>
                 ) : (
                     <>
-                        <ToyBrick className='size-4 text-destructive' />
-                        <span className='text-destructive'>{__('Failed to load block', 'suggerence-blocks')}</span>
+                        <ToyBrick className='size-4 text-block-generation-destructive' />
+                        <span className='text-block-generation-destructive'>{__('Failed to load block', 'suggerence-blocks')}</span>
                     </>
                 )
             }
@@ -272,8 +272,8 @@ export const InstallItemsToolCall = ({ toolCall }: { toolCall: ToolCallMessage }
                     </>
                 ) : (
                     <>
-                        <DownloadIcon className='size-4 text-destructive' />
-                        <span className='text-destructive'>{__('Failed to install items', 'suggerence-blocks')}</span>
+                        <DownloadIcon className='size-4 text-block-generation-destructive' />
+                        <span className='text-block-generation-destructive'>{__('Failed to install items', 'suggerence-blocks')}</span>
                     </>
                 )
             }

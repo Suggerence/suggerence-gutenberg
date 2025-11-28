@@ -74,7 +74,7 @@ export const BlockEditorLoaderArtifact = () =>
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className={isOpen ? 'h-full max-h-72' : ''}>
             <Artifact className="border-none rounded-none bg-transparent h-full">
                 <ArtifactHeader className='border-none justify-start gap-6'>
-                    {block?.status === 'completed' ? <CircleCheck className='size-4 text-chart-2' /> : <Spinner className="size-4" />}
+                    {block?.status === 'completed' ? <CircleCheck className='size-4 text-block-generation-chart-2' /> : <Spinner className="size-4" />}
 
                     <div className="flex-1">
                         <ArtifactTitle className='m-0!'>{formatStatus(block?.status ?? 'pending', conversation?.aiEditingFile ?? '')}</ArtifactTitle>
@@ -85,7 +85,7 @@ export const BlockEditorLoaderArtifact = () =>
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="size-8 p-0 text-muted-foreground hover:text-foreground group"
+                            className="size-8 p-0 text-block-generation-muted-foreground hover:text-block-generation-foreground group"
                         >
                             <ChevronDown className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                             <span className="sr-only">{isOpen ? __('Collapse', 'suggerence-blocks') : __('Expand', 'suggerence-blocks')}</span>
@@ -93,9 +93,9 @@ export const BlockEditorLoaderArtifact = () =>
                     </CollapsibleTrigger>
                 </ArtifactHeader>
 
-                <CollapsibleContent className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-2 overflow-hidden bg-muted h-full">
-                    <ArtifactContent className='p-0! bg-muted'>
-                        <code ref={scrollContainerRef} className='h-full overflow-hidden bg-muted'>
+                <CollapsibleContent className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-2 overflow-hidden bg-block-generation-muted h-full">
+                    <ArtifactContent className='p-0! bg-block-generation-muted'>
+                        <code ref={scrollContainerRef} className='h-full overflow-hidden bg-block-generation-muted'>
                             {(conversation?.streamedCode ?? '').split('\n').map((line, index) => (
                                 <pre key={index} className='text-sm'>{line}</pre>
                             ))}

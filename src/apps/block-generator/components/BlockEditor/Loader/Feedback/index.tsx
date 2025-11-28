@@ -66,14 +66,14 @@ export const BlockEditorLoaderFeedback = () =>
     const { data: block } = useQuery(getBlockQueryOptions(selectedBlockId ?? ''));
 
     return (
-        <div className='text-primary flex flex-col items-center gap-10'>
-            <h2 className='text-6xl! text-primary! font-normal! text-center! max-w-xl m-0!'>
+        <div className='text-block-generation-primary flex flex-col items-center gap-10'>
+            <h2 className='text-6xl! text-block-generation-primary! font-normal! text-center! max-w-xl m-0!'>
                 {__('Hold on, your block is being generated', 'suggerence-blocks')}
             </h2>
 
             <BlockEditorLoaderFeedbackIcon />
 
-            <p className='text-primary! text-lg! text-center! max-w-xl m-0! mt-10! animate-pulse'>
+            <p className='text-block-generation-primary! text-lg! text-center! max-w-xl m-0! mt-10! animate-pulse'>
                 {formatFeedback(block?.status ?? 'pending')}
             </p>
         </div>

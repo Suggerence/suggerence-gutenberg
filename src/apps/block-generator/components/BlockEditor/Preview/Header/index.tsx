@@ -13,19 +13,19 @@ interface BlockEditorPreviewHeaderProps
 export const BlockEditorPreviewHeader = ({ activeTab }: BlockEditorPreviewHeaderProps) =>
 {
     return (
-        <div className="w-full flex items-center justify-between border-border border-b p-4 bg-input/50">
-            <h3 className="text-sm font-medium m-0! text-primary! truncate">
+        <div className="w-full flex items-center justify-between border-block-generation-border border-b p-4 bg-block-generation-input/50">
+            <h3 className="text-sm font-medium m-0! text-block-generation-primary! truncate">
                 {activeTab === 'preview' ? __('Editor', 'suggerence-blocks') : __('Frontend', 'suggerence-blocks')}
             </h3>
 
             <TabsList>
                 <TabsTrigger value="preview">
                     <Icon icon={drawerRight} fill="currentColor" />
-                    <span className="text-primary">{__('Editor', 'suggerence-blocks')}</span>
+                    <span className="text-block-generation-primary">{__('Editor', 'suggerence-blocks')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="frontend">
                     <Icon icon={desktop} fill="currentColor" />
-                    <span className="text-primary">{__('Frontend', 'suggerence-blocks')}</span>
+                    <span className="text-block-generation-primary">{__('Frontend', 'suggerence-blocks')}</span>
                 </TabsTrigger>
             </TabsList>
         </div>

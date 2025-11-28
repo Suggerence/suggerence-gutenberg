@@ -17,7 +17,7 @@ export const BlockEditorPreviewEditorWindow = ({ blockClientId }: BlockEditorPre
     }, [blockClientId]);
 
     return (
-        <div className='grow bg-white p-10'>
+        <div className='grow bg-white p-10 text-black'>
             <BlockEditorKeyboardShortcuts />
             <WritingFlow>
                 <ObserveTyping>

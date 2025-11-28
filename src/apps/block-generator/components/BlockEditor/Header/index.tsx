@@ -35,7 +35,7 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
     const showSynced = activeTab === 'code' && block?.src_files && block?.src_files.length > 0 && !isSyncing;
 
     return (
-        <div className="w-full flex items-center justify-between box-border border-b border-border pr-12">
+        <div className="w-full flex items-center justify-between box-border border-b border-block-generation-border pr-12">
             <div className="flex items-center gap-4">
                 <Button variant='ghost' size='icon' className="cursor-pointer" onClick={handleBackClick} title={__('Back to collection', 'suggerence-blocks')}>
                     <Icon icon={arrowLeft} fill='currentColor' className='size-6' />
@@ -46,7 +46,7 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
                         block?.icon ? (
                             <Dashicon icon={block.icon as any} size={48} />
                         ) : (
-                            <span className="size-12 bg-muted-foreground animate-pulse rounded block"></span>
+                            <span className="size-12 bg-block-generation-muted-foreground animate-pulse rounded block"></span>
                         )
                     }
                 </div>
@@ -56,7 +56,7 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
                         block?.title ? (
                             <p className="m-0! text-lg font-bold">{block.title}</p>
                         ) : (
-                            <span className="h-5 w-40 bg-muted-foreground animate-pulse rounded block"></span>
+                            <span className="h-5 w-40 bg-block-generation-muted-foreground animate-pulse rounded block"></span>
                         )
                     }
 
@@ -79,7 +79,7 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
                 
                 {
                     isSyncing && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-block-generation-muted-foreground">
                             <Spinner className="size-4" />
                             <span>{__('Syncing...', 'suggerence-blocks')}</span>
                         </div>
@@ -88,7 +88,7 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
 
                 {
                     showSynced && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-block-generation-muted-foreground">
                             <Dashicon icon='cloud-saved' size={16} />
                             <span>{__('Synced', 'suggerence-blocks')}</span>
                         </div>
@@ -98,11 +98,11 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
                 <TabsList>
                     <TabsTrigger value="preview">
                         <Icon icon={seen} fill="currentColor" />
-                        <span className="text-primary">{__('Preview', 'suggerence-blocks')}</span>
+                        <span className="text-block-generation-primary">{__('Preview', 'suggerence-blocks')}</span>
                     </TabsTrigger>
                     <TabsTrigger value="code">
                         <Icon icon={code} fill="currentColor" />
-                        <span className="text-primary">{__('Code', 'suggerence-blocks')}</span>
+                        <span className="text-block-generation-primary">{__('Code', 'suggerence-blocks')}</span>
                     </TabsTrigger>
                 </TabsList>
             </div>

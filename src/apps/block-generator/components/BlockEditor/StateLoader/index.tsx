@@ -35,14 +35,14 @@ export const BlockEditorStateLoader = () =>
     const { data: block } = useQuery(getBlockQueryOptions(selectedBlockId ?? ''));
 
     return (
-        <div className="absolute bottom-4 right-4 bg-background border border-border rounded-lg flex flex-col items-center gap-4">
+        <div className="absolute bottom-4 right-4 bg-block-generation-background border border-block-generation-border rounded-lg flex flex-col items-center gap-4">
             <div className="pt-4">
                 <BlockEditorLoaderFeedbackIcon />
             </div>
 
-            <div className="bg-popover p-4 rounded-b-lg">
-                <p className="text-primary! text-lg! m-0!">{__('Working', 'suggerence-blocks')}</p>
-                <p className="text-muted-foreground! text-sm! m-0!">{formatFeedback(block?.status ?? 'pending').replace('%s', block?.title ?? __('your block', 'suggerence-blocks'))}</p>
+            <div className="bg-block-generation-popover p-4 rounded-b-lg">
+                <p className="text-block-generation-primary! text-lg! m-0!">{__('Working', 'suggerence-blocks')}</p>
+                <p className="text-block-generation-muted-foreground! text-sm! m-0!">{formatFeedback(block?.status ?? 'pending').replace('%s', block?.title ?? __('your block', 'suggerence-blocks'))}</p>
             </div>
         </div>
     );

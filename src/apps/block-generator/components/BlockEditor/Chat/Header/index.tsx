@@ -22,13 +22,13 @@ export const BlockEditorChatHeader = ({ title }: BlockEditorChatHeaderProps) =>
     }
     
     return (
-        <div className="flex items-center justify-between p-2 border-b border-border shrink-0">
-            <h3 className="text-sm font-medium m-0! text-primary! truncate">
+        <div className="flex items-center justify-between p-2 border-b border-block-generation-border shrink-0">
+            <h3 className="text-sm font-medium m-0! text-block-generation-primary! truncate">
                 {title ?? __('Chat', 'suggerence-blocks')}
             </h3>
 
-            <button type="button" className="p-1.5 hover:bg-muted rounded-md transition-colors cursor-pointer" onClick={handleClearConversation} title={__('Clear conversation', 'suggerence-blocks')}>
-                <Trash2 className="size-4 text-primary" />
+            <button type="button" className="p-1.5 hover:bg-block-generation-muted rounded-md transition-colors cursor-pointer" onClick={handleClearConversation} title={__('Clear conversation', 'suggerence-blocks')}>
+                <Trash2 className="size-4 text-block-generation-primary" />
             </button>
         </div>
     );

@@ -24,7 +24,7 @@ export const BlockEditorChat = () =>
     }
 
     return (
-        <div className="w-min lg:w-sm border-l border-border flex flex-col gap-2 overflow-hidden min-h-0">
+        <div className="w-min lg:w-sm border-l border-block-generation-border flex flex-col gap-2 overflow-hidden min-h-0">
             <BlockEditorChatHeader title={block?.title} />
 
             <BlockEditorChatConversation />

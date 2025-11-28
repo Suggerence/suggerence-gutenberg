@@ -1,4 +1,4 @@
-import { formatListBullets, blockTable } from '@wordpress/icons';
+import { formatListBullets, blockDefault } from '@wordpress/icons';
 
 export default
     [
@@ -8,8 +8,8 @@ export default
             icon: formatListBullets
         },
         {
-            title: "Calculator",
-            description: "A calculator block that allows the user to perform basic arithmetic operations.",
-            icon: blockTable
+            title: "Confetti",
+            description: "A button that triggers a confetti effect when clicked.",
+            icon: blockDefault
         }
     ]

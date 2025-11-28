@@ -17,6 +17,10 @@ export const BlockSelector = ({ blocks }: BlockSelectorProps) =>
 
     return (
         <div className='size-full p-10 flex flex-col items-center justify-center gap-10 relative'>
+            <p className="absolute top-4 left-4 text-sm! m-0! text-block-generation-primary! bg-block-generation-muted! rounded-full! px-3! py-1!">
+                {__('Experimental Beta', 'suggerence-blocks')}
+            </p>
+
             <SuggerenceLogo className='max-w-40 absolute top-10' />
 
             <div className='text-center!'>

@@ -11,14 +11,14 @@ interface BlockEditorChatHeaderProps
 
 export const BlockEditorChatHeader = ({ title }: BlockEditorChatHeaderProps) =>
 {
-    const { blockId } = useBlocksStore();
+    const { selectedBlockId } = useBlocksStore();
     const { clearConversation } = useConversationsStore();
 
     const handleClearConversation = () =>
     {
-        if (!blockId) return;
+        if (!selectedBlockId) return;
 
-        clearConversation(blockId);
+        clearConversation(selectedBlockId);
     }
     
     return (

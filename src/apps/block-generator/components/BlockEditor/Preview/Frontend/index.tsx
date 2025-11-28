@@ -13,6 +13,7 @@ interface PreviewState {
     loading: boolean;
     error: string | null;
     viewJs: string | null;
+    styleCss: string | null;
 }
 
 interface BlockEditorPreviewFrontendProps {
@@ -28,7 +29,8 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
         html: null,
         loading: true,
         error: null,
-        viewJs: null
+        viewJs: null,
+        styleCss: null
     });
 
     const blockName = `suggerence/${block?.slug || selectedBlockId || 'unknown'}`;
@@ -94,6 +96,7 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
 
         // Try to load view.js if available
         let viewJsContent: string | null = null;
+        let styleCssContent: string | null = null;
         if (block) {
             try {
                 const viewJsFile = await getBlockFile(block, './build/view.js');
@@ -104,6 +107,21 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
                 // view.js is optional, so we don't treat this as an error
                 console.log('view.js not found or failed to load:', error);
             }
+
+            // Try to load style.css or style-index.css if available
+            try {
+                // Try style.css first, then style-index.css
+                let styleFile = await getBlockFile(block, './build/style-index.css');
+                if (!styleFile.success) {
+                    styleFile = await getBlockFile(block, './build/index.css');
+                }
+                if (styleFile.success && styleFile.data?.content) {
+                    styleCssContent = styleFile.data.content;
+                }
+            } catch (error) {
+                // CSS is optional, so we don't treat this as an error
+                console.log('index.css not found or failed to load:', error);
+            }
         }
 
         try {
@@ -113,7 +131,8 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
                     html: serverHtml,
                     loading: false,
                     error: null,
-                    viewJs: viewJsContent
+                    viewJs: viewJsContent,
+                    styleCss: styleCssContent
                 });
                 return;
             }
@@ -128,7 +147,8 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
                     html: clientHtml,
                     loading: false,
                     error: null,
-                    viewJs: viewJsContent
+                    viewJs: viewJsContent,
+                    styleCss: styleCssContent
                 });
                 return;
             }
@@ -140,7 +160,8 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             html: null,
             loading: false,
             error: 'Unable to render block preview',
-            viewJs: viewJsContent
+            viewJs: viewJsContent,
+            styleCss: styleCssContent
         });
     }, [blockName, getCurrentAttributes, fetchServerRender, renderClientSide, blocks, block]);
 
@@ -157,6 +178,11 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             .map(el => el.outerHTML)
             .join('\n');
 
+        // Include block's style.css if available
+        const blockStyleCss = previewState.styleCss 
+            ? `<style id="block-style-css">${previewState.styleCss}</style>`
+            : '';
+
         // Include view.js script if available
         const viewJsScript = previewState.viewJs 
             ? `<script type="module">${previewState.viewJs}</script>`
@@ -170,6 +196,7 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Block Preview</title>
                 ${styles}
+                ${blockStyleCss}
                 <style>
                     html {
                         padding: 2.5rem;
@@ -195,7 +222,7 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
         `;
 
         iframe.srcdoc = content;
-    }, [previewState.html, previewState.viewJs]);
+    }, [previewState.html, previewState.viewJs, previewState.styleCss]);
 
     if (previewState.loading) {
         return (

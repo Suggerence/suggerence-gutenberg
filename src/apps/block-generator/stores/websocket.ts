@@ -28,7 +28,9 @@ export const useWebsocketStore = create<WebsocketStore>((set, get) => ({
         }
 
         try {
-            const ws = new WebSocket(BLOCKS_WEBSOCKET_URL);
+            const apiKey = SuggerenceData.api_key || 'sk-sgg-demo-key';
+            
+            const ws = new WebSocket(`${BLOCKS_WEBSOCKET_URL}?api_key=${apiKey}`);
 
             ws.onopen = () =>
             {

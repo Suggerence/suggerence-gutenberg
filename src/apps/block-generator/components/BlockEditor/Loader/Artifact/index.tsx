@@ -93,7 +93,7 @@ export const BlockEditorLoaderArtifact = () =>
                     </CollapsibleTrigger>
                 </ArtifactHeader>
 
-                <CollapsibleContent className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-2 overflow-hidden bg-block-generation-muted h-full">
+                <CollapsibleContent className="overflow-hidden bg-block-generation-muted h-full">
                     <ArtifactContent className='p-0! bg-block-generation-muted'>
                         <code ref={scrollContainerRef} className='h-full overflow-hidden bg-block-generation-muted'>
                             {(conversation?.streamedCode ?? '').split('\n').map((line, index) => (

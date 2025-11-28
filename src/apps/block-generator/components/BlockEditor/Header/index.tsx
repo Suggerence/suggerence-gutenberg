@@ -35,7 +35,7 @@ export const BlockEditorHeader = ({ activeTab, onCloseModal }: BlockEditorHeader
     const showSynced = activeTab === 'code' && block?.src_files && block?.src_files.length > 0 && !isSyncing;
 
     return (
-        <div className="w-full flex items-center justify-between box-border border-b border-block-generation-border pr-12">
+        <div className="w-full flex items-center justify-between box-border border-b border-block-generation-border pr-12 text-block-generation-primary">
             <div className="flex items-center gap-4">
                 <Button variant='ghost' size='icon' className="cursor-pointer" onClick={handleBackClick} title={__('Back to collection', 'suggerence-blocks')}>
                     <Icon icon={arrowLeft} fill='currentColor' className='size-6' />

@@ -11,7 +11,7 @@ export const WebsocketHandler = () =>
         handleBlockPlanningStarted,
         handleBlockPlanningStep,
         handleBuildBlock,
-        handleCodeStream,
+        // handleCodeStream,
         handleCodeUpdateSuccess,
         handleLoadBlock,
         handleReadFile,
@@ -54,9 +54,9 @@ export const WebsocketHandler = () =>
                     handleBuildBlock(message.data as { status: 'building' | 'built', success: boolean, build_output?: string | undefined; error?: string | undefined; files?: Record<string, string> | undefined; });
                     break;
 
-                case 'code_stream':
-                    handleCodeStream(message.data as { content: string });
-                    break;
+                // case 'code_stream':
+                //     handleCodeStream(message.data as { content: string });
+                //     break;
 
                 case 'code_update_success':
                     handleCodeUpdateSuccess(message.data as { blockId: string, path: string });
@@ -149,7 +149,7 @@ export const WebsocketHandler = () =>
         };
 
         return addMessageHandler(handleMessage);
-    }, [addMessageHandler, handleBlockPlanningStarted, handleBlockPlanningStep, handleBuildBlock, handleCodeStream, handleCodeUpdateSuccess, handleLoadBlock, handleReadFile, handleReadProjectStructure, handleReasoning, handleReasoningEnded, handleReplaceInFile, handleReplaceInFileEnded, handleReplaceInFileStarted, handleResponse, handleShadcnGetItemExamplesFromRegistries, handleShadcnGetProjectRegistries, handleShadcnInstallItems, handleShadcnListItemsInRegistries, handleShadcnSearchItemsInRegistries, handleShadcnViewItemsInRegistries, handleTodoUpdated, handleWriteFile, handleWriteFileEnded, handleWriteFileStarted, handleFinish]);
+    }, [addMessageHandler, handleBlockPlanningStarted, handleBlockPlanningStep, handleBuildBlock, handleCodeUpdateSuccess, handleLoadBlock, handleReadFile, handleReadProjectStructure, handleReasoning, handleReasoningEnded, handleReplaceInFile, handleReplaceInFileEnded, handleReplaceInFileStarted, handleResponse, handleShadcnGetItemExamplesFromRegistries, handleShadcnGetProjectRegistries, handleShadcnInstallItems, handleShadcnListItemsInRegistries, handleShadcnSearchItemsInRegistries, handleShadcnViewItemsInRegistries, handleTodoUpdated, handleWriteFile, handleWriteFileEnded, handleWriteFileStarted, handleFinish]);
     
     return null;
 }

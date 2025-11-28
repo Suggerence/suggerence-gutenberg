@@ -95,7 +95,7 @@ export const BlockEditorLoaderArtifact = () =>
 
                 <CollapsibleContent className="overflow-hidden bg-block-generation-muted h-full">
                     <ArtifactContent className='p-0! bg-block-generation-muted'>
-                        <code ref={scrollContainerRef} className='h-full overflow-hidden bg-block-generation-muted'>
+                        <code ref={scrollContainerRef} className='h-full overflow-hidden bg-block-generation-muted text-block-generation-primary'>
                             {(conversation?.streamedCode ?? '').split('\n').map((line, index) => (
                                 <pre key={index} className='text-sm'>{line}</pre>
                             ))}

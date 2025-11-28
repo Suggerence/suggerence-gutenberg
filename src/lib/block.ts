@@ -117,7 +117,10 @@ export const loadBlockIntoEditor = async (generatedBlock: Partial<GeneratedBlock
     // Execute the block registration code
     const indexJs = await getBlockFile(generatedBlock, './build/index.js');
     if (indexJs.success) {
-        await executeBlockRegistrationCode(indexJs.data?.content ?? '');
+        const executionResult = await executeBlockRegistrationCode(indexJs.data?.content ?? '');
+        if (!executionResult.success) {
+            return executionResult;
+        }
     }
 
     let block = wp?.blocks?.getBlockType(fullBlockName);

@@ -6,11 +6,13 @@ import apiFetch from '@wordpress/api-fetch';
 import { getBlockQueryOptions } from '@/shared/block-generation/query-options';
 import { useBlocksStore } from '@/apps/block-generator/stores/blocks';
 import { Spinner } from '@/components/ui/spinner';
+import { getBlockFile } from '@/lib/block';
 
 interface PreviewState {
     html: string | null;
     loading: boolean;
     error: string | null;
+    viewJs: string | null;
 }
 
 interface BlockEditorPreviewFrontendProps {
@@ -25,7 +27,8 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
     const [previewState, setPreviewState] = useState<PreviewState>({
         html: null,
         loading: true,
-        error: null
+        error: null,
+        viewJs: null
     });
 
     const blockName = `suggerence/${block?.slug || selectedBlockId || 'unknown'}`;
@@ -89,13 +92,28 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
 
         const attributes = getCurrentAttributes();
 
+        // Try to load view.js if available
+        let viewJsContent: string | null = null;
+        if (block) {
+            try {
+                const viewJsFile = await getBlockFile(block, './build/view.js');
+                if (viewJsFile.success && viewJsFile.data?.content) {
+                    viewJsContent = viewJsFile.data.content;
+                }
+            } catch (error) {
+                // view.js is optional, so we don't treat this as an error
+                console.log('view.js not found or failed to load:', error);
+            }
+        }
+
         try {
             const serverHtml = await fetchServerRender(blockName, attributes);
             if (serverHtml) {
                 setPreviewState({
                     html: serverHtml,
                     loading: false,
-                    error: null
+                    error: null,
+                    viewJs: viewJsContent
                 });
                 return;
             }
@@ -109,7 +127,8 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
                 setPreviewState({
                     html: clientHtml,
                     loading: false,
-                    error: null
+                    error: null,
+                    viewJs: viewJsContent
                 });
                 return;
             }
@@ -120,9 +139,10 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
         setPreviewState({
             html: null,
             loading: false,
-            error: 'Unable to render block preview'
+            error: 'Unable to render block preview',
+            viewJs: viewJsContent
         });
-    }, [blockName, getCurrentAttributes, fetchServerRender, renderClientSide, blocks]);
+    }, [blockName, getCurrentAttributes, fetchServerRender, renderClientSide, blocks, block]);
 
     useEffect(() => {
         renderPreview();
@@ -137,6 +157,11 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             .map(el => el.outerHTML)
             .join('\n');
 
+        // Include view.js script if available
+        const viewJsScript = previewState.viewJs 
+            ? `<script type="module">${previewState.viewJs}</script>`
+            : '';
+
         const content = `
             <!DOCTYPE html>
             <html lang="en">
@@ -146,9 +171,13 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
                 <title>Block Preview</title>
                 ${styles}
                 <style>
+                    html {
+                        padding: 2.5rem;
+                    }
                     body {
                         margin: 0;
                         padding: 0;
+                        height: auto !important;
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
                         line-height: 1.6;
                         background: white !important;
@@ -160,12 +189,13 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             </head>
             <body>
                 ${previewState.html}
+                ${viewJsScript}
             </body>
             </html>
         `;
 
         iframe.srcdoc = content;
-    }, [previewState.html]);
+    }, [previewState.html, previewState.viewJs]);
 
     if (previewState.loading) {
         return (
@@ -192,10 +222,10 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
     }
 
     return (
-        <div className='size-full bg-white p-10'>
+        <div className='size-full bg-white overflow-auto!'>
             <iframe
                 ref={iframeRef}
-                className='w-full h-full border-0'
+                className='size-full border-0'
                 title={__('Frontend Preview', 'suggerence-blocks')}
             />
         </div>

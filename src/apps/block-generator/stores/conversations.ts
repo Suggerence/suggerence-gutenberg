@@ -158,6 +158,9 @@ export const useConversationsStore = create<ConversationsStore>()(
         {
             name: 'suggerence-blocks-conversations',
             storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                conversations: state.conversations.map(({ streamedCode, ...conversation }) => conversation)
+            }),
         }
     )
 );

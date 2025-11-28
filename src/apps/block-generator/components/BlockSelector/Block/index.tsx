@@ -44,7 +44,7 @@ export const BlockSelectorBlock = ({ title, description, icon, status, onClick, 
             <div className='relative z-10 w-full flex flex-col gap-3'>
 
                 {/* Icon */}
-                <div className={cn('flex items-center justify-center w-full h-16 rounded-lg bg-linear-to-br from-block-generation-background to-block-generation-background/75 group-hover:from-block-generation-background/75 group-hover:to-block-generation-background/50 transition-all duration-300 shrink-0', generating && 'from-block-generation-primary/10 to-block-generation-primary/5')}>
+                <div className={cn('flex items-center justify-center w-full h-16 rounded-lg bg-linear-to-br from-block-generation-background to-block-generation-background/75 group-hover:from-block-generation-background/75 group-hover:to-block-generation-background/50 transition-all duration-300 shrink-0 text-block-generation-primary', generating && 'from-block-generation-primary/10 to-block-generation-primary/5')}>
                     {
                         generating ? <Spinner className='size-5' /> : <Icon icon={icon} fill='currentColor' className='size-5 group-hover:scale-110 transition-transform duration-300' />
                     }

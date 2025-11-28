@@ -63,7 +63,7 @@ export const BlockEditorCodeFileTree = () =>
     const { data: block } = useQuery(getBlockQueryOptions(selectedBlockId ?? ''));
 
     return (
-        <div className="min-w-fit border-r border-block-generation-border flex flex-col p-3 overflow-auto min-h-0">
+        <div className="min-w-fit border-r border-block-generation-border flex flex-col p-3 overflow-auto min-h-0 text-block-generation-primary">
             <div className="flex flex-col gap-1">
                 {block?.file_tree?.map(node => <FileTreeNode key={node.path} node={node} />)}
             </div>

@@ -10,7 +10,7 @@ import { useConversationsStore } from "@/apps/block-generator/stores/conversatio
 export const useWriteFileHandler = () =>
 {
     const { blockId } = useBlocksStore();
-    const { getConversation, updateMessage } = useConversationsStore();
+    const { getConversation, updateMessage, setStreamedCode } = useConversationsStore();
     const queryClient = useQueryClient();
     const { mutate: updateBlock } = useMutation(updateBlockMutationOptions());
 
@@ -49,5 +49,7 @@ export const useWriteFileHandler = () =>
         queryClient.setQueryData(['block', blockId], updatedBlock);
 
         updateBlock({ blockId, block: updatedBlock });
-    }, [blockId, getConversation, updateMessage, queryClient, updateBlock]);
+
+        setStreamedCode(blockId, (conversation.streamedCode ?? '') + data.content);
+    }, [blockId, getConversation, updateMessage, setStreamedCode, queryClient, updateBlock]);
 }

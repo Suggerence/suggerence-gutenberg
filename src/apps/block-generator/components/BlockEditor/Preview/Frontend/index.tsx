@@ -187,6 +187,7 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
         const wpScript = `
             <script>
                 window.wp = window.parent.wp;
+                window.ReactJSXRuntime = window.parent.ReactJSXRuntime;
             </script>
         `;
 

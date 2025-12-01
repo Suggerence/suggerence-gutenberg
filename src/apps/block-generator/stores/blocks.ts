@@ -17,6 +17,10 @@ export const useBlocksStore = create<BlocksStore>()(
             selectedBlockId: undefined,
             setSelectedBlockId: (selectedBlockId) => set({ selectedBlockId }),
         }),
-        { name: 'suggerence-blocks-blocks', storage: createJSONStorage(() => localStorage) }
+        {
+            name: 'suggerence-blocks-blocks',
+            storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({ selectedBlockId: state.selectedBlockId }),
+        }
     )
 );

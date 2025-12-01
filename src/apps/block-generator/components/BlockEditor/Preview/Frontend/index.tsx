@@ -183,6 +183,13 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             ? `<style id="block-style-css">${previewState.styleCss}</style>`
             : '';
 
+        // Inject parent window's wp object into iframe
+        const wpScript = `
+            <script>
+                window.wp = window.parent.wp;
+            </script>
+        `;
+
         // Include view.js script if available
         const viewJsScript = previewState.viewJs 
             ? `<script type="module">${previewState.viewJs}</script>`
@@ -216,6 +223,7 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             </head>
             <body>
                 ${previewState.html}
+                ${wpScript}
                 ${viewJsScript}
             </body>
             </html>

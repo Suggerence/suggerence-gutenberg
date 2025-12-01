@@ -8,4 +8,8 @@
     .components-base-control {
         @apply w-full;
     }
+
+    .components-range-control__number {
+        @apply max-w-fit;
+    }
 }

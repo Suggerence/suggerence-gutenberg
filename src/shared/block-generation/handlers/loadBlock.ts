@@ -84,6 +84,7 @@ export const useLoadBlockHandler = () =>
 
             // Send the result to the websocket
             sendWebsocketMessage('response', {
+                blockId: data.blockId,
                 requestId: data.requestId,
                 success: result.success,
                 message: result.message
@@ -99,6 +100,7 @@ export const useLoadBlockHandler = () =>
 
             // Send the result to the websocket
             sendWebsocketMessage('response', {
+                blockId: data.blockId,
                 requestId: data.requestId,
                 success: false,
                 message: error instanceof Error ? error.message : String(error ?? 'Failed to load block')

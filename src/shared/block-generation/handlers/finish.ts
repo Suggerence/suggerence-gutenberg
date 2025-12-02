@@ -4,12 +4,10 @@ import { useBlocksStore } from "@/apps/block-generator/stores/blocks";
 
 export const useFinishHandler = () =>
 {
-    const { blockId, setBlockId } = useBlocksStore();
+    const { setBlockId } = useBlocksStore();
 
     return useCallback(() =>
     {
-        if (!blockId) return;
-
         setBlockId(undefined);
-    }, [blockId, setBlockId]);
+    }, [setBlockId]);
 }

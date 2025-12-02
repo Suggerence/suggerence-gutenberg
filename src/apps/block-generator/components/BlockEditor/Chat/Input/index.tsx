@@ -15,11 +15,9 @@ export const BlockEditorChatInput = ({ onSubmit }: BlockEditorChatInputProps) =>
     const [status, setStatus] = useState<ChatStatus>('ready');
     const { blockId } = useBlocksStore();
 
-    const isGenerating = !!blockId;
-
     const handleSubmit = (message: PromptInputMessage, event: React.FormEvent<HTMLFormElement>) =>
     {
-        if (isGenerating) {
+        if (!!blockId) {
             event.preventDefault();
             return;
         }
@@ -31,13 +29,13 @@ export const BlockEditorChatInput = ({ onSubmit }: BlockEditorChatInputProps) =>
             <PromptInput onSubmit={handleSubmit} className='shrink-0'>
                 <PromptInputBody>
                     <PromptInputTextarea
-                        placeholder={isGenerating ? __('A block is being generated...', 'suggerence-blocks') : __('Ask me anything...', 'suggerence-blocks')} 
+                        placeholder={!!blockId ? __('A block is being generated...', 'suggerence-blocks') : __('Ask me anything...', 'suggerence-blocks')} 
                         className='outline-none! ring-0! border-0! resize-none! p-2! bg-transparent! text-block-generation-foreground! placeholder:text-block-generation-muted-foreground!'
-                        disabled={isGenerating}
+                        disabled={!!blockId}
                     />
                 </PromptInputBody>
 
-                <PromptInputSubmit variant='block-generation-primary' className='h-8! cursor-pointer! mr-2!' status={status} disabled={isGenerating} />
+                <PromptInputSubmit variant='block-generation-primary' className='h-8! cursor-pointer! mr-2!' status={status} disabled={!!blockId} />
             </PromptInput>
         </div>
     )

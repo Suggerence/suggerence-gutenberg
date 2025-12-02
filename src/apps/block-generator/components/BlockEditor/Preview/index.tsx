@@ -29,12 +29,15 @@ export const BlockEditorPreview = () =>
     const initialAttributes = useMemo(() => {
         return block?.attributes ? Object.entries(block.attributes).reduce((acc: Record<string, unknown>, [key, value]) =>
         {
-            acc[key] = value.default;
+            // Only include attributes with defined defaults - let WordPress use block.json defaults for others
+            if (value.default !== undefined) {
+                acc[key] = value.default;
+            }
             return acc;
         }, {}) : {};
     }, [block?.attributes]);
 
-    // Initialize blocks once per blockName
+    // Initialize blocks when blockName or initialAttributes change
     useEffect(() => {
         // Only initialize if blockName changed
         if (initializedBlockNameRef.current === blockName) {
@@ -63,7 +66,7 @@ export const BlockEditorPreview = () =>
             setBlocks([]);
             setIsReady(false);
         }
-    }, [blockName]);
+    }, [blockName, initialAttributes]);
 
     const onInput = useCallback((newBlocks: any[]) => {
         setBlocks(newBlocks);

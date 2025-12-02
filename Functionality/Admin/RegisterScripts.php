@@ -97,6 +97,6 @@ class RegisterScripts
             $this->plugin_version
         );
 
-        wp_add_inline_script($this->plugin_name . '-block-generator', $suggerence_data);
+        // wp_add_inline_script($this->plugin_name . '-block-generator', $suggerence_data);
     }
 }

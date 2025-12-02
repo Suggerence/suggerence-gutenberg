@@ -15,11 +15,9 @@ export const BlockSelectorTextarea = forwardRef<HTMLTextAreaElement>((props, ref
     const { blockId } = useBlocksStore();
     const { sendMessage } = useSendMessage();
 
-    const isGenerating = !!blockId;
-
     const handleSubmit = () =>
     {
-        if (!value.trim() || isGenerating) return;
+        if (!value.trim() || !!blockId) return;
 
         sendMessage(value);
 
@@ -42,16 +40,16 @@ export const BlockSelectorTextarea = forwardRef<HTMLTextAreaElement>((props, ref
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={isGenerating ? __('A block is being generated...', 'suggerence-blocks') : __('Describe the block you want to create...', 'suggerence-blocks')}
+                placeholder={!!blockId ? __('A block is being generated...', 'suggerence-blocks') : __('Describe the block you want to create...', 'suggerence-blocks')}
                 rows={6}
-                disabled={isGenerating}
+                disabled={!!blockId}
                 className='min-h-40! rounded-2xl! p-4! pr-16! resize-none! border-block-generation-input! placeholder:text-block-generation-muted-foreground! focus-visible:border-block-generation-primary! focus-visible:ring-block-generation-primary! aria-invalid:ring-block-generation-destructive/20! dark:aria-invalid:ring-block-generation-destructive/40! aria-invalid:border-block-generation-destructive! bg-block-generation-input! text-block-generation-foreground!'
             />
 
             <Button
                 variant='block-generation-primary'
                 onClick={handleSubmit}
-                disabled={!value.trim() || isGenerating}
+                disabled={!value.trim() || !!blockId}
                 size='icon-lg'
                 className='absolute top-4 right-4 rounded-full! cursor-pointer! disabled:cursor-not-allowed! z-10'
             >

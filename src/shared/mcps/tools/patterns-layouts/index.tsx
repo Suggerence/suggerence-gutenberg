@@ -1,8 +1,58 @@
-import { dispatch, select } from '@wordpress/data';
+import { dispatch, select, subscribe } from '@wordpress/data';
 import { parse } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 
 declare const SuggerenceData: SuggerenceData;
+
+/**
+ * Wait for the WordPress data store to finish resolving block patterns.
+ * Prevents the first search from running before patterns are available.
+ */
+async function waitForBlockPatternsResolution(blockEditorSelect: any): Promise<void> {
+    if (!blockEditorSelect?.__experimentalGetAllowedPatterns) {
+        return;
+    }
+
+    const initialResult = blockEditorSelect.__experimentalGetAllowedPatterns(undefined);
+    if (Array.isArray(initialResult) && initialResult.length > 0) {
+        return;
+    }
+
+    const dataStore = select('core/data') as any;
+    const alreadyResolved = dataStore?.hasFinishedResolution?.(
+        'core/block-editor',
+        '__experimentalGetAllowedPatterns',
+        [undefined]
+    );
+
+    if (alreadyResolved) {
+        return;
+    }
+
+    await new Promise<void>((resolve) => {
+        let unsubscribe = () => {};
+        const timeout = setTimeout(() => {
+            unsubscribe();
+            resolve();
+        }, 2000);
+
+        unsubscribe = subscribe(() => {
+            const latestPatterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined);
+            const latestDataStore = select('core/data') as any;
+            const finished = latestDataStore?.hasFinishedResolution?.(
+                'core/block-editor',
+                '__experimentalGetAllowedPatterns',
+                [undefined]
+            );
+
+            if ((Array.isArray(latestPatterns) && latestPatterns.length > 0) || finished) {
+                clearTimeout(timeout);
+                unsubscribe();
+                resolve();
+            }
+        });
+    });
+}
 
 /**
  * Get available pattern categories from WordPress
@@ -79,7 +129,7 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
                 description: 'Where to insert the pattern. "before" inserts above the selected block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after".',
                 enum: ['before', 'after', 'end']
             },
-            target_block_id: {
+            relative_to_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor.'
             }
@@ -92,7 +142,6 @@ export const insertPatternTool: SuggerenceMCPResponseTool = {
  * Check if Kadence Blocks is installed and fetch patterns from their API
  */
 async function getKadencePatternsAPI(): Promise<any[] | null> {
-    console.log('Checking if Kadence Blocks is installed:', SuggerenceData?.has_kadence_blocks);
     // Check if Kadence Blocks is installed
     if (!(SuggerenceData?.has_kadence_blocks)) {
         return [];
@@ -108,8 +157,6 @@ async function getKadencePatternsAPI(): Promise<any[] | null> {
         // Kadence returns an object with pattern IDs as keys
         if (data && typeof data === 'string') {
             const parsedData = JSON.parse(data);
-
-            console.log('Kadence patterns:', parsedData);
 
             return Object.entries(parsedData).map(([patternId, kadencePattern]: [string, any]) => {
                 // Extract category names from the categories object
@@ -134,8 +181,6 @@ async function getKadencePatternsAPI(): Promise<any[] | null> {
                 };
             });
         }
-
-        console.log('No Kadence patterns found');
 
         return [];
     } catch (error) {
@@ -175,6 +220,8 @@ export async function searchPattern(args: {
             }));
         } else {
             // Fallback to WordPress patterns
+            await waitForBlockPatternsResolution(blockEditorSelect);
+
             // Get settings first (needed for categories)
             const settings = blockEditorSelect?.getSettings?.();
 
@@ -182,14 +229,26 @@ export async function searchPattern(args: {
             if (blockEditorSelect?.__experimentalGetAllowedPatterns) {
                 try {
                     // Call with rootClientId = undefined to get all patterns (same as Gutenberg)
-                    patterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined) || [];
+                    const allowedPatterns = blockEditorSelect.__experimentalGetAllowedPatterns(undefined);
+                    if (Array.isArray(allowedPatterns)) {
+                        patterns = allowedPatterns;
+                    } else if (allowedPatterns && typeof (allowedPatterns as Promise<any>).then === 'function') {
+                        try {
+                            const resolvedPatterns = await allowedPatterns;
+                            if (Array.isArray(resolvedPatterns)) {
+                                patterns = resolvedPatterns;
+                            }
+                        } catch (patternError) {
+                            console.warn('__experimentalGetAllowedPatterns promise rejected:', patternError);
+                        }
+                    }
                 } catch (e) {
                     console.warn('__experimentalGetAllowedPatterns failed:', e);
                 }
             }
 
             // Fallback: Get patterns from settings if the method above failed
-            if (patterns.length === 0 && settings?.__experimentalBlockPatterns) {
+            if (patterns.length === 0 && Array.isArray(settings?.__experimentalBlockPatterns)) {
                 patterns = settings.__experimentalBlockPatterns || [];
             }
 
@@ -251,8 +310,6 @@ export async function searchPattern(args: {
 
                 return matches;
             });
-
-            console.log(`Search filter: ${beforeFilterCount} -> ${patterns.length} patterns for search "${normalizedSearch}"`);
         }
 
         // Format pattern information

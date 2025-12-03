@@ -35,8 +35,27 @@ class EditorCommands
             return;
         }
 
+        $code_editor_settings = wp_enqueue_code_editor([
+            'type' => 'text/css',
+        ]);
+
+        if ($code_editor_settings) {
+            wp_enqueue_script('wp-codemirror');
+            wp_enqueue_style('wp-codemirror');
+
+            wp_add_inline_script(
+                $this->plugin_name . '-gutenberg-editor',
+                'window.SuggerenceCustomCssEditorSettings = ' . wp_json_encode($code_editor_settings) . ';',
+                'before'
+            );
+        }
+
         // Enqueue the gutenberg editor script
         wp_enqueue_script($this->plugin_name . '-gutenberg-editor');
         wp_enqueue_style($this->plugin_name . '-gutenberg-editor');
+
+        // Enqueue the block generator script
+        wp_enqueue_script($this->plugin_name . '-block-generator');
+        wp_enqueue_style($this->plugin_name . '-block-generator');
     }
 }

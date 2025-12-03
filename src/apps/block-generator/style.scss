@@ -1,0 +1,51 @@
+/* Transparent scrollbar styles for block-generator-dialog */
+.block-generator-dialog {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #303030 transparent;
+
+    /* Webkit browsers (Chrome, Safari, Edge) */
+    &::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #303030;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: #303030;
+    }
+
+    /* Apply to all scrollbars inside */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #303030 transparent;
+
+        &::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: #303030;
+            border-radius: 4px;
+        }
+
+        &::-webkit-scrollbar-thumb:hover {
+            background: #303030;
+        }
+    }
+}

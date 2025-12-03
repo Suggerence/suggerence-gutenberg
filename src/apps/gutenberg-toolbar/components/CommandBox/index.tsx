@@ -46,14 +46,14 @@ export const CommandBox = ({
             const success = await executeCommand(inputValue.trim());
 
             if (success) {
-                setResult(__('Command executed successfully!', 'suggerence'));
+                setResult(__('Done! Looking good.', 'suggerence'));
                 setInputValue('');
                 onClose?.();
             } else {
-                createErrorSnackbar(__('Command execution failed. Please try again.', 'suggerence'));
+                createErrorSnackbar(__('That didn\'t work out. Want to try something different?', 'suggerence'));
             }
         } catch (error) {
-            createErrorSnackbar(__('An error occurred while executing the command.', 'suggerence'));
+            createErrorSnackbar(__('Oops, something went wrong. Let\'s give it another go?', 'suggerence'));
             console.error('Command execution error:', error);
         } finally {
             setExecuting(false);
@@ -89,14 +89,14 @@ export const CommandBox = ({
             const success = await executeCommand(audioMessage);
 
             if (success) {
-                setResult(__('Audio command executed successfully!', 'suggerence'));
+                setResult(__('All set! That sounded great.', 'suggerence'));
                 setInputValue('');
                 onClose?.();
             } else {
-                createErrorSnackbar(__('Audio command execution failed. Please try again.', 'suggerence'));
+                createErrorSnackbar(__('Couldn\'t process that audio command. Try again?', 'suggerence'));
             }
         } catch (error) {
-            createErrorSnackbar(__('An error occurred while executing the audio command.', 'suggerence'));
+            createErrorSnackbar(__('Audio command hit a snag. Let\'s try once more?', 'suggerence'));
             console.error('Audio command execution error:', error);
         } finally {
             setExecuting(false);
@@ -105,7 +105,7 @@ export const CommandBox = ({
 
     return (
         <div
-            className="suggerence-command-box"
+            className="suggerence-command-box suggerence-app"
             style={{
                 width: '320px',
                 padding: '4px',
@@ -130,7 +130,7 @@ export const CommandBox = ({
                         value={inputValue}
                         onChange={(value: string) => setInputValue(value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={placeholder || __('"Ask me to modify the content of the block"', 'suggerence')}
+                        placeholder={placeholder || __('Tell me what you need changed...', 'suggerence')}
                         disabled={isLoading}
                         rows={2}
                         ref={textareaRef}
@@ -150,13 +150,14 @@ export const CommandBox = ({
                                     )}
                                 </FlexItem>
                                 <FlexItem style={{ display: 'flex', gap: '4px' }}>
-                                    <AudioButton
+                                    {/* Audio messages not currently supported by Claude */}
+                                    {/* <AudioButton
                                         onAudioMessage={handleAudioMessage}
                                         inputValue={inputValue}
                                         isLoading={isLoading}
                                         size="small"
                                         showError={false}
-                                    />
+                                    /> */}
                                     <Button
                                         variant="primary"
                                         size="small"

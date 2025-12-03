@@ -1,0 +1,15 @@
+@use 'tailwindcss';
+
+.block-generator-dialog {
+    .block-editor-block-inspector {
+        @apply w-full max-w-sm bg-[#f0f0f1] text-[#3c434a] font-sans overflow-auto;
+    }
+
+    .components-base-control {
+        @apply w-full;
+    }
+
+    .components-range-control__number {
+        @apply max-w-fit;
+    }
+}

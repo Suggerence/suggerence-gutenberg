@@ -19,6 +19,8 @@ class RegisterScripts
     public function register_scripts()
     {
 
+        $suggerence_config = get_option('suggerence_suggerence_config');
+
         $suggerence_data = 'const SuggerenceData = ' . wp_json_encode([
             'suggerence_api_url' => 'https://api.suggerence.com/v1',
             'locale' => get_locale(),
@@ -27,7 +29,8 @@ class RegisterScripts
             'admin_ajax_url' => admin_url('admin-ajax.php'),
             'updates_nonce' => wp_create_nonce('updates'),
             'site_url' => home_url(),
-            'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php')
+            'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php'),
+            'api_key' => $suggerence_config['api_key'] ?? ''
         ]) . ';';
 
         /**
@@ -46,11 +49,16 @@ class RegisterScripts
          */
 
         $asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/gutenberg-editor.asset.php');
+        $script_dependencies = $asset_file['dependencies'];
+
+        if (!in_array('code-editor', $script_dependencies, true)) {
+            $script_dependencies[] = 'code-editor';
+        }
 
         wp_register_script(
             $this->plugin_name . '-gutenberg-editor',
             SUGGERENCEGUTENBERG_URL . 'build/gutenberg-editor.js',
-            $asset_file['dependencies'],
+            $script_dependencies,
             $asset_file['version'],
             array(
                 'in_footer' => true,
@@ -65,5 +73,30 @@ class RegisterScripts
             [$this->plugin_name . '-components'],
             $asset_file['version'],
         );
+
+        /**
+         * Block generator
+         */
+        $asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/block-generator.asset.php');
+
+        // Remove wp-admin-ui from dependencies
+        $script_dependencies = array_diff($script_dependencies, ['wp-admin-ui']);
+
+        $result = wp_register_script(
+            $this->plugin_name . '-block-generator',
+            SUGGERENCEGUTENBERG_URL . 'build/block-generator.js',
+            $script_dependencies,
+            $asset_file['version'],
+            ['in_footer' => true]
+        );
+
+        wp_register_style(
+            $this->plugin_name . '-block-generator',
+            SUGGERENCEGUTENBERG_URL . 'build/style-block-generator.css',
+            [$this->plugin_name . '-components'],
+            $this->plugin_version
+        );
+
+        // wp_add_inline_script($this->plugin_name . '-block-generator', $suggerence_data);
     }
 }

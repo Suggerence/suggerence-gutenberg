@@ -311,7 +311,7 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
         if (!canvas) return;
 
         try {
-            const canvasData = localStorage.getItem('suggerence-drawing-canvas');
+            const canvasData = localStorage.getItem('suggerenceDrawingCanvas');
             if (canvasData) {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
@@ -360,9 +360,8 @@ export const useDrawingCanvasStore = create<DrawingCanvasStore>((set, get) => ({
         if (!canvas) return;
 
         try {
-            console.log('Persisting current canvas state');
             const canvasData = canvas.toDataURL('image/png');
-            localStorage.setItem('suggerence-drawing-canvas', canvasData);
+            localStorage.setItem('suggerenceDrawingCanvas', canvasData);
         } catch (error) {
             console.warn('Failed to persist canvas data to localStorage:', error);
         }

@@ -29,19 +29,6 @@ function getAllBlockIds(): string[] {
     }
 }
 
-function getAvailableBlockTypes(): string[] {
-    try {
-        const { getBlockTypes } = select('core/blocks') as any;
-        const blockTypes = getBlockTypes();
-        return blockTypes
-            .filter((block: any) => !block.deprecated && !block.private)
-            .map((block: any) => block.name);
-    } catch (error) {
-        // Fallback to common block types if WordPress data is not available
-        return ['core/paragraph', 'core/heading', 'core/image', 'core/list', 'core/code', 'core/button', 'core/group', 'core/columns', 'core/cover', 'core/gallery', 'core/audio', 'core/video', 'core/embed', 'core/spacer', 'core/separator', 'core/quote', 'core/table', 'core/html', 'core/shortcode'];
-    }
-}
-
 export const addBlockTool: SuggerenceMCPResponseTool = {
     name: 'add_block',
     description: '⚠️ PREREQUISITE: Call get_block_schema FIRST to see correct attribute structure and supported styling. Creates and inserts new blocks with FULL styling support: duotone filters, border radius (circular images with "50%"), spacing, typography, colors, and all block-specific attributes. Schema provides usage examples for complex features. Supports nested layouts (columns with innerBlocks). Use "attributes" for content/functional properties, use "style" for visual properties like duotone, borders, colors. Combined with schema, this tool can create blocks with ANY WordPress styling feature.',
@@ -50,8 +37,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
         properties: {
             block_type: {
                 type: 'string',
-                description: 'The WordPress block type identifier to create. Must be a valid registered block type (e.g., "core/paragraph" for text, "core/heading" for titles, "core/image" for images, "core/button" for buttons). Use get available blocks tool to see all valid block types if unsure.',
-                enum: getAvailableBlockTypes()
+                description: 'The WordPress block type identifier to create. Must be a valid registered block type (e.g., "core/paragraph" for text, "core/heading" for titles, "core/image" for images, "core/button" for buttons). Use get available blocks tool to see all valid block types if unsure.'
             },
             attributes: {
                 type: 'object',
@@ -94,7 +80,7 @@ export const addBlockTool: SuggerenceMCPResponseTool = {
                 description: 'Insertion position relative to the target block. "before" inserts above the target block, "after" inserts below it, "end" appends to the bottom of the document. Defaults to "after" if not specified.',
                 enum: ['before', 'after', 'end']
             },
-            target_block_id: {
+            relative_to_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. If not provided, uses the currently selected block in the editor. Only needed when inserting relative to a specific block that is not currently selected.'
             }
@@ -113,7 +99,7 @@ export const moveBlockTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'The client ID of the block to relocate. If omitted, moves the currently selected block in the editor. Use this parameter when moving a specific block that is not currently selected.'
             },
-            target_block_id: {
+            relative_to_block_id: {
                 type: 'string',
                 description: 'The client ID of the reference block for positioning. The block will be moved relative to this target block. Required to specify where to move the block.'
             },
@@ -123,7 +109,7 @@ export const moveBlockTool: SuggerenceMCPResponseTool = {
                 enum: ['before', 'after']
             }
         },
-        required: ['target_block_id', 'position']
+        required: ['relative_to_block_id', 'position']
     }
 };
 
@@ -177,16 +163,15 @@ export function deleteBlockTool(): SuggerenceMCPResponseTool {
         inputSchema: {
             type: 'object',
             properties: {
-                client_id: {
+                block_id: {
                     type: 'string',
                     description: hasAvailableBlocks
-                        ? `The clientId of the block to remove. Valid values: ${availableClientIds.join(', ')}. MUST be one of these - do not invent new IDs.`
+                        ? `The clientId of the block to remove.`
                         : 'No blocks available to delete.',
-                    enum: availableClientIds.length > 0 ? availableClientIds : undefined,
-                    required: true
+                    enum: availableClientIds.length > 0 ? availableClientIds : undefined
                 }
             },
-            required: ['client_id']
+            required: ['block_id']
         }
     };
 }
@@ -225,13 +210,12 @@ export const transformBlockTool: SuggerenceMCPResponseTool = {
                 type: 'string',
                 description: 'The client ID of the block to transform. If omitted, transforms the currently selected block in the editor. Use this parameter when transforming a specific block that is not currently selected.'
             },
-            target_block_type: {
+            transform_to: {
                 type: 'string',
-                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.',
-                required: true
+                description: 'The block type to transform to. Must be a valid WordPress block type identifier (e.g., "core/heading", "core/quote", "core/cover"). The transformation will only succeed if the source block type allows transformation to this target type. Use get block schema tool to see possible transformations for a block type.'
             }
         },
-        required: ['target_block_type']
+        required: ['transform_to']
     }
 };
 
@@ -294,21 +278,33 @@ export const redoTool: SuggerenceMCPResponseTool = {
 
 /**
  * Helper function to recursively create blocks with innerBlocks
+ * Handles both camelCase (blockType) and snake_case (block_type) formats
  */
 function createBlockFromDefinition(blockDef: {
-    blockType: string;
+    blockType?: string;
+    block_type?: string;
     attributes?: Record<string, any>;
     innerBlocks?: any[];
+    inner_blocks?: any[];
 }): any {
-    const innerBlocks = blockDef.innerBlocks?.map(innerBlockDef => 
+    // Support both naming conventions
+    const blockType = blockDef.blockType || blockDef.block_type;
+    const innerBlocksArray = blockDef.innerBlocks || blockDef.inner_blocks;
+
+    if (!blockType) {
+        console.error('Block definition missing blockType/block_type:', blockDef);
+        return null;
+    }
+
+    const innerBlocks = innerBlocksArray?.map(innerBlockDef =>
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];
 
     // Only pass innerBlocks if they exist - some blocks like core/table don't use innerBlocks
     // and passing an empty array can cause issues with their internal processing
     return innerBlocks.length > 0
-        ? createBlock(blockDef.blockType, blockDef.attributes || {}, innerBlocks)
-        : createBlock(blockDef.blockType, blockDef.attributes || {});
+        ? createBlock(blockType, blockDef.attributes || {}, innerBlocks)
+        : createBlock(blockType, blockDef.attributes || {});
 }
 
 export function addBlock(
@@ -352,13 +348,13 @@ export function addBlock(
     }
 
     // Create inner blocks recursively if provided
+    // createBlockFromDefinition handles both snake_case (block_type) and camelCase (blockType)
     const processedInnerBlocks = innerBlocks?.map(innerBlockDef =>
         createBlockFromDefinition(innerBlockDef)
     ).filter(Boolean) || [];
 
     // Special handling for table blocks - ensure body and head are properly structured
     if (blockType === 'core/table') {
-        console.log('Creating table block with attributes:', JSON.stringify(attributes, null, 2));
         
         // WordPress table structure (based on schema example):
         // body/head: array of row objects
@@ -424,8 +420,6 @@ export function addBlock(
                 return row;
             });
         }
-        
-        console.log('Transformed table attributes:', JSON.stringify(attributes, null, 2));
     }
 
     // Only pass innerBlocks if they exist - some blocks like core/table don't use innerBlocks
@@ -579,7 +573,7 @@ export function moveBlock(args: {
                     action: 'block_already_at_position',
                     data: {
                         block_id: sourceBlockId,
-                        target_block_id: args.targetBlockId,
+                        relative_to_block_id: args.targetBlockId,
                         position: args.position
                     }
                 })
@@ -605,7 +599,7 @@ export function moveBlock(args: {
                     data: {
                         block_id: sourceBlockId,
                         block_type: sourceBlock.name,
-                        target_block_id: args.targetBlockId,
+                        relative_to_block_id: args.targetBlockId,
                         position: args.position,
                         from_parent: sourceRootClientId || 'root',
                         to_parent: targetRootClientId || 'root',
@@ -624,7 +618,7 @@ export function moveBlock(args: {
                     action: 'block_move_failed',
                     error: `Error moving block: ${error instanceof Error ? error.message : 'Unknown error'}`,
                     block_id: sourceBlockId,
-                    target_block_id: args.targetBlockId
+                    relative_to_block_id: args.targetBlockId
                 })
             }]
         };
@@ -717,7 +711,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                 text: JSON.stringify({
                     success: false,
                     action: 'block_delete_failed',
-                    error: 'No block selected and no client_id provided'
+                    error: 'No block selected and no block_id provided'
                 })
             }]
         };
@@ -732,7 +726,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                 text: JSON.stringify({
                     success: false,
                     action: 'block_delete_failed',
-                    error: `Block with clientId "${targetClientId}" not found. This clientId is invalid or does not exist in the current document.`
+                    error: `Block with block_id "${targetClientId}" not found. This blockId is invalid or does not exist in the current document.`
                 })
             }]
         };
@@ -758,7 +752,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                     success: true,
                     action: 'block_deleted',
                     data: {
-                        client_id: targetClientId,
+                        block_id: targetClientId,
                         block_type: block.name || 'unknown',
                         had_inner_blocks: block.innerBlocks?.length > 0
                     }
@@ -773,7 +767,7 @@ export function deleteBlock(clientId?: string): { content: Array<{ type: string,
                     success: false,
                     action: 'block_delete_failed',
                     error: `Error deleting block: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    client_id: targetClientId,
+                    block_id: targetClientId,
                     block_type: block.name || 'unknown'
                 })
             }]

@@ -3,7 +3,7 @@
 namespace SuggerenceGutenberg\Functionality;
 
 use SuggerenceGutenberg\Functionality\Endpoints\AiProviders;
-
+use SuggerenceGutenberg\Functionality\Endpoints\BlockGeneration;
 /**
  * Main API Endpoints coordinator
  * Manages all endpoint groups and provides common functionality
@@ -28,6 +28,9 @@ class ApiEndpoints
     {       
         // AI Providers endpoints
         new AiProviders($this->plugin_name, $this->plugin_version);
+
+        // Block Generation endpoints
+        new BlockGeneration($this->plugin_name, $this->plugin_version);
     }
 
 

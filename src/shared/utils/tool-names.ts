@@ -32,7 +32,7 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'search_media': __('Search media library', 'suggerence'),
     'get_media_details': __('Get media details', 'suggerence'),
     'search_openverse': __('Search Openverse', 'suggerence'),
-    'upload_openverse_to_media': __('Upload Openverse to media', 'suggerence'),
+    'upload_openverse_to_media': __('Upload to media library', 'suggerence'),
 
     // Document tools
     'get_document_structure': __('Get document structure', 'suggerence'),
@@ -42,7 +42,9 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'update_post_excerpt': __('Update post excerpt', 'suggerence'),
     'set_featured_image': __('Set featured image', 'suggerence'),
     'remove_featured_image': __('Remove featured image', 'suggerence'),
+    'generate_custom_css': __('Generate custom CSS', 'suggerence'),
     'get_post_content': __('Get post content', 'suggerence'),
+    'capture_frontend_screenshot': __('Screenshot', 'suggerence'),
 });
 
 /**

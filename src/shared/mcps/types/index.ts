@@ -49,7 +49,7 @@ interface MCPClientSession {
     messages: MCPClientMessage[];
 }
 
-type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation' | 'reasoning';
+type MCPClientMessageRole = 'user' | 'assistant' | 'tool' | 'tool_confirmation' | 'thinking';
 
 interface ReasoningTask {
     id: string;
@@ -77,6 +77,10 @@ interface MCPClientMessage {
     toolName?: string;
     toolArgs?: Record<string, any>;
     toolResult?: any;
+
+    // Thinking fields (for 'thinking' role messages)
+    thinkingDuration?: number;
+    thinkingSignature?: string;
 
     // Reasoning fields (for 'reasoning' role messages)
     reasoning?: ReasoningContent;

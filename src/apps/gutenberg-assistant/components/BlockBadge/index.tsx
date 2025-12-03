@@ -2,16 +2,14 @@ import { useSelect, useDispatch } from '@wordpress/data';
 import { Icon } from '@wordpress/components';
 import { post, close } from '@wordpress/icons';
 import { useState } from '@wordpress/element';
+import { Badge } from '@/components/ui/badge';
 
 export const BlockBadge = () => {
     const [isHovered, setIsHovered] = useState(false);
-
-    // @ts-ignore - WordPress types not available
     const { clearSelectedBlock } = useDispatch('core/block-editor');
 
     const blockInfo = useSelect((select): BlockInfo | null => {
         try {
-            // @ts-ignore - WordPress types not available
             const { getSelectedBlock } = select('core/block-editor');
             const selectedBlock = getSelectedBlock?.();
 
@@ -19,11 +17,7 @@ export const BlockBadge = () => {
                 return null;
             }
 
-            // Get block type information from WordPress registry
             const blockName = selectedBlock.name || 'Unknown';
-
-            // Try to get the block type from WordPress blocks registry
-            // @ts-ignore - WordPress types not available
             const blockType = window.wp?.blocks?.getBlockType?.(blockName);
 
             let displayTitle = blockName
@@ -59,40 +53,21 @@ export const BlockBadge = () => {
     }
 
     return (
-        <div>
-            <span
-                className="block-badge"
-                style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    backgroundColor: isHovered ? '#f1f5f9' : '#f8fafc',
-                    color: '#475569',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                    lineHeight: '16px',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.15s ease'
-                }}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                onClick={handleDeselectBlock}
-                title="Click to deselect block"
-            >
-                <Icon
-                    icon={isHovered ? close : blockInfo.icon}
-                    size={12}
-                    style={{
-                        color: isHovered ? '#ef4444' : '#64748b',
-                        transition: 'color 0.15s ease'
-                    }}
-                />
-                {blockInfo.title}
-            </span>
-        </div>
+        <Badge
+            variant="outline"
+            className="gap-1 cursor-pointer font-mono hover:bg-muted transition-colors flex items-center"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={handleDeselectBlock}
+            title="Click to deselect block"
+        >
+
+            <Icon
+                icon={isHovered ? close : blockInfo.icon}
+                size={12}
+                className={isHovered ? 'fill-destructive' : 'fill-muted-foreground'}
+            />
+            {blockInfo.title}
+        </Badge>
     );
 };

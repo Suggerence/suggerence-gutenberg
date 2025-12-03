@@ -1,7 +1,6 @@
-import { useState } from '@wordpress/element';
-import { SearchControl, Button, Icon } from '@wordpress/components';
+import { useEffect, useMemo, useState } from '@wordpress/element';
+import type { ChangeEvent } from 'react';
 import { __ } from '@wordpress/i18n';
-import { check } from '@wordpress/icons';
 import { useSelect } from '@wordpress/data';
 import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
 import { getBlockType } from '@wordpress/blocks';
@@ -10,52 +9,29 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 import {
     getBlocksWithHierarchy,
     highlightBlock,
-    removeBlockHighlight,
+    unhighlightBlock,
 } from '@/shared/components/BlockSelector/api';
 import type { BlockSelectorProps } from '@/shared/components/BlockSelector/types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Check, FileAudio, Film } from 'lucide-react';
 
 export const BlockSelector = ({
     onBlockSelect,
-    selectedBlockId,
+    selectedBlockIds = [],
     className,
     showBlockHierarchy = true
 }: BlockSelectorProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const selectedBlockIdSet = useMemo(() => new Set(selectedBlockIds.filter(Boolean)), [selectedBlockIds]);
 
     // Get blocks from WordPress data store
     const blocks = useSelect((select) => {
         return getBlocksWithHierarchy();
     }, []);
-
-    // Filter blocks based on search term
-    const filteredBlocks = blocks.filter((block) => {
-        if (!debouncedSearchTerm) return true;
-
-        const searchLower = debouncedSearchTerm.toLowerCase();
-        const blockName = block.name.toLowerCase();
-        const blockContent = getBlockSearchText(block).toLowerCase();
-
-        return blockName.includes(searchLower) || blockContent.includes(searchLower);
-    });
-
-    const handleBlockClick = (block: BlockInstance) => {
-        onBlockSelect(block);
-    };
-
-    const handleBlockHover = (blockId: string) => {
-        if (hoveredBlockId && hoveredBlockId !== blockId) {
-            removeBlockHighlight(hoveredBlockId);
-        }
-        setHoveredBlockId(blockId);
-        highlightBlock(blockId);
-    };
-
-    const handleBlockLeave = (blockId: string) => {
-        setHoveredBlockId(null);
-        removeBlockHighlight(blockId);
-    };
 
     const getBlockSearchText = (block: BlockInstance): string => {
         // Simple search text extraction for filtering
@@ -73,15 +49,70 @@ export const BlockSelector = ({
         return '';
     };
 
+    // Filter blocks based on search term
+    const filteredBlocks = blocks.filter((block) => {
+        const normalizedSearch = (debouncedSearchTerm || '').trim().toLowerCase();
+        if (!normalizedSearch) return true;
+
+        const blockType = getBlockType(block.name);
+        const rawTitle = blockType?.title;
+        const blockName = block.name?.toLowerCase() ?? '';
+        const blockLabel = typeof rawTitle === 'string'
+            ? rawTitle.toLowerCase()
+            : typeof rawTitle === 'function'
+                ? String(rawTitle({})).toLowerCase()
+                : '';
+        const blockKeywords = Array.isArray(blockType?.keywords)
+            ? blockType.keywords.join(' ').toLowerCase()
+            : '';
+        const blockContent = getBlockSearchText(block).toLowerCase();
+        const blockClientId = block.clientId?.toLowerCase?.() ?? '';
+
+        const searchableText = [
+            blockName,
+            blockLabel,
+            blockKeywords,
+            blockContent,
+            blockClientId
+        ].join(' ');
+
+        return searchableText.includes(normalizedSearch);
+    });
+
+    const handleBlockClick = (block: BlockInstance) => {
+        if (hoveredBlockId) {
+            unhighlightBlock(hoveredBlockId);
+            setHoveredBlockId(null);
+        }
+        unhighlightBlock(block.clientId);
+        onBlockSelect(block);
+    };
+
+    const handleBlockHover = (blockId: string) => {
+        if (hoveredBlockId && hoveredBlockId !== blockId) {
+            unhighlightBlock(hoveredBlockId);
+        }
+        setHoveredBlockId(blockId);
+        highlightBlock(blockId);
+    };
+
+    const handleBlockLeave = (blockId: string) => {
+        setHoveredBlockId(null);
+        unhighlightBlock(blockId);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (hoveredBlockId) {
+                unhighlightBlock(hoveredBlockId);
+            }
+        };
+    }, [hoveredBlockId]);
+
     if (blocks.length === 0) {
         return (
-            <div className={className} style={{ padding: '16px', minWidth: '320px', maxWidth: '400px' }}>
-                <div style={{
-                    textAlign: 'center',
-                    padding: '20px',
-                    color: '#6b7280',
-                    fontSize: '14px'
-                }}>
+            <div className={cn('flex w-full flex-col gap-3 p-4 text-sm text-muted-foreground', className)}>
+                <div className="rounded-md border border-dashed border-border bg-muted/50 px-4 py-6 text-center text-xs">
                     {__('No blocks found in the current document.', 'suggerence-gutenberg')}
                 </div>
             </div>
@@ -89,54 +120,46 @@ export const BlockSelector = ({
     }
 
     return (
-        <div className={className} style={{ padding: '16px', minWidth: '320px', maxWidth: '400px' }}>
-            <SearchControl
+        <div className={cn('flex w-full flex-col gap-3', className)}>
+            <Input
                 value={searchTerm}
-                onChange={setSearchTerm}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
                 placeholder={__('Search blocks...', 'suggerence-gutenberg')}
-                style={{ marginBottom: '12px' }}
+                className="h-9 text-sm"
             />
 
             {filteredBlocks.length === 0 && debouncedSearchTerm && (
-                <div style={{
-                    textAlign: 'center',
-                    padding: '20px',
-                    color: '#6b7280',
-                    fontSize: '14px'
-                }}>
+                <div className="rounded-md border border-dashed border-border bg-muted/50 px-4 py-6 text-center text-xs text-muted-foreground">
                     {__('No blocks found matching your search.', 'suggerence-gutenberg')}
                 </div>
             )}
 
             {filteredBlocks.length > 0 && (
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {filteredBlocks.map(block => (
+                <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                    {filteredBlocks.map(block => {
+                        const blockType = getBlockType(block.name);
+                        const isSelected = selectedBlockIdSet.has(block.clientId);
+
+                        return (
                         <Button
                             key={block.clientId}
                             onClick={() => handleBlockClick(block)}
                             onMouseEnter={() => handleBlockHover(block.clientId)}
                             onMouseLeave={() => handleBlockLeave(block.clientId)}
-                            className={`block-editor-list-view-block-select-button ${selectedBlockId === block.clientId ? 'is-selected' : ''}`}
+                            variant={isSelected ? 'default' : 'ghost'}
+                            className={cn(
+                                'w-full justify-start gap-2 px-2 py-2 text-sm transition-colors',
+                                isSelected
+                                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                    : 'text-foreground hover:bg-muted',
+                            )}
                             style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                width: '100%',
-                                padding: '8px',
-                                marginBottom: '0px',
-                                backgroundColor: selectedBlockId === block.clientId ? '#2271b1' : 'transparent',
-                                border: 'none',
-                                borderRadius: '2px',
-                                textAlign: 'left',
-                                cursor: 'pointer',
-                                minHeight: '28px',
-                                paddingLeft: showBlockHierarchy ? `${8 + (block.depth * 28)}px` : '8px',
-                                color: selectedBlockId === block.clientId ? 'white' : '#1e1e1e'
+                                paddingLeft: showBlockHierarchy ? 12 + (block.depth * 20) : 12,
                             }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                            <div className="flex flex-1 items-center gap-2">
                                 <BlockIcon
-                                    icon={getBlockType(block.name)?.icon}
+                                    icon={blockType?.icon}
                                     showColors={true}
                                     style={{
                                         width: '16px',
@@ -144,70 +167,38 @@ export const BlockSelector = ({
                                         flexShrink: 0
                                     }}
                                 />
-                                <div style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    fontSize: '13px',
-                                    lineHeight: '20px',
-                                    fontWeight: '400'
-                                }}>
+                                <div className="flex-1 min-w-0 text-left text-sm font-normal leading-5">
                                     <BlockTitle
                                         clientId={block.clientId}
                                     />
                                 </div>
                                 {/* Block preview for images */}
                                 {block.name === 'core/image' && block.attributes?.url && (
-                                    <div style={{
-                                        width: '24px',
-                                        height: '24px',
-                                        borderRadius: '2px',
-                                        overflow: 'hidden',
-                                        flexShrink: 0
-                                    }}>
+                                    <div className="h-6 w-6 overflow-hidden rounded">
                                         <img
                                             src={block.attributes.url}
                                             alt=""
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover'
-                                            }}
+                                            className="h-full w-full object-cover"
                                         />
                                     </div>
                                 )}
                                 {/* Block preview for other media blocks */}
                                 {(block.name === 'core/video' || block.name === 'core/audio') && block.attributes?.src && (
-                                    <div style={{
-                                        width: '24px',
-                                        height: '24px',
-                                        borderRadius: '2px',
-                                        backgroundColor: '#f0f0f0',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0
-                                    }}>
-                                        <Icon
-                                            icon={block.name === 'core/video' ? 'video-alt2' : 'media-audio'}
-                                            size={12}
-                                            style={{ color: '#666' }}
-                                        />
+                                    <div className="flex h-6 w-6 items-center justify-center rounded bg-muted text-muted-foreground">
+                                        {block.name === 'core/video' ? (
+                                            <Film className="h-3.5 w-3.5" />
+                                        ) : (
+                                            <FileAudio className="h-3.5 w-3.5" />
+                                        )}
                                     </div>
                                 )}
                             </div>
-                            {selectedBlockId === block.clientId && (
-                                <Icon
-                                    icon={check}
-                                    size={16}
-                                    style={{
-                                        color: 'white',
-                                        flexShrink: 0,
-                                        marginLeft: '4px'
-                                    }}
-                                />
+                            {isSelected && (
+                                <Check className="h-4 w-4 flex-shrink-0" />
                             )}
                         </Button>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -38,6 +38,14 @@ import {
 import {
     thinkTool, think
 } from '@/shared/mcps/tools/reasoning';
+import {
+    createGutenbergTemplateTool,
+    createGutenbergTemplate,
+    listGutenbergTemplatesTool,
+    listGutenbergTemplates,
+    applyGutenbergTemplateTool,
+    applyGutenbergTemplate
+} from '@/shared/mcps/tools/layout-generation';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -82,7 +90,10 @@ export class GutenbergMCPServer {
         removeFeaturedImageTool,
         getPostContentTool,
         generateCustomCssTool,
-        captureFrontendScreenshotTool
+        captureFrontendScreenshotTool,
+        createGutenbergTemplateTool,
+        listGutenbergTemplatesTool,
+        applyGutenbergTemplateTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -213,6 +224,34 @@ export class GutenbergMCPServer {
                         viewport: args.viewport,
                         url: args.url,
                         full_height: args.full_height
+                    });
+
+                case 'list_gutenberg_templates':
+                    return listGutenbergTemplates({
+                        search: args.search,
+                        status: args.status,
+                        per_page: args.per_page,
+                        page: args.page
+                    });
+
+                case 'apply_gutenberg_template':
+                    return applyGutenbergTemplate({
+                        template_slug: args.template_slug,
+                        post_id: args.post_id,
+                        post_type: args.post_type
+                    });
+
+                case 'create_gutenberg_template':
+                    return createGutenbergTemplate({
+                        template_title: args.template_title,
+                        template_slug: args.template_slug,
+                        template_description: args.template_description,
+                        template_content: args.template_content,
+                        template_blocks: args.template_blocks,
+                        apply_to_post: args.apply_to_post,
+                        overwrite_existing: args.overwrite_existing,
+                        post_id: args.post_id,
+                        post_type: args.post_type
                     });
 
                 default:

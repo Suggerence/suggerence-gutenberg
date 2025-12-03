@@ -45,6 +45,11 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'generate_custom_css': __('Generate custom CSS', 'suggerence'),
     'get_post_content': __('Get post content', 'suggerence'),
     'capture_frontend_screenshot': __('Screenshot', 'suggerence'),
+
+    // Template tools
+    'list_gutenberg_templates': __('List templates', 'suggerence'),
+    'apply_gutenberg_template': __('Apply template', 'suggerence'),
+    'create_gutenberg_template': __('Create template', 'suggerence'),
 });
 
 /**
@@ -61,4 +66,3 @@ export const getToolDisplayName = (toolName: string): string => {
     // Return translated name if available, otherwise return cleaned tool name
     return toolNames[cleanToolName] || cleanToolName || __('Unknown Tool', 'suggerence');
 };
-

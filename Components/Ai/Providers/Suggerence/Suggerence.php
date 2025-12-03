@@ -57,7 +57,10 @@ class Suggerence extends Provider
         $defaultOptions = array_merge(['timeout' => 120], $options);
         
         return $this->baseClient()
-            ->withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'x-cors-proxy-allowed-request-headers' => 'authorization'
+            ])
             ->withOptions($defaultOptions)
             ->when($retry !== [], fn ($client) => $client->retry(...$retry))
             ->baseUrl($baseUrl ?? self::BASE_URL);

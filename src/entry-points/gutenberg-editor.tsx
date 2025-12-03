@@ -7,11 +7,17 @@ import { createRoot } from '@wordpress/element';
 
 import { GutenbergAssistant } from '@/apps/gutenberg-assistant';
 import { GutenbergToolbar } from '@/apps/gutenberg-toolbar';
+import { PostCustomCssPanel } from '@/apps/gutenberg-custom-css-panel';
 import { GutenbergAutocomplete } from '@/apps/gutenberg-autocomplete';
 // import { GutenbergSuggestions } from '@/apps/gutenberg-suggestions';
 
 registerPlugin('suggerence-gutenberg-assistant', {
     render: GutenbergAssistant,
+    icon: <SuggerenceIcon />,
+});
+
+registerPlugin('suggerence-post-custom-css-panel', {
+    render: PostCustomCssPanel,
     icon: <SuggerenceIcon />,
 });
 
@@ -30,15 +36,15 @@ domReady(() => {
         toolbarRoot.render(<GutenbergToolbar />);
 
         // Create a container for the autocomplete app
-        const autocompleteContainer = document.createElement('div');
-        autocompleteContainer.id = 'suggerence-gutenberg-autocomplete';
-        autocompleteContainer.style.position = 'fixed';
-        autocompleteContainer.style.zIndex = '999998';
-        autocompleteContainer.style.pointerEvents = 'none';
-        document.body.appendChild(autocompleteContainer);
+        // const autocompleteContainer = document.createElement('div');
+        // autocompleteContainer.id = 'suggerence-gutenberg-autocomplete';
+        // autocompleteContainer.style.position = 'fixed';
+        // autocompleteContainer.style.zIndex = '999998';
+        // autocompleteContainer.style.pointerEvents = 'none';
+        // document.body.appendChild(autocompleteContainer);
 
-        const autocompleteRoot = createRoot(autocompleteContainer);
-        autocompleteRoot.render(<GutenbergAutocomplete />);
+        // const autocompleteRoot = createRoot(autocompleteContainer);
+        // autocompleteRoot.render(<GutenbergAutocomplete />);
 
         // Create a container for the suggestions app
         // const suggestionsContainer = document.createElement('div');

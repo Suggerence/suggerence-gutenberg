@@ -1,4 +1,4 @@
-import { __experimentalVStack as VStack, __experimentalText as Text, Button } from '@wordpress/components';
+import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { Volume2, Play, Pause } from 'lucide-react';
 import { useState, useRef, useEffect } from '@wordpress/element';
@@ -76,25 +76,17 @@ export const UserMessage = ({message}: {message: MCPClientMessage}) => {
     }, []);
 
     return (
-        <div style={{ paddingLeft: '2rem', marginLeft: 'auto', maxWidth: '90%' }}>
-            <div
-                style={{
-                    padding: '10px 14px',
-                    backgroundColor: '#d22178',
-                    color: 'white',
-                    borderRadius: '12px 12px 4px 12px',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
-                }}
-            >
-                <VStack spacing={1}>
+        <div className="pb-4 pl-8 ml-auto max-w-[90%]">
+            <div className="px-3.5 py-2.5 bg-primary text-primary-foreground rounded-xl rounded-br-sm shadow-sm">
+                <div className="space-y-1">
                     {textContent && (
-                        <Text color="white" size="14" style={{ overflowWrap: 'anywhere', lineHeight: '1.5' }}>
+                        <p className="text-sm leading-relaxed break-words">
                             {textContent}
-                        </Text>
+                        </p>
                     )}
 
                     {hasAudio && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginTop: '4px' }}>
+                        <div className="flex items-center gap-2 text-xs mt-1">
                             <Button
                                 onClick={isPlaying ? stopAudio : playAudio}
                                 size="small"
@@ -111,13 +103,13 @@ export const UserMessage = ({message}: {message: MCPClientMessage}) => {
                                 }}
                                 aria-label={isPlaying ? __('Stop audio', 'suggerence') : __('Play audio', 'suggerence')}
                             />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.95 }}>
+                            <div className="flex items-center gap-1 opacity-95">
                                 <Volume2 size={14} />
                                 <span>{__('Audio message', 'suggerence')}</span>
                             </div>
                         </div>
                     )}
-                </VStack>
+                </div>
             </div>
         </div>
     );

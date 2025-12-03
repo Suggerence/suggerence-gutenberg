@@ -55,8 +55,7 @@ export const MediaSelector = ({ isOpen, onClose, onSelect }: MediaSelectorProps)
 
         mediaFrame.open();
 
-    }, [isOpen, onClose, onSelect, isMediaFrameOpen]);
+    }, [isOpen, isMediaFrameOpen]);
 
-    // This component doesn't render anything - it just handles the media frame logic
     return null;
 };

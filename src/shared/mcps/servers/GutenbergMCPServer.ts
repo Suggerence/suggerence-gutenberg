@@ -31,8 +31,13 @@ import {
     updatePostExcerptTool, updatePostExcerpt,
     setFeaturedImageTool, setFeaturedImage,
     removeFeaturedImageTool, removeFeaturedImage,
-    getPostContentTool, getPostContent
+    getPostContentTool, getPostContent,
+    generateCustomCssTool, generateCustomCss,
+    captureFrontendScreenshotTool, captureFrontendScreenshot
 } from '@/shared/mcps/tools/document-tools';
+import {
+    thinkTool, think
+} from '@/shared/mcps/tools/reasoning';
 
 export class GutenbergMCPServer {
     static initialize(): SuggerenceMCPServerConnection {
@@ -54,6 +59,7 @@ export class GutenbergMCPServer {
     }
 
     private staticTools: SuggerenceMCPResponseTool[] = [
+        thinkTool,
         addBlockTool,
         moveBlockTool,
         duplicateBlockTool,
@@ -74,7 +80,9 @@ export class GutenbergMCPServer {
         updatePostExcerptTool,
         setFeaturedImageTool,
         removeFeaturedImageTool,
-        getPostContentTool
+        getPostContentTool,
+        generateCustomCssTool,
+        captureFrontendScreenshotTool
     ];
 
     listTools(): { tools: SuggerenceMCPResponseTool[] } {
@@ -92,12 +100,15 @@ export class GutenbergMCPServer {
 
         try {
             switch (name) {
+                case 'think':
+                    return think(args.thinking);
+
                 case 'add_block':
-                    return addBlock(args.block_type, args.attributes, args.position, args.target_block_id, args.inner_blocks, args.style);
+                    return addBlock(args.block_type, args.attributes, args.position, args.relative_to_block_id, args.inner_blocks, args.style);
 
                 case 'move_block':
                     return moveBlock({
-                        targetBlockId: args.target_block_id,
+                        targetBlockId: args.relative_to_block_id,
                         position: args.position,
                         blockId: args.block_id
                     });
@@ -106,7 +117,7 @@ export class GutenbergMCPServer {
                     return duplicateBlock(args.block_id, args.position);
 
                 case 'delete_block':
-                    return deleteBlock(args.client_id || args.block_id);
+                    return deleteBlock(args.block_id || args.id);
 
                 case 'generate_image':
                     return generateImage(args.prompt, args.alt_text);
@@ -125,7 +136,7 @@ export class GutenbergMCPServer {
                 case 'transform_block':
                     return transformBlock({
                         blockId: args.block_id,
-                        targetBlockType: args.target_block_type
+                        targetBlockType: args.transform_to
                     });
 
                 case 'wrap_block':
@@ -147,7 +158,7 @@ export class GutenbergMCPServer {
                     return insertPattern({
                         patternName: args.pattern_name,
                         position: args.position,
-                        targetBlockId: args.target_block_id
+                        targetBlockId: args.relative_to_block_id
                     });
 
                 case 'get_available_blocks':
@@ -193,6 +204,16 @@ export class GutenbergMCPServer {
 
                 case 'get_post_content':
                     return getPostContent(args.post_id, args.post_type, args.context);
+                
+                case 'generate_custom_css':
+                    return generateCustomCss(args.css_rules, args.mode, args.description);
+
+                case 'capture_frontend_screenshot':
+                    return captureFrontendScreenshot({
+                        viewport: args.viewport,
+                        url: args.url,
+                        full_height: args.full_height
+                    });
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

@@ -2,6 +2,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    width: 100% !important;
+    position: relative;
 
     & > .components-panel {
         flex: 1;
@@ -15,7 +17,10 @@
     svg.lucide-mic, svg.lucide-square, svg.lucide-pencil, svg.lucide-pen-tool, svg.lucide-eraser, svg.lucide-brush, svg.lucide-paintbrush, svg.lucide-highlighter, svg.lucide-arrow-right, svg.lucide-type {
         fill: none;
     }
-
+    
+    p {
+        margin: 0 !important;
+    }
     
 }
 .suggerence-gutenberg-assistant-modal svg, .suggerence-command-box svg {
@@ -24,6 +29,176 @@
     }
 }
 
-.thinking-message p {
-    margin: 0 !important;
+/* Only when your plugin sidebar is inside the complementary area */
+@media (min-width: 782px) {
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+        width: var(--suggerence-sidebar-width, 500px) !important;
+        position: relative;
+    }
+
+    .interface-interface-skeleton__sidebar:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+        margin-bottom: -25px !important;
+        flex: 0 0 var(--suggerence-sidebar-width, 500px);
+        width: var(--suggerence-sidebar-width, 500px) !important;
+        max-width: var(--suggerence-sidebar-width, 500px);
+        min-width: var(--suggerence-sidebar-width, 500px);
+    }
+
+    .interface-interface-skeleton__complementary-area:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) {
+        width: var(--suggerence-sidebar-width, 500px) !important;
+        max-width: none !important;
+        min-width: var(--suggerence-sidebar-width, 500px);
+        flex: 0 0 var(--suggerence-sidebar-width, 500px);
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer {
+        position: absolute;
+        inset: 0 auto 0 -6px;
+        width: 12px;
+        cursor: col-resize;
+        z-index: 10;
+        touch-action: none;
+        background: rgba(0, 0, 0, 0.04);
+        transition: background-color 0.2s ease;
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 2px;
+        height: 40px;
+        border-radius: 999px;
+        background-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:hover,
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:active {
+        background: rgba(0, 0, 0, 0.08);
+    }
+
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:hover::before,
+    .interface-complementary-area__fill:has(#suggerence-gutenberg-assistant\:suggerence-chat-sidebar) .suggerence-sidebar-resizer:active::before {
+        background-color: rgba(0, 0, 0, 0.35);
+    }
+
+    body.is-resizing-suggerence-sidebar {
+        cursor: col-resize;
+        user-select: none;
+    }
+}
+
+#suggerence-gutenberg-assistant\:suggerence-chat-sidebar .interface-complementary-area-header {
+    display: none !important;
+}
+
+@keyframes suggerence-editor-overlay-shimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+@keyframes suggerence-editor-overlay-pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+}
+
+@keyframes suggerence-editor-overlay-indicator {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.85);
+        opacity: 0.6;
+    }
+}
+
+body.suggerence-editor-locked {
+    cursor: progress;
+}
+
+.suggerence-editor-overlay-container {
+    position: relative;
+    isolation: isolate;
+}
+
+.suggerence-editor-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 50;
+    border-radius: inherit;
+}
+
+.suggerence-editor-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(0,0,0,0.35) 0%,
+        rgba(255,255,255,0.18) 50%,
+        rgba(0,0,0,0.35) 100%
+    );
+    // background: linear-gradient(
+    //     90deg,
+    //     rgba(18, 18, 18, 0.55),
+    //     rgba(210, 33, 120, 0.25),
+    //     rgba(18, 18, 18, 0.55)
+    // );
+    background-size: 200% 100%;
+    animation: shimmer-simple 2.4s ease-in-out infinite;
+}
+
+@keyframes shimmer-simple {
+    0% { background-position: -100% 0; }
+    100% { background-position: 100% 0; }
+}
+
+
+
+.suggerence-editor-overlay__label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 999px;
+    background: rgba(13, 13, 13, 0.88);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-align: center;
+    animation: suggerence-editor-overlay-pulse 2.4s ease-in-out infinite;
+    pointer-events: none;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .suggerence-editor-overlay__backdrop {
+        animation-duration: 6s;
+    }
+
+    .suggerence-editor-overlay__label {
+        animation: none;
+    }
 }

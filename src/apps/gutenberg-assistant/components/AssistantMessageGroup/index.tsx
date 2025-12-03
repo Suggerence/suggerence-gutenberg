@@ -6,33 +6,15 @@ interface AssistantMessageGroupProps {
 
 export const AssistantMessageGroup = ({ children }: AssistantMessageGroupProps) => {
     const childArray = Children.toArray(children);
-    const messageCount = childArray.length;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
             {childArray.map((child, index) => {
-                const isLast = index === messageCount - 1;
-
                 return (
                     <div key={index}>
-                        {/* Message content - the message itself contains its icon */}
-                        <div style={{ paddingBottom: '4px' }}>
+                        <div className="pb-4">
                             {child}
                         </div>
-
-                        {/* Connecting line to next message */}
-                        {!isLast && (
-                            <div
-                                style={{
-                                    width: '2px',
-                                    height: '12px',
-                                    backgroundColor: '#cbd5e1',
-                                    marginLeft: '7px',
-                                    marginTop: '4px',
-                                    marginBottom: '4px'
-                                }}
-                            />
-                        )}
                     </div>
                 );
             })}

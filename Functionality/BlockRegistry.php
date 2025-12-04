@@ -158,7 +158,7 @@ class BlockRegistry
 
             // Enqueue index.js if it exists
             if ( $block->file_exists( Block::BLOCKS_BUILD_FOLDER . '/' . 'index.js' ) ) {
-                $script_url = content_url( '/blocks/' . $block_id . '/' . Block::BLOCKS_BUILD_FOLDER . '/index.js' );
+                $script_url = WP_CONTENT_URL . '/blocks/' . $block_id . '/' . Block::BLOCKS_BUILD_FOLDER . '/index.js';
                 $script_handle = 'suggerence-block-' . $block_id;
 
                 // Get file modification time for versioning
@@ -198,7 +198,7 @@ class BlockRegistry
 
             // Check if view.js exists
             if ( $block->file_exists( Block::BLOCKS_BUILD_FOLDER . '/' . 'view.js' ) ) {
-                $script_url = content_url( '/blocks/' . $block_id . '/' . Block::BLOCKS_BUILD_FOLDER . '/view.js' );
+                $script_url = WP_CONTENT_URL . '/blocks/' . $block_id . '/' . Block::BLOCKS_BUILD_FOLDER . '/view.js';
                 $script_handle = 'suggerence-block-view-' . $block_id;
 
                 // Get file modification time for versioning

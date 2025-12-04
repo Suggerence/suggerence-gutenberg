@@ -8,6 +8,7 @@ import { useAssistantAI } from '@/apps/gutenberg-assistant/hooks/useAssistantAI'
 import { highlightBlocksFromToolData, removeBlockHighlightsFromToolData } from '@/shared/utils/block-highlight';
 import type { SelectedContext } from '@/apps/gutenberg-assistant/stores/types';
 import type { ScreenshotCaptureResult } from '@/apps/gutenberg-assistant/components/ScreenshotCapture/types';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
 
 interface UseAssistantComposerReturn {
     inputValue: string;
@@ -62,6 +63,7 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
     const { addContext } = useContextStore();
     const { isGutenbergServerReady, getGutenbergTools, callGutenbergTool } = useGutenbergMCP();
     const { callAI } = useAssistantAI();
+    const { isConnected: isWebSocketConnected, sendRequest: sendWebSocketRequest } = useWebSocket();
 
     const [inputValue, setInputValue] = useState('');
     const hasHistory = messages.length > 1;
@@ -114,7 +116,8 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         };
 
         try {
-            const tools = await getGutenbergTools();
+            // Filter out any workspace/code-exec tools - only send Gutenberg tools to the AI
+            const tools = (await getGutenbergTools()).filter((tool: any) => !tool.name?.startsWith('codeexec___'));
             let response: any;
 
             try {
@@ -360,15 +363,57 @@ export const useAssistantComposer = (): UseAssistantComposerReturn => {
         setMediaOpen(false);
     }, [addContext]);
 
+    const syncScreenshotContext = useCallback(async (contextId: string, result: ScreenshotCaptureResult) => {
+        if (!isWebSocketConnected) {
+            console.warn('Suggerence: WebSocket not connected, skipping screenshot context sync.');
+            return;
+        }
+
+        let completed = false;
+
+        sendWebSocketRequest(
+            {
+                type: 'sync_context',
+                data: {
+                    key: contextId,
+                    data: {
+                        type: 'screenshot',
+                        label: __('Frontend screenshot', 'suggerence'),
+                        payload: result
+                    }
+                }
+            },
+            (message) => {
+                if (message.type === 'error') {
+                    completed = true;
+                    console.error('Suggerence: Failed to sync screenshot context via WebSocket', message);
+                }
+
+                if (message.type === 'done') {
+                    completed = true;
+                }
+            },
+            () => {
+                if (!completed) {
+                    completed = true;
+                }
+            }
+        );
+    }, [isWebSocketConnected, sendWebSocketRequest]);
+
     const handleScreenshotCapture = useCallback((result: ScreenshotCaptureResult) => {
+        const contextId = `screenshot-${Date.now()}`;
+
         addContext({
-            id: `screenshot-${Date.now()}`,
+            id: contextId,
             type: 'screenshot',
             label: __('Frontend screenshot', 'suggerence'),
             data: result,
             timestamp: new Date().toISOString()
         });
-    }, [addContext]);
+
+        void syncScreenshotContext(contextId, result);
+    }, [addContext, syncScreenshotContext]);
 
     const handleAudioMessage = useCallback(async (audioMessage: MCPClientMessage) => {
         if (isLoading || !isGutenbergServerReady) return;

@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Functionality;
 
 use SuggerenceGutenberg\Components\Block;
+use SuggerenceGutenberg\Components\WPBlocks;
 
 class BlockRegistry
 {
@@ -15,8 +16,6 @@ class BlockRegistry
         $this->plugin_version = $plugin_version;
 
         add_action( 'init', [ $this, 'register_blocks' ], 20 );
-        add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_block_scripts' ] );
-        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_block_view_scripts' ] );
     }
 
     private function get_block_directories()
@@ -88,7 +87,9 @@ class BlockRegistry
             $block->make_file( Block::BLOCKS_BUILD_FILE_PATH, $updated_json_string );
         }
 
-        $result = register_block_type( $block->file_path( Block::BLOCKS_BUILD_FOLDER ) );
+        $block_definition = WPBlocks::get_block_type_from_metadata( $block->file_path( Block::BLOCKS_BUILD_FOLDER ) );
+
+        $result = register_block_type( $block_definition['metadata']['name'], $block_definition['settings'] );
 
         if ( !$result ) {
             error_log( 'Failed to register block: ' . $block_directory . ' - ' . json_last_error_msg() );
@@ -133,86 +134,6 @@ class BlockRegistry
 
         foreach ( $block_directories as $block_directory ) {
             $this->register_block( $block_directory );
-        }
-    }
-
-    /**
-     * Enqueue scripts for all registered blocks
-     */
-    public function enqueue_block_scripts()
-    {
-        // Only load in the block editor
-        if ( !wp_should_load_block_editor_scripts_and_styles() ) {
-            return;
-        }
-
-        if ( !file_exists( Block::BLOCKS_FOLDER ) ) {
-            return;
-        }
-
-        $block_directories = $this->get_block_directories();
-
-        foreach ( $block_directories as $block_directory ) {
-            $block_id = basename( $block_directory );
-            $block = new Block( $block_id );
-
-            // Enqueue index.js if it exists
-            if ( $block->file_exists( Block::BLOCKS_BUILD_FOLDER . '/' . 'index.js' ) ) {
-                $script_url = WP_CONTENT_URL . '/blocks/' . $block_id . '/' . Block::BLOCKS_BUILD_FOLDER . '/index.js';
-                $script_handle = 'suggerence-block-' . $block_id;
-
-                // Get file modification time for versioning
-                $script_path = $block->file_path( Block::BLOCKS_BUILD_FOLDER . '/' . 'index.js' );
-                $script_version = file_exists( $script_path ) ? filemtime( $script_path ) : $this->plugin_version;
-
-                wp_enqueue_script(
-                    $script_handle,
-                    $script_url,
-                    [ 'wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n' ],
-                    $script_version,
-                    true
-                );
-            }
-        }
-    }
-
-    /**
-     * Enqueue view scripts for all registered blocks on the frontend
-     */
-    public function enqueue_block_view_scripts()
-    {
-        // Only load on frontend, not in editor
-        if ( is_admin() || wp_should_load_block_editor_scripts_and_styles() ) {
-            return;
-        }
-
-        if ( !file_exists( Block::BLOCKS_FOLDER ) ) {
-            return;
-        }
-
-        $block_directories = $this->get_block_directories();
-
-        foreach ( $block_directories as $block_directory ) {
-            $block_id = basename( $block_directory );
-            $block = new Block( $block_id );
-
-            // Check if view.js exists
-            if ( $block->file_exists( Block::BLOCKS_BUILD_FOLDER . '/' . 'view.js' ) ) {
-                $script_url = WP_CONTENT_URL . '/blocks/' . $block_id . '/' . Block::BLOCKS_BUILD_FOLDER . '/view.js';
-                $script_handle = 'suggerence-block-view-' . $block_id;
-
-                // Get file modification time for versioning
-                $script_path = $block->file_path( Block::BLOCKS_BUILD_FOLDER . '/' . 'view.js' );
-                $script_version = file_exists( $script_path ) ? filemtime( $script_path ) : $this->plugin_version;
-
-                wp_enqueue_script(
-                    $script_handle,
-                    $script_url,
-                    [], // No dependencies by default, but view.js can declare its own
-                    $script_version,
-                    true // Load in footer
-                );
-            }
         }
     }
 }

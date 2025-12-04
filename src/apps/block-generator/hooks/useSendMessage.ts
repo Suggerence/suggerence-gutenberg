@@ -27,7 +27,7 @@ export const useSendMessage = () =>
     const sendMessage = useCallback(async (text: string) =>
     {
         const trimmedText = text.trim();
-        if (!trimmedText) return;
+        if (!trimmedText || !connected) return;
 
         // Determine which block to use for generation
         // If there's already a block being generated, use it

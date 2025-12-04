@@ -31,7 +31,11 @@ export const BlockSelector = ({ blocks }: BlockSelectorProps) =>
             <BlockSelectorTextarea ref={textareaRef} />
 
             <div className='w-full max-w-2xl mx-auto max-h-64 overflow-y-auto'>
-                {blocks.length > 0 ? <BlockSelectorCollection blocks={blocks} /> : <BlockSelectorSuggestions />}
+                {blocks.length > 0 ?
+                    <BlockSelectorCollection blocks={blocks} /> :
+                    // <BlockSelectorSuggestions /> Removed suggestions for now
+                    null
+                }
             </div>
         </div>
     );

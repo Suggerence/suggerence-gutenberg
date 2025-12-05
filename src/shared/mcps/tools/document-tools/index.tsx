@@ -1,0 +1,783 @@
+import { select, dispatch } from '@wordpress/data';
+import { fetchContentById } from '@/shared/components/PostSelector/api';
+import { useScreenshotCaptureStore } from '@/apps/gutenberg-assistant/stores/screenshotCaptureStore';
+import type { ScreenshotViewportPreset } from '@/apps/gutenberg-assistant/components/ScreenshotCapture/types';
+
+type CustomCssMode = 'replace' | 'append' | 'prepend' | 'clear';
+
+export const getDocumentStructureTool: SuggerenceMCPResponseTool = {
+    name: 'get_document_structure',
+    description: 'Retrieves a complete outline of all blocks in the current document, including their IDs, types, positions, and content previews. Use this when you need to understand the document structure, find specific blocks, or determine what content exists before making changes. Essential for complex operations that need to know the full context of the document.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            include_content: {
+                type: 'boolean',
+                description: 'Whether to include content previews for text blocks. Set to true for full context, false for faster response with just block structure.',
+                default: true
+            },
+            max_content_length: {
+                type: 'number',
+                description: 'Maximum characters of content to include per block (only if includeContent is true). Defaults to 100.',
+                default: 100
+            }
+        }
+    }
+};
+
+export const searchBlocksByContentTool: SuggerenceMCPResponseTool = {
+    name: 'search_blocks_by_content',
+    description: 'Searches through all blocks in the document to find blocks containing specific text or patterns. Returns block IDs and positions of matching blocks. Use this when the user references content indirectly (e.g., "change the paragraph that mentions pricing" or "delete the heading that says welcome").',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            search_query: {
+                type: 'string',
+                description: 'The text to search for within block content. Can be exact phrase or partial match.',
+                required: true
+            },
+            block_type: {
+                type: 'string',
+                description: 'Optional: filter results to specific block type (e.g., "core/paragraph", "core/heading"). Leave empty to search all blocks.'
+            },
+            case_sensitive: {
+                type: 'boolean',
+                description: 'Whether the search should be case-sensitive. Defaults to false.',
+                default: false
+            }
+        },
+        required: ['search_query']
+    }
+};
+
+export const getPostMetadataTool: SuggerenceMCPResponseTool = {
+    name: 'get_post_metadata',
+    description: 'Retrieves metadata about the current post/page including title, excerpt, categories, tags, featured image, author, publish date, and status. Use this to understand the context of the current document or when the user asks about post properties. Provides comprehensive information about the document beyond just the block content.',
+    inputSchema: {
+        type: 'object',
+        properties: {}
+    }
+};
+
+export const updatePostTitleTool: SuggerenceMCPResponseTool = {
+    name: 'update_post_title',
+    description: 'Changes the title of the current post or page. Use this when the user explicitly requests to change the document title (not to be confused with heading blocks within the content). The title appears in the browser tab, search results, and at the top of the editor.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            title: {
+                type: 'string',
+                description: 'The new title for the post/page.',
+                required: true
+            }
+        },
+        required: ['title']
+    }
+};
+
+export const updatePostExcerptTool: SuggerenceMCPResponseTool = {
+    name: 'update_post_excerpt',
+    description: 'Sets or updates the post excerpt (summary). The excerpt is used in post listings, search results, and social media sharing. Use this when the user wants to add or change the post summary, or when you\'ve generated a summary of the content.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            excerpt: {
+                type: 'string',
+                description: 'The new excerpt text. Can be plain text or HTML.',
+                required: true
+            }
+        },
+        required: ['excerpt']
+    }
+};
+
+export const setFeaturedImageTool: SuggerenceMCPResponseTool = {
+    name: 'set_featured_image',
+    description: 'Sets the featured image (post thumbnail) for the current post/page. The featured image is displayed in post listings, social media shares, and at the top of posts in many themes. Essential for SEO and visual appeal. Use this after uploading or generating an image that should represent the post. You can get media IDs from search_media or generate_image results.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            media_id: {
+                type: 'number',
+                description: 'The WordPress media library ID of the image to set as featured. Get this from search_media results or from the generate_image response (image_id field).',
+                required: true
+            }
+        },
+        required: ['media_id']
+    }
+};
+
+export const removeFeaturedImageTool: SuggerenceMCPResponseTool = {
+    name: 'remove_featured_image',
+    description: 'Removes the featured image from the current post/page. Use this when the user wants to clear the featured image or when replacing it with a new one.',
+    inputSchema: {
+        type: 'object',
+        properties: {}
+    }
+};
+
+export const generateCustomCssTool: SuggerenceMCPResponseTool = {
+    name: 'generate_custom_css',
+    description: 'Creates or updates per-post custom CSS stored in the Suggerence sidebar. Use this when the user asks to apply styling changes that cannot be achieved with existing blocks or settings. Provide the exact CSS rules you want applied—this tool will persist them to the current post so they are scoped to body.postid-{POST_ID}.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            css_rules: {
+                type: 'string',
+                description: 'The full CSS rules (already formatted) that should be applied. Keep selectors specific to the current post content when possible. Required unless mode is "clear".'
+            },
+            mode: {
+                type: 'string',
+                enum: ['replace', 'append', 'prepend', 'clear'],
+                description: 'How to apply the CSS. "replace" overwrites the existing CSS, "append" adds to the end, "prepend" adds to the beginning, and "clear" removes all custom CSS.',
+                default: 'replace'
+            },
+            description: {
+                type: 'string',
+                description: 'Optional explanation of the change for logging/debugging (not stored with the CSS).'
+            }
+        },
+        required: ['css_rules']
+    }
+};
+
+export const getPostContentTool: SuggerenceMCPResponseTool = {
+    name: 'get_post_content',
+    description: 'Fetches the complete content and metadata of any WordPress post or page by its ID. Returns the post title, content (in HTML and blocks format), excerpt, status, author, categories, tags, featured image, and other metadata. Use this when you need to reference, analyze, or copy content from other posts/pages in the site. Essential for content migration, referencing related posts, or when the user mentions a specific post ID.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            post_id: {
+                type: 'number',
+                description: 'The WordPress post or page ID to fetch. Must be a valid post ID from this WordPress site.',
+                required: true
+            },
+            post_type: {
+                type: 'string',
+                description: 'The post type to fetch: "post" for posts or "page" for pages. Defaults to "post".',
+                enum: ['post', 'page'],
+                default: 'post'
+            },
+            context: {
+                type: 'string',
+                description: 'Context for the request: "view" for public content (default) or "edit" for full editor content including blocks. Use "edit" when you need to work with the block structure.',
+                enum: ['view', 'edit'],
+                default: 'view'
+            }
+        },
+        required: ['post_id', 'post_type']
+    }
+};
+
+export const captureFrontendScreenshotTool: SuggerenceMCPResponseTool = {
+    name: 'capture_frontend_screenshot',
+    description: 'Loads the public preview of the current post/page (or a provided URL) and captures a screenshot for visual context. Use this to give the AI an up-to-date rendering of the frontend so it can make accurate styling decisions.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            viewport: {
+                type: 'string',
+                enum: ['desktop', 'tablet', 'mobile'],
+                description: 'Viewport preset to emulate. Defaults to desktop.',
+                default: 'desktop'
+            },
+            url: {
+                type: 'string',
+                description: 'Optional absolute URL to capture instead of the current post preview.'
+            },
+            full_height: {
+                type: 'boolean',
+                description: 'If true, capture the full scrollable height of the page. Defaults to true.',
+                default: true
+            }
+        }
+    }
+};
+
+export function getDocumentStructure(
+    includeContent: boolean = true,
+    maxContentLength: number = 100
+): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { getBlocks } = select('core/block-editor') as any;
+        const allBlocks = getBlocks();
+
+        const extractBlockInfo = (block: any, parentId: string | null = null, index: number = 0): any => {
+            const info: any = {
+                clientId: block.clientId,
+                name: block.name,
+                position: index,
+                parentId: parentId
+            };
+
+            // Include content preview if requested
+            if (includeContent) {
+                if (block.attributes?.content) {
+                    // Strip HTML tags for preview
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = block.attributes.content;
+                    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                    info.contentPreview = textContent.substring(0, maxContentLength) +
+                        (textContent.length > maxContentLength ? '...' : '');
+                }
+
+                // Include other relevant attributes
+                if (block.attributes?.url) info.url = block.attributes.url;
+                if (block.attributes?.level) info.level = block.attributes.level;
+                if (block.attributes?.ordered !== undefined) info.ordered = block.attributes.ordered;
+            }
+
+            // Process inner blocks recursively
+            if (block.innerBlocks && block.innerBlocks.length > 0) {
+                info.innerBlocks = block.innerBlocks.map((innerBlock: any, idx: number) =>
+                    extractBlockInfo(innerBlock, block.clientId, idx)
+                );
+                info.innerBlockCount = block.innerBlocks.length;
+            }
+
+            return info;
+        };
+
+        const structure = allBlocks.map((block: any, idx: number) => extractBlockInfo(block, null, idx));
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'document_structure_retrieved',
+                    data: {
+                        total_blocks: allBlocks.length,
+                        blocks: structure
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'document_structure_failed',
+                    error: `Error retrieving document structure: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function captureFrontendScreenshot(params: {
+    viewport?: ScreenshotViewportPreset;
+    url?: string;
+    full_height?: boolean;
+}): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const store = useScreenshotCaptureStore.getState();
+        if (!store.startToolCapture) {
+            throw new Error('Screenshot capture store is unavailable.');
+        }
+
+        const allowedViewports: ScreenshotViewportPreset[] = ['desktop', 'tablet', 'mobile'];
+        const viewport = allowedViewports.includes(params.viewport as ScreenshotViewportPreset)
+            ? params.viewport as ScreenshotViewportPreset
+            : 'desktop';
+
+        const result = await store.startToolCapture({
+            device: viewport,
+            url: params.url,
+            fullHeight: params.full_height ?? true
+        });
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'screenshot_captured',
+                    data: {
+                        preview_url: result.previewUrl,
+                        width: result.width,
+                        height: result.height,
+                        captured_at: result.capturedAt,
+                        viewport
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'screenshot_capture_failed',
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                })
+            }]
+        };
+    }
+}
+
+export function searchBlocksByContent(
+    searchQuery: string,
+    blockType?: string,
+    caseSensitive: boolean = false
+): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { getBlocks } = select('core/block-editor') as any;
+        const allBlocks = getBlocks();
+
+        const searchTerm = caseSensitive ? searchQuery : searchQuery.toLowerCase();
+        const matches: any[] = [];
+
+        const searchBlock = (block: any, parentId: string | null = null, position: number = 0) => {
+            // Filter by block type if specified
+            if (blockType && block.name !== blockType) {
+                // Still search inner blocks
+                if (block.innerBlocks) {
+                    block.innerBlocks.forEach((innerBlock: any, idx: number) => {
+                        searchBlock(innerBlock, block.clientId, idx);
+                    });
+                }
+                return;
+            }
+
+            // Search in block content
+            let content = '';
+            if (block.attributes?.content) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = block.attributes.content;
+                content = tempDiv.textContent || tempDiv.innerText || '';
+            } else if (block.attributes?.text) {
+                content = block.attributes.text;
+            } else if (block.attributes?.values) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = block.attributes.values;
+                content = tempDiv.textContent || tempDiv.innerText || '';
+            }
+
+            const searchableContent = caseSensitive ? content : content.toLowerCase();
+
+            if (searchableContent.includes(searchTerm)) {
+                matches.push({
+                    clientId: block.clientId,
+                    name: block.name,
+                    position: position,
+                    parentId: parentId,
+                    matchedContent: content.substring(
+                        Math.max(0, searchableContent.indexOf(searchTerm) - 30),
+                        Math.min(content.length, searchableContent.indexOf(searchTerm) + searchTerm.length + 30)
+                    )
+                });
+            }
+
+            // Search inner blocks
+            if (block.innerBlocks) {
+                block.innerBlocks.forEach((innerBlock: any, idx: number) => {
+                    searchBlock(innerBlock, block.clientId, idx);
+                });
+            }
+        };
+
+        allBlocks.forEach((block: any, idx: number) => searchBlock(block, null, idx));
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'blocks_searched',
+                    data: {
+                        search_query: searchQuery,
+                        matches_found: matches.length,
+                        matches: matches
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'block_search_failed',
+                    error: `Error searching blocks: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function getPostMetadata(): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+
+        if (!post) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'post_metadata_failed',
+                        error: 'No post data available. This may not be a post/page editor context.'
+                    })
+                }]
+            };
+        }
+
+        const metadata = {
+            id: post.id,
+            title: post.title,
+            slug: post.slug,
+            status: post.status,
+            type: post.type,
+            excerpt: post.excerpt,
+            featured_media: post.featured_media,
+            author: post.author,
+            date: post.date,
+            modified: post.modified,
+            categories: post.categories,
+            tags: post.tags,
+            permalink: post.link,
+            comment_status: post.comment_status,
+            ping_status: post.ping_status,
+            sticky: post.sticky,
+            template: post.template,
+            meta: post.meta
+        };
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'post_metadata_retrieved',
+                    data: metadata
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'post_metadata_failed',
+                    error: `Error retrieving post metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export function updatePostTitle(title: string): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+        const oldTitle = post.title;
+
+        editPost({ title });
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'post_title_updated',
+                    data: {
+                        old_title: oldTitle,
+                        new_title: title
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'post_title_update_failed',
+                    error: `Error updating post title: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export function updatePostExcerpt(excerpt: string): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+        const oldExcerpt = post.excerpt;
+        
+        editPost({ excerpt });
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'post_excerpt_updated',
+                    data: {
+                        old_excerpt: oldExcerpt,
+                        new_excerpt: excerpt
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'post_excerpt_update_failed',
+                    error: `Error updating post excerpt: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export function setFeaturedImage(mediaId: number): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        
+        // Set the featured media ID
+        editPost({ featured_media: mediaId });
+        
+        // Get the current post to verify
+        const post = getCurrentPost();
+        const currentFeaturedMedia = post?.featured_media;
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'featured_image_set',
+                    data: {
+                        media_id: mediaId,
+                        verified_id: currentFeaturedMedia,
+                        message: 'Featured image has been set. Changes will be saved when you update/publish the post.'
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'featured_image_set_failed',
+                    error: `Error setting featured image: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export function removeFeaturedImage(): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { editPost } = dispatch('core/editor') as any;
+
+        // Remove the featured media by setting it to 0
+        editPost({ featured_media: 0 });
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'featured_image_removed',
+                    data: {
+                        message: 'Featured image has been removed. Changes will be saved when you update/publish the post.'
+                    }
+                })
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'featured_image_remove_failed',
+                    error: `Error removing featured image: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export function generateCustomCss(
+    cssRules: string,
+    mode: CustomCssMode = 'replace',
+    description?: string
+): { content: Array<{ type: string, text: string }> } {
+    try {
+        const { editPost } = dispatch('core/editor') as any;
+        const { getCurrentPost } = select('core/editor') as any;
+        const post = getCurrentPost();
+
+        if (!post) {
+            throw new Error('No post is currently loaded in the editor.');
+        }
+
+        const normalizedMode: CustomCssMode = (['replace', 'append', 'prepend', 'clear'].includes(mode)
+            ? mode
+            : 'replace') as CustomCssMode;
+
+        const trimmedCss = (cssRules || '').trim();
+        if (normalizedMode !== 'clear' && trimmedCss === '') {
+            throw new Error('CSS rules are required unless mode is set to "clear".');
+        }
+
+        const existingMeta = typeof post.meta === 'object' && post.meta !== null ? post.meta : {};
+        const existingCss = typeof existingMeta.suggerence_custom_css === 'string'
+            ? existingMeta.suggerence_custom_css
+            : '';
+
+        let updatedCss = '';
+
+        switch (normalizedMode) {
+            case 'append':
+                updatedCss = existingCss
+                    ? `${existingCss.trim()}\n\n${trimmedCss}`
+                    : trimmedCss;
+                break;
+            case 'prepend':
+                updatedCss = existingCss
+                    ? `${trimmedCss}\n\n${existingCss.trim()}`
+                    : trimmedCss;
+                break;
+            case 'clear':
+                updatedCss = '';
+                break;
+            case 'replace':
+            default:
+                updatedCss = trimmedCss;
+                break;
+        }
+
+        // Normalize line endings for consistency
+        updatedCss = updatedCss.replace(/\r\n/g, '\n');
+
+        editPost({
+            meta: {
+                ...existingMeta,
+                suggerence_custom_css: updatedCss
+            }
+        });
+
+        const preview =
+            updatedCss.length > 400
+                ? `${updatedCss.substring(0, 400)}…`
+                : updatedCss;
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'custom_css_updated',
+                    data: {
+                        post_id: post.id,
+                        mode: normalizedMode,
+                        previous_length: existingCss.length,
+                        new_length: updatedCss.length,
+                        description,
+                        applied_css_preview: preview
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'custom_css_update_failed',
+                    error: `Error applying custom CSS: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function getPostContent(
+    postId: number,
+    postType: ContentType = 'post',
+    context: 'view' | 'edit' = 'view'
+): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        // Use the shared fetchContentById function with the provided post type
+        const post: any = await fetchContentById(postId, postType);
+
+        if (!post) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'post_content_fetch_failed',
+                        error: `Post with ID ${postId} not found.`
+                    })
+                }]
+            };
+        }
+
+        const responseData: any = {
+            id: post.id,
+            title: post.title?.rendered || post.title,
+            content: post.content?.rendered || post.content,
+            excerpt: post.excerpt?.rendered || post.excerpt,
+            status: post.status,
+            type: post.type,
+            slug: post.slug,
+            date: post.date,
+            modified: post.modified,
+            author: post.author,
+            featured_media: post.featured_media,
+            categories: post.categories,
+            tags: post.tags,
+            permalink: post.link,
+        };
+
+        // Include blocks if context is 'edit'
+        if (context === 'edit' && post.blocks) {
+            responseData.blocks = post.blocks;
+        }
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'post_content_fetched',
+                    data: responseData
+                }, null, 2)
+            }]
+        };
+    } catch (error: any) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'post_content_fetch_failed',
+                    error: `Error fetching post content: ${error?.message || 'Unknown error'}. Make sure the post ID is valid and you have permission to access it.`
+                })
+            }]
+        };
+    }
+}

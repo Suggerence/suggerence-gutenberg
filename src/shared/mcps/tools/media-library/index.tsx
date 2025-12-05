@@ -1,0 +1,396 @@
+import apiFetch from '@wordpress/api-fetch';
+
+export const searchMediaTool: SuggerenceMCPResponseTool = {
+    name: 'search_media',
+    description: 'Searches the WordPress media library for existing images, videos, audio, or documents. Use this when the user wants to reuse existing media instead of generating new content. Returns media items with IDs, URLs, titles, and metadata that can be used in image/video/audio blocks. More efficient than generating new media if suitable content already exists in the library.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            search: {
+                type: 'string',
+                description: 'Search query to find media by filename, title, caption, or alt text. Leave empty to get recent media items.'
+            },
+            media_type: {
+                type: 'string',
+                description: 'Filter by media type: "image", "video", "audio", or "application" (for documents). Leave empty to search all types.',
+                enum: ['image', 'video', 'audio', 'application', '']
+            },
+            per_page: {
+                type: 'number',
+                description: 'Number of results to return (1-100). Defaults to 10.',
+                default: 10
+            }
+        }
+    }
+};
+
+export const getMediaDetailsTool: SuggerenceMCPResponseTool = {
+    name: 'get_media_details',
+    description: 'Retrieves complete information about a specific media item by its ID. Returns full metadata including URLs for all available sizes, dimensions, alt text, caption, and file details. Use this when you have a media ID and need complete information to insert it into a block properly.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            media_id: {
+                type: 'number',
+                description: 'The WordPress media library ID of the item to retrieve.',
+                required: true
+            }
+        },
+        required: ['media_id']
+    }
+};
+
+export const getOpenerseImagesTool: SuggerenceMCPResponseTool = {
+    name: 'search_openverse',
+    description: 'Searches Openverse for free, openly-licensed stock images that can be used legally without copyright concerns. Openverse provides access to over 600 million creative works from sources like Flickr, Wikipedia, and NASA. Use this when the user needs stock photography, illustrations, or reference images without generating AI images. Returns image URLs, titles, creator information, and license details.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            query: {
+                type: 'string',
+                description: 'Search query describing the desired image (e.g., "sunset beach", "business meeting", "cat playing").',
+                required: true
+            },
+            per_page: {
+                type: 'number',
+                description: 'Number of results to return (1-20). Defaults to 10.',
+                default: 10
+            },
+            license: {
+                type: 'string',
+                description: 'Filter by license type. Common options: "cc0" (public domain), "cc-by" (attribution required), "cc-by-sa" (attribution + share-alike). Leave empty for all licenses.',
+                enum: ['', 'cc0', 'pdm', 'cc-by', 'cc-by-sa', 'cc-by-nd', 'cc-by-nc', 'cc-by-nc-sa', 'cc-by-nc-nd']
+            }
+        },
+        required: ['query']
+    }
+};
+
+export const uploadOpenverseToMediaTool: SuggerenceMCPResponseTool = {
+    name: 'upload_openverse_to_media',
+    description: 'Downloads an image from Openverse and uploads it to the WordPress media library with proper attribution. Returns the media ID that can then be used with other tools like add block (to insert as image block), update block (to modify existing block), or set featured image tool (to set as post thumbnail). This separation allows flexible usage - you decide what to do with the image after uploading. IMPORTANT: You must provide imageId, imageUrl, and title from the search openverse results.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            image_id: {
+                type: 'string',
+                description: 'The Openverse image ID from search openverse tool results.',
+                required: true
+            },
+            image_url: {
+                type: 'string',
+                description: 'The direct URL to the image from search openverse tool results.',
+                required: true
+            },
+            title: {
+                type: 'string',
+                description: 'The image title for the media library.',
+                required: true
+            },
+            creator: {
+                type: 'string',
+                description: 'The creator/photographer name for attribution.'
+            },
+            creator_url: {
+                type: 'string',
+                description: 'URL to the creator\'s profile or website for attribution linking.'
+            },
+            license: {
+                type: 'string',
+                description: 'The license type (e.g., "CC0", "CC BY").'
+            },
+            license_url: {
+                type: 'string',
+                description: 'URL to the license details page for attribution linking.'
+            }
+        },
+        required: ['image_id', 'image_url', 'title']
+    }
+};
+
+export async function searchMedia(
+    search?: string,
+    mediaType?: string,
+    perPage: number = 10
+): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const params = new URLSearchParams();
+        params.append('per_page', String(Math.min(Math.max(perPage, 1), 100)));
+        params.append('orderby', 'date');
+        params.append('order', 'desc');
+        
+        if (search) {
+            params.append('search', search);
+        }
+        
+        if (mediaType) {
+            params.append('media_type', mediaType);
+        }
+
+        const media: any[] = await apiFetch({
+            path: `/wp/v2/media?${params.toString()}`,
+            method: 'GET'
+        });
+
+        const results = media.map(item => ({
+            id: item.id,
+            title: item.title?.rendered || '',
+            filename: item.source_url?.split('/').pop() || '',
+            url: item.source_url,
+            mediaType: item.media_type,
+            mimeType: item.mime_type,
+            alt: item.alt_text || '',
+            caption: item.caption?.rendered || '',
+            description: item.description?.rendered || '',
+            width: item.media_details?.width,
+            height: item.media_details?.height,
+            filesize: item.media_details?.filesize,
+            date: item.date,
+            sizes: item.media_details?.sizes || {}
+        }));
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'media_search_complete',
+                    data: {
+                        total_found: results.length,
+                        media_items: results
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'media_search_failed',
+                    error: `Error searching media library: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function getMediaDetails(
+    mediaId: number
+): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const media: any = await apiFetch({
+            path: `/wp/v2/media/${mediaId}`,
+            method: 'GET'
+        });
+
+        const details = {
+            id: media.id,
+            title: media.title?.rendered || '',
+            filename: media.source_url?.split('/').pop() || '',
+            url: media.source_url,
+            mediaType: media.media_type,
+            mimeType: media.mime_type,
+            alt: media.alt_text || '',
+            caption: media.caption?.rendered || '',
+            description: media.description?.rendered || '',
+            width: media.media_details?.width,
+            height: media.media_details?.height,
+            filesize: media.media_details?.filesize,
+            date: media.date,
+            author: media.author,
+            sizes: media.media_details?.sizes || {},
+            meta: media.meta || {}
+        };
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'media_details_retrieved',
+                    data: details
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'media_details_failed',
+                    error: `Error retrieving media details: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function searchOpenverse(
+    query: string,
+    perPage: number = 10,
+    license?: string
+): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        const params = new URLSearchParams();
+        params.append('q', query);
+        params.append('page_size', String(Math.min(Math.max(perPage, 1), 20)));
+        
+        if (license) {
+            params.append('license', license);
+        }
+
+        const response = await fetch(`https://api.openverse.org/v1/images/?${params.toString()}`, {
+            headers: {
+                'User-Agent': 'WordPress-Gutenberg-Assistant/1.0'
+            }
+        });
+
+        if (!response.ok) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'openverse_search_failed',
+                        error: `Openverse API error: ${response.statusText}`
+                    })
+                }]
+            };
+        }
+
+        const data = await response.json();
+
+        const results = data.results?.map((item: any) => ({
+            id: item.id,
+            title: item.title || 'Untitled',
+            url: item.url,
+            thumbnail: item.thumbnail,
+            width: item.width,
+            height: item.height,
+            creator: item.creator || 'Unknown',
+            creator_url: item.creator_url,
+            license: item.license,
+            license_version: item.license_version,
+            license_url: item.license_url,
+            attribution: item.attribution,
+            source: item.source,
+            tags: item.tags?.map((t: any) => t.name) || []
+        })) || [];
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'openverse_search_complete',
+                    data: {
+                        total_found: results.length,
+                        images: results,
+                        attribution_note: 'Remember to include proper attribution when using these images according to their license requirements.'
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'openverse_search_failed',
+                    error: `Error searching Openverse: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+
+export async function uploadOpenverseToMedia(
+    imageId: string,
+    imageUrl: string,
+    title: string,
+    creator?: string,
+    creatorUrl?: string,
+    license?: string,
+    licenseUrl?: string
+): Promise<{ content: Array<{ type: string, text: string }> }> {
+    try {
+        if(!imageUrl) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'openverse_upload_failed',
+                        error: 'Missing required parameter: imageUrl'
+                    })
+                }]
+            };
+        }
+        
+        // Sideload the image from Openverse to WordPress Media Library
+        const sideloadResponse: any = await apiFetch({
+            path: '/suggerence-gutenberg/ai-providers/v1/openverse/sideload',
+            method: 'POST',
+            data: {
+                image_url: imageUrl,
+                title: title,
+                alt_text: title,
+                creator: creator,
+                creator_url: creatorUrl || '',
+                license: license,
+                license_url: licenseUrl || ''
+            }
+        });
+
+        if (!sideloadResponse.success) {
+           return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        success: false,
+                        action: 'openverse_upload_failed',
+                        error: sideloadResponse.error || 'Failed to upload Openverse image'
+                    })
+                }]
+            };
+        }
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: true,
+                    action: 'openverse_uploaded_to_media',
+                    data: {
+                        media_id: sideloadResponse.attachment_id,
+                        url: sideloadResponse.image_url,
+                        alt_text: sideloadResponse.alt_text || title,
+                        caption: sideloadResponse.caption || '',
+                        title: title,
+                        creator: creator,
+                        license: license,
+                        attribution_html: sideloadResponse.caption,
+                        sizes: sideloadResponse.sizes || {},
+                        next_steps: 'Use this media_id with add block tool to insert as image, update block tool to modify existing block, or set featured image tool to set as post thumbnail.'
+                    }
+                }, null, 2)
+            }]
+        };
+    } catch (error) {
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    success: false,
+                    action: 'openverse_upload_failed',
+                    error: `Error uploading Openverse image: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+            }]
+        };
+    }
+}
+

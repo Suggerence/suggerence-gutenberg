@@ -1,0 +1,116 @@
+/* Suggerence AI Thinking Animation - Modern Gradient Shimmer */
+
+/* Spinner animation for loading overlay */
+@keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+/* Gradient shimmer animation for border */
+@keyframes suggerence-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Subtle glow pulse */
+  @keyframes suggerence-glow {
+    0%, 100% {
+      box-shadow:
+        0 0 0 2px rgba(210, 33, 120, 0.15),
+        0 0 20px rgba(210, 33, 120, 0.1),
+        0 0 40px rgba(210, 33, 120, 0.05);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2px rgba(210, 33, 120, 0.3),
+        0 0 30px rgba(210, 33, 120, 0.2),
+        0 0 60px rgba(210, 33, 120, 0.1);
+    }
+  }
+
+  /* Apply to blocks in editor - works in both iframe and non-iframe modes */
+  .wp-block.suggerence-thinking,
+  p.block-editor-rich-text__editable.suggerence-thinking,
+  .block-editor-rich-text__editable.suggerence-thinking,
+  p.suggerence-thinking,
+  .suggerence-thinking,
+  [id^="block-"].suggerence-thinking {
+    position: relative !important;
+    border-radius: 8px !important;
+    isolation: isolate !important;
+    animation: suggerence-glow 2s ease-in-out infinite !important;
+  }
+
+  /* Animated gradient border effect using pseudo-element */
+  .wp-block.suggerence-thinking::before,
+  p.block-editor-rich-text__editable.suggerence-thinking::before,
+  .block-editor-rich-text__editable.suggerence-thinking::before,
+  p.suggerence-thinking::before,
+  .suggerence-thinking::before,
+  [id^="block-"].suggerence-thinking::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: -2px !important;
+    border-radius: 8px !important;
+    padding: 2px !important;
+    background: linear-gradient(
+      90deg,
+      rgba(210, 33, 120, 0.8),
+      rgba(156, 39, 176, 0.8),
+      rgba(63, 81, 181, 0.8),
+      rgba(0, 188, 212, 0.8),
+      rgba(210, 33, 120, 0.8)
+    ) !important;
+    background-size: 200% 100% !important;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0) !important;
+    -webkit-mask-composite: xor !important;
+    mask-composite: exclude !important;
+    animation: suggerence-shimmer 3s linear infinite !important;
+    z-index: -1 !important;
+  }
+
+  /* Ensure animation works inside editor iframe */
+  .editor-styles-wrapper .wp-block.suggerence-thinking,
+  .editor-styles-wrapper .block-editor-rich-text__editable.suggerence-thinking,
+  .editor-styles-wrapper [id^="block-"].suggerence-thinking {
+    position: relative !important;
+    border-radius: 8px !important;
+    isolation: isolate !important;
+    animation: suggerence-glow 2s ease-in-out infinite !important;
+  }
+
+  .editor-styles-wrapper .wp-block.suggerence-thinking::before,
+  .editor-styles-wrapper .block-editor-rich-text__editable.suggerence-thinking::before,
+  .editor-styles-wrapper [id^="block-"].suggerence-thinking::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: -2px !important;
+    border-radius: 8px !important;
+    padding: 2px !important;
+    background: linear-gradient(
+      90deg,
+      rgba(210, 33, 120, 0.8),
+      rgba(156, 39, 176, 0.8),
+      rgba(63, 81, 181, 0.8),
+      rgba(0, 188, 212, 0.8),
+      rgba(210, 33, 120, 0.8)
+    ) !important;
+    background-size: 200% 100% !important;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0) !important;
+    -webkit-mask-composite: xor !important;
+    mask-composite: exclude !important;
+    animation: suggerence-shimmer 3s linear infinite !important;
+    z-index: -1 !important;
+  }

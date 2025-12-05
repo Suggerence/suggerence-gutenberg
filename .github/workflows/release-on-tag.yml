@@ -1,0 +1,77 @@
+name: Build & Release WordPress Plugin
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build Plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------
+      # Checkout the repo
+      # -----------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------
+      # PHP + Composer setup
+      # -----------------------------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --prefer-dist --no-progress --no-suggest
+
+      # -----------------------------
+      # Node.js setup
+      # -----------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build plugin assets
+        run: npm run build
+
+      # -----------------------------
+      # Install WP-CLI
+      # -----------------------------
+      - name: Install WP-CLI
+        run: |
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
+      # -----------------------------
+      # Build ZIP using "wp dist-archive"
+      # -----------------------------
+      - name: Create plugin ZIP
+        id: zip
+        run: |
+          mkdir -p dist
+          ZIP_NAME="${GITHUB_REPOSITORY##*/}-${GITHUB_REF_NAME}.zip"
+          wp dist-archive . "dist/${ZIP_NAME}"
+          echo "zip_name=${ZIP_NAME}" >> $GITHUB_OUTPUT
+
+      # -----------------------------
+      # Create Release + Upload Asset
+      # -----------------------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: dist/${{ steps.zip.outputs.zip_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

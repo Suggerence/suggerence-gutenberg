@@ -1,0 +1,33 @@
+{
+	"authors": [
+		{
+			"email": "joan@sirvelia.com",
+			"homepage": "https://sirvelia.com",
+			"name": "Joan Rodas Cusidó",
+			"role": "Developer"
+		}
+	],
+	"autoload": {
+		"files": [
+			"Utils/plubo.php"
+		],
+		"psr-4": {
+			"SuggerenceGutenberg\\": ""
+		}
+	},
+	"description": "An amazing plugin made with PLUBO",
+	"homepage": "https://github.com/joanrodas/plubo",
+	"keywords": [
+		"plugin",
+		"wordpress",
+		"boilerplate",
+		"wp"
+	],
+	"license": "GPL-3.0+",
+	"name": "joanrodas/suggerence-gutenberg",
+	"require": {
+		"joanrodas/plubo-routes": "^0.7.8",
+		"php": "\u003e=7.4"
+	},
+	"type": "wordpress-plugin"
+}

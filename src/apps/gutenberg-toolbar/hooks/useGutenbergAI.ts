@@ -1,0 +1,250 @@
+import { useSelect } from '@wordpress/data';
+import { GenericBlockMCPServer } from '@/shared/mcps/servers/GenericBlockMCPServer';
+import { useBaseAI } from '@/shared/hooks/useBaseAi';
+
+export const useGutenbergAI = (): UseGutenbergAITools => {
+
+    // Get current Gutenberg context with block type information
+    const {
+        selectedBlock,
+        selectedBlockClientId,
+        blocks,
+        postTitle,
+        postMeta,
+        postId,
+        selectedBlockType
+    } = useSelect((select: any) => {
+        const {
+            getSelectedBlock,
+            getSelectedBlockClientId,
+            getBlocks,
+        } = select('core/block-editor');
+
+        const {
+            getEditedPostAttribute,
+            getCurrentPostId
+        } = select('core/editor');
+
+        const {
+            getBlockType
+        } = select('core/blocks');
+
+        const selectedBlock = getSelectedBlock();
+        const selectedBlockType = selectedBlock ? getBlockType(selectedBlock.name) : null;
+
+        return {
+            selectedBlock,
+            selectedBlockClientId: getSelectedBlockClientId(),
+            blocks: getBlocks(),
+            postTitle: getEditedPostAttribute('title'),
+            postMeta: getEditedPostAttribute('meta'),
+            postId: getCurrentPostId?.(),
+            selectedBlockType
+        };
+    }, []);
+
+    const executeCommand = async (command: string | MCPClientMessage): Promise<boolean> => {
+        try {
+            // Check if we have a selected block
+            if (!selectedBlock) {
+                console.error('No block selected for toolbar action');
+                return false;
+            }
+
+            // Get generic MCP server with block-specific tools
+            const genericServer = GenericBlockMCPServer.initialize();
+
+            // Get tools (includes block-specific tools like image editing for image blocks)
+            const blockTools = genericServer.client.listTools().tools;
+
+            // Create comprehensive post content context for the AI
+            const allBlocks = blocks.map((block: any) => ({
+                id: block.clientId,
+                name: block.name,
+                attributes: block.attributes,
+                content: block.attributes?.content || '',
+                innerBlocks: block.innerBlocks?.map((innerBlock: any) => ({
+                    id: innerBlock.clientId,
+                    name: innerBlock.name,
+                    attributes: innerBlock.attributes,
+                    content: innerBlock.attributes?.content || ''
+                })) || []
+            }));
+
+            // Prepare detailed selected block info with type information
+            const selectedBlockInfo = selectedBlock ? {
+                id: selectedBlockClientId,
+                name: selectedBlock.name,
+                attributes: selectedBlock.attributes,
+                content: selectedBlock.attributes?.content || '',
+                typeDefinition: selectedBlockType ? {
+                    title: selectedBlockType.title,
+                    category: selectedBlockType.category,
+                    attributes: selectedBlockType.attributes || {},
+                    supports: selectedBlockType.supports || {}
+                } : null
+            } : null;
+
+            // Generate dynamic context based on selected block
+            let selectedBlockContext = '';
+            if (selectedBlockInfo) {
+                selectedBlockContext = `
+
+Selected Block Details:
+- Type: ${selectedBlockInfo.name} (${selectedBlockInfo.typeDefinition?.title || 'Unknown'})
+- Category: ${selectedBlockInfo.typeDefinition?.category || 'unknown'}
+- ID: ${selectedBlockInfo.id}
+- Current Attributes: ${JSON.stringify(selectedBlockInfo.attributes, null, 2)}
+
+Available Attributes for ${selectedBlockInfo.name}:
+${selectedBlockInfo.typeDefinition ? Object.entries(selectedBlockInfo.typeDefinition.attributes).map(([attrName, attrDef]: [string, any]) =>
+    `- ${attrName}: ${attrDef.type || 'string'}${attrDef.default !== undefined ? ` (default: ${JSON.stringify(attrDef.default)})` : ''}${attrDef.description ? ` - ${attrDef.description}` : ''}`
+).join('\n') : 'No attribute schema available'}
+
+Block Capabilities:
+${selectedBlockInfo.typeDefinition?.supports ? Object.entries(selectedBlockInfo.typeDefinition.supports).map(([feature, supported]) =>
+    `- ${feature}: ${supported}`
+).join('\n') : 'No capability information available'}`;
+            }
+
+            const existingCustomCss = typeof postMeta?.suggerence_custom_css === 'string'
+                ? postMeta.suggerence_custom_css.trim()
+                : '';
+            const customCssSummary = existingCustomCss
+                ? `Current per-post CSS (${existingCustomCss.length} chars, scoped to body.postid-${postId ?? '[ID]'}):\n${existingCustomCss.substring(0, 500)}${existingCustomCss.length > 500 ? '…' : ''}`
+                : 'No per-post custom CSS has been saved yet.';
+
+            // Create message for AI with comprehensive block-aware context
+            let messages: MCPClientMessage[];
+
+            if (typeof command === 'string') {
+                // Traditional string command
+                messages = [
+                    {
+                        role: 'user',
+                        content: `Current Post Context:
+- Post Title: ${postTitle || 'Untitled'}
+- Total Blocks: ${blocks.length}
+- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+${customCssSummary ? `Post-specific Custom CSS:\n${customCssSummary}` : ''}
+
+All Blocks in Post (with IDs for reference):
+${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
+
+Available Tools for ${selectedBlockInfo?.name}:
+${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+User Command: ${command}
+
+Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`,
+                        date: new Date().toISOString()
+                    }
+                ];
+            } else {
+                // Multimodal message (like audio)
+                const baseContext = `Current Post Context:
+- Post Title: ${postTitle || 'Untitled'}
+- Total Blocks: ${blocks.length}
+- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+${customCssSummary ? `Post-specific Custom CSS:\n${customCssSummary}` : ''}
+
+All Blocks in Post (with IDs for reference):
+${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
+
+Available Tools for ${selectedBlockInfo?.name}:
+${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`;
+
+                // Handle multimodal content
+                let messageContent;
+                if (Array.isArray(command.content)) {
+                    // Add context to existing multimodal content
+                    messageContent = [
+                        { type: 'text', text: baseContext },
+                        ...command.content
+                    ];
+                } else {
+                    // Simple content, add context
+                    messageContent = `${baseContext}\n\nUser Command: ${command.content}`;
+                }
+
+                messages = [
+                    {
+                        role: 'user',
+                        content: messageContent as any, // Type assertion for multimodal content
+                        date: new Date().toISOString()
+                    }
+                ];
+            }
+
+            // Get AI model (we'll use a default one for now)
+            const defaultModel: AIModel = {
+                id: 'suggerence-v1',
+                provider: 'suggerence',
+                providerName: 'Suggerence',
+                name: 'Suggerence v1',
+                date: new Date().toISOString(),
+                capabilities: ['text-generation', 'tool-calling']
+            };
+
+            // Get toolbar system prompt
+            const getToolbarSystemPrompt = (): string => {
+                return `Current Post Context:
+- Post Title: ${postTitle || 'Untitled'}
+- Total Blocks: ${blocks.length}
+- Selected Block: ${selectedBlockInfo ? `${selectedBlockInfo.name} (ID: ${selectedBlockInfo.id})` : 'None'}${selectedBlockContext}
+
+${customCssSummary ? `Post-specific Custom CSS:\n${customCssSummary}` : ''}
+
+All Blocks in Post (with IDs for reference):
+${allBlocks.map((block: any, index: number) => `${index + 1}. ${block.name} (ID: ${block.id})${block.content ? ` - Content: "${block.content.substring(0, 100)}${block.content.length > 100 ? '...' : ''}"` : ''}${block.innerBlocks.length > 0 ? ` [${block.innerBlocks.length} inner blocks]` : ''}`).join('\n')}
+
+Available Tools for ${selectedBlockInfo?.name}:
+${blockTools.map((tool: any) => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+Instructions: You have complete information about the selected ${selectedBlockInfo?.name} block including its available attributes and current values. Use the block-specific tools to modify the current block based on the user's command. Focus only on the selected block - do not add, delete, or manipulate other blocks. These tools are specifically designed for ${selectedBlockInfo?.name} blocks.`;
+            };
+
+            const getSiteContext = () => ({
+                selectedContexts: []
+            });
+
+            // Initialize base AI hook with toolbar-specific prompts
+            const { callAI } = useBaseAI({
+                getSystemPrompt: getToolbarSystemPrompt,
+                getSiteContext
+            });
+
+            // Call AI with block-specific tools
+            const response = await callAI(messages, defaultModel, blockTools);
+
+            // If AI wants to use a tool, execute it on the generic server
+            if (response.toolName && response.toolArgs) {
+                const toolResult = await genericServer.client.callTool({
+                    name: response.toolName,
+                    arguments: response.toolArgs
+                });
+
+                return true;
+            }
+
+            // If AI provides text response, log it
+            if (response.content) {
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error executing Gutenberg command:', error);
+            return false;
+        }
+    };
+
+    return {
+        executeCommand,
+        isLoading: false // We don't need to wait for the general Gutenberg server
+    };
+};

@@ -1,0 +1,184 @@
+import { useState, useEffect, useRef } from '@wordpress/element';
+import { Button, TextareaControl, Flex, FlexItem, KeyboardShortcuts } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import { useSelect } from '@wordpress/data';
+import { BlockTitle, BlockIcon } from '@wordpress/block-editor';
+import { useCommandStore } from '@/apps/gutenberg-toolbar/stores/commandStore';
+import { useGutenbergAI } from '@/apps/gutenberg-toolbar/hooks/useGutenbergAI';
+import { AudioButton } from '@/shared/components/AudioButton';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
+
+export const CommandBox = ({
+    onClose,
+    onExecute,
+    placeholder,
+    mode = 'default'
+}: CommandBoxProps) => {
+    const {
+        isExecuting,
+        setExecuting,
+        setResult
+    } = useCommandStore();
+
+    const { executeCommand: defaultExecuteCommand, isLoading: mcpLoading } = useGutenbergAI();
+    const { createErrorSnackbar } = useSnackbar();
+    const [inputValue, setInputValue] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Use custom execute function if provided, otherwise use default
+    const executeCommand = onExecute || defaultExecuteCommand;
+
+    // Get selected block information
+    const selectedBlock = useSelect((select) => {
+        // @ts-ignore - WordPress types not available
+        const { getSelectedBlock } = select('core/block-editor');
+        // @ts-ignore - WordPress types not available
+        return getSelectedBlock?.();
+    }, []);
+
+    const handleSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!inputValue.trim() || isLoading) return;
+
+        try {
+            setExecuting(true);
+
+            const success = await executeCommand(inputValue.trim());
+
+            if (success) {
+                setResult(__('Done! Looking good.', 'suggerence'));
+                setInputValue('');
+                onClose?.();
+            } else {
+                createErrorSnackbar(__('That didn\'t work out. Want to try something different?', 'suggerence'));
+            }
+        } catch (error) {
+            createErrorSnackbar(__('Oops, something went wrong. Let\'s give it another go?', 'suggerence'));
+            console.error('Command execution error:', error);
+        } finally {
+            setExecuting(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
+    };
+
+    const isLoading = isExecuting || mcpLoading;
+
+    // Focus textarea when component mounts
+    useEffect(() => {
+        // Use timeout to ensure the textarea is rendered
+        const timeout = setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+            }
+        }, 100);
+
+        return () => clearTimeout(timeout);
+    }, []);
+
+    const handleAudioMessage = async (audioMessage: any) => {
+        try {
+            setExecuting(true);
+
+            // Pass the full multimodal message to executeCommand
+            const success = await executeCommand(audioMessage);
+
+            if (success) {
+                setResult(__('All set! That sounded great.', 'suggerence'));
+                setInputValue('');
+                onClose?.();
+            } else {
+                createErrorSnackbar(__('Couldn\'t process that audio command. Try again?', 'suggerence'));
+            }
+        } catch (error) {
+            createErrorSnackbar(__('Audio command hit a snag. Let\'s try once more?', 'suggerence'));
+            console.error('Audio command execution error:', error);
+        } finally {
+            setExecuting(false);
+        }
+    };
+
+    return (
+        <div
+            className="suggerence-command-box suggerence-app"
+            style={{
+                width: '320px',
+                padding: '4px',
+            }}
+        >
+            <KeyboardShortcuts
+                shortcuts={{
+                    'mod+enter': () => handleSubmit(),
+                }}
+            />
+
+            <div aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(1px, 1px, 1px, 1px)' }}>
+				{isLoading
+					? (mcpLoading ? __('Loading…', 'suggerence') : __('Executing…', 'suggerence'))
+					: ''}
+			</div>
+
+            <div>
+                    <TextareaControl
+                        label={__('AI Command', 'suggerence')}
+                        hideLabelFromVision
+                        value={inputValue}
+                        onChange={(value: string) => setInputValue(value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={placeholder || __('Tell me what you need changed...', 'suggerence')}
+                        disabled={isLoading}
+                        rows={2}
+                        ref={textareaRef}
+                    />
+
+                    {!isLoading ? (
+                            <Flex gap={2} align="center" justify="space-between">
+                                <FlexItem>
+                                    {selectedBlock && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <BlockIcon
+                                                icon={selectedBlock.name ? (window as any).wp?.blocks?.getBlockType?.(selectedBlock.name)?.icon : undefined}
+                                                showColors={true}
+                                            />
+                                            <BlockTitle clientId={selectedBlock.clientId} />
+                                        </div>
+                                    )}
+                                </FlexItem>
+                                <FlexItem style={{ display: 'flex', gap: '4px' }}>
+                                    {/* Audio messages not currently supported by Claude */}
+                                    {/* <AudioButton
+                                        onAudioMessage={handleAudioMessage}
+                                        inputValue={inputValue}
+                                        isLoading={isLoading}
+                                        size="small"
+                                        showError={false}
+                                    /> */}
+                                    <Button
+                                        variant="primary"
+                                        size="small"
+                                        onClick={handleSubmit}
+                                        disabled={!inputValue.trim() || isLoading}
+                                        isBusy={isLoading}
+                                        aria-label={__('Send command', 'suggerence')}
+                                    >
+                                        {__('Send', 'suggerence')}
+                                    </Button>
+                                </FlexItem>
+                            </Flex>
+                        ) : (
+                            <div style={{ marginTop: '12px', fontSize: '13px', color: '#757575', fontStyle: 'italic' }}>
+                                {mcpLoading
+                                    ? __('Loading...', 'suggerence')
+                                    : __('Executing...', 'suggerence')
+                                }
+                            </div>
+                        )}
+            </div>
+        </div>
+    );
+};

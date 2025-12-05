@@ -95,7 +95,7 @@ jobs:
       # Install dist-archive command
       # -----------------------------
       - name: Install dist-archive WP-CLI package
-        run: wp package install wp-cli/dist-archive-command:@dev-main
+        run: wp package install wp-cli/dist-archive-command:@stable
 
       # -----------------------------
       # Build ZIP

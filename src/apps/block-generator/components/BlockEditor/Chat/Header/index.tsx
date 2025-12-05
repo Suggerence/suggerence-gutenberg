@@ -11,12 +11,12 @@ interface BlockEditorChatHeaderProps
 
 export const BlockEditorChatHeader = ({ title }: BlockEditorChatHeaderProps) =>
 {
-    const { selectedBlockId } = useBlocksStore();
+    const { blockId, selectedBlockId } = useBlocksStore();
     const { clearConversation } = useConversationsStore();
 
     const handleClearConversation = () =>
     {
-        if (!selectedBlockId) return;
+        if (blockId === selectedBlockId || !selectedBlockId) return;
 
         clearConversation(selectedBlockId);
     }
@@ -27,7 +27,7 @@ export const BlockEditorChatHeader = ({ title }: BlockEditorChatHeaderProps) =>
                 {title ?? __('Chat', 'suggerence-blocks')}
             </h3>
 
-            <button type="button" className="p-1.5 hover:bg-block-generation-muted rounded-md transition-colors cursor-pointer" onClick={handleClearConversation} title={__('Clear conversation', 'suggerence-blocks')}>
+            <button type="button" className="p-1.5 hover:bg-block-generation-muted rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleClearConversation} title={__('Clear conversation', 'suggerence-blocks')} disabled={blockId === selectedBlockId}>
                 <Trash2 className="size-4 text-block-generation-primary" />
             </button>
         </div>

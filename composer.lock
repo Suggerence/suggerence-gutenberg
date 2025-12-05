@@ -4,39 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5a98639c3ea8f8bc6f3afce628aa98b2",
+    "content-hash": "d6970398517e00793dd5795ac0845f6b",
     "packages": [
-        {
-            "name": "berlindb/core",
-            "version": "2.0.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/berlindb/core.git",
-                "reference": "6a9383ab2dad726bf2d6dbda6687da848eda22ea"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/berlindb/core/zipball/6a9383ab2dad726bf2d6dbda6687da848eda22ea",
-                "reference": "6a9383ab2dad726bf2d6dbda6687da848eda22ea",
-                "shasum": ""
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "BerlinDB\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "A collection of PHP classes and functions that aims to provide an ORM-like experience and interface to WordPress database tables.",
-            "support": {
-                "issues": "https://github.com/berlindb/core/issues",
-                "source": "https://github.com/berlindb/core/tree/2.0.2"
-            },
-            "time": "2025-10-23T20:00:35+00:00"
-        },
         {
             "name": "joanrodas/plubo-routes",
             "version": "v0.7.8",

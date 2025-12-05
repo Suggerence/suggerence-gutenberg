@@ -23,7 +23,7 @@ jobs:
       - name: Read plugin version
         id: version
         run: |
-          VERSION=$(grep -i "Version:" suggerence-gutenberg.php | awk '{print $2}')
+          VERSION=$(sed -n 's/^.*Version:[[:space:]]*\([0-9\.]*\).*$/\1/p' suggerence-gutenberg.php)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected plugin version: $VERSION"
 

@@ -11,6 +11,9 @@ import { useBlocksStore } from '@/apps/block-generator/stores/blocks';
 
 import { usePreviewStore } from '@/apps/block-generator/stores/preview';
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose, DialogFooter } from "@/components/ui/dialog";
+import { Button as ButtonUI } from "@/components/ui/button";
+
 import { getBlockFile, loadBlockStyle } from "@/lib/block";
 
 interface BlockEditorHeaderAddBlockButtonProps
@@ -21,6 +24,7 @@ interface BlockEditorHeaderAddBlockButtonProps
 export const BlockEditorHeaderAddBlockButton = ({ onCloseModal }: BlockEditorHeaderAddBlockButtonProps) =>
 {
     const [isAdding, setIsAdding] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const { selectedBlockId } = useBlocksStore();
     const { blocks } = usePreviewStore();
 
@@ -83,6 +87,7 @@ export const BlockEditorHeaderAddBlockButton = ({ onCloseModal }: BlockEditorHea
             {
                 mainEditorDispatch.selectBlock(newBlock.clientId);
                 setIsAdding(false);
+                setIsDialogOpen(false);
                 onCloseModal?.();
             }, 100);
         }
@@ -93,15 +98,42 @@ export const BlockEditorHeaderAddBlockButton = ({ onCloseModal }: BlockEditorHea
     };
 
     return (
-        <Button 
-            variant="primary" 
-            icon={plus} 
-            onClick={handleAddBlock} 
-            disabled={isAdding || !blocks.length} 
-            className="justify-center" 
-            isBusy={isAdding} 
-        >
-            { isAdding ? __('Adding block...', 'suggerence-blocks') : __('Add this block to the editor', 'suggerence-blocks') }
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button 
+                    variant="primary" 
+                    icon={plus} 
+                    disabled={isAdding || !blocks.length} 
+                    className="justify-center" 
+                    isBusy={isAdding} 
+                >
+                    { isAdding ? __('Adding block...', 'suggerence-blocks') : __('Add this block to the editor', 'suggerence-blocks') }
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-block-generation-background! text-block-generation-foreground! border-block-generation-border! gap-0!">
+                <DialogHeader className="border-0!">
+                    <DialogTitle className="text-block-generation-foreground!">{__('Add block to editor', 'suggerence-blocks')}</DialogTitle>
+                    <DialogDescription className="text-block-generation-muted-foreground!">
+                        {__('We recommend testing the block in the preview before adding it to your post. This ensures the block works correctly with your content.', 'suggerence-blocks')}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="border-0!">
+                    <DialogClose asChild>
+                        <ButtonUI variant="outline" className="border-block-generation-border! text-block-generation-foreground! hover:bg-block-generation-muted! hover:text-block-generation-foreground! cursor-pointer!">
+                            {__('Cancel', 'suggerence-blocks')}
+                        </ButtonUI>
+                    </DialogClose>
+                    <ButtonUI 
+                        type="button"
+                        onClick={handleAddBlock}
+                        disabled={isAdding || !blocks.length}
+                        variant="block-generation-primary"
+                        className="cursor-pointer!"
+                    >
+                        { isAdding ? __('Adding block...', 'suggerence-blocks') : __('Add my block', 'suggerence-blocks') }
+                    </ButtonUI>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

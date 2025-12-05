@@ -83,13 +83,19 @@ jobs:
         run: pnpm build
 
       # -----------------------------
-      # WP-CLI
+      # Install WP-CLI
       # -----------------------------
       - name: Install WP-CLI
         run: |
           curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
           chmod +x wp-cli.phar
           sudo mv wp-cli.phar /usr/local/bin/wp
+
+      # -----------------------------
+      # Install dist-archive command
+      # -----------------------------
+      - name: Install dist-archive WP-CLI package
+        run: wp package install wp-cli/dist-archive-command
 
       # -----------------------------
       # Build ZIP
@@ -99,7 +105,7 @@ jobs:
         run: |
           mkdir -p dist
           ZIP_NAME="suggerence-gutenberg-${{ steps.version.outputs.version }}.zip"
-          wp dist-archive . "dist/${ZIP_NAME}"
+          wp --path=/tmp dist-archive . "dist/${ZIP_NAME}"
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       # -----------------------------

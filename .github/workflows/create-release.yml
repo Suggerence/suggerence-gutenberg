@@ -1,0 +1,102 @@
+name: Build & Release WordPress Plugin
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------
+      # Checkout
+      # -----------------------------
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # -----------------------------
+      # Extract version from plugin file
+      # -----------------------------
+      - name: Read plugin version
+        id: version
+        run: |
+          VERSION=$(grep -i "Version:" suggerence-gutenberg.php | awk '{print $2}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected plugin version: $VERSION"
+
+      # -----------------------------
+      # Create tag if not exists
+      # -----------------------------
+      - name: Create tag if missing
+        id: tag
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          echo "Tag to use: $TAG"
+
+          # Check if tag exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists. Skipping tag creation."
+          else
+            echo "Creating new tag: $TAG"
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      # -----------------------------
+      # PHP + Composer
+      # -----------------------------
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+
+      - run: composer install --no-dev --prefer-dist --no-progress
+
+      # -----------------------------
+      # Node.js
+      # -----------------------------
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+      - run: npm run build
+
+      # -----------------------------
+      # WP-CLI
+      # -----------------------------
+      - name: Install WP-CLI
+        run: |
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
+      # -----------------------------
+      # Build ZIP
+      # -----------------------------
+      - name: Create plugin ZIP
+        id: zip
+        run: |
+          mkdir -p dist
+          ZIP_NAME="suggerence-gutenberg-${{ steps.version.outputs.version }}.zip"
+          wp dist-archive . "dist/${ZIP_NAME}"
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+
+      # -----------------------------
+      # Create GitHub Release
+      # -----------------------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          files: dist/${{ steps.zip.outputs.zip_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

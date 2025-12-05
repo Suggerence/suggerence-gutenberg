@@ -29,6 +29,7 @@ define('SUGGERENCEGUTENBERG_URL', plugin_dir_url(__FILE__));
 define('SUGGERENCEGUTENBERG_ASSETS_PATH', SUGGERENCEGUTENBERG_PATH . 'dist/' );
 define('SUGGERENCEGUTENBERG_ASSETS_URL', SUGGERENCEGUTENBERG_URL . 'dist/' );
 define('SUGGERENCEGUTENBERG_SCHEMAS_PATH', plugin_dir_path(__FILE__) . 'Schemas/');
+define('SUGGERENCEGUTENBERG_UPDATER_URL', 'https://api.suggerence.com/');
 
 // AUTOLOAD
 if (file_exists(SUGGERENCEGUTENBERG_PATH . 'vendor/autoload.php')) {

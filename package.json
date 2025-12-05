@@ -7,6 +7,7 @@
 		"@types/wordpress__block-editor": "^14.21.2",
 		"@types/wordpress__blocks": "^12.5.18",
 		"@types/wordpress__url": "^2.14.0",
+		"@wordpress/interface": "^9.21.0",
 		"@wordpress/jest-preset-default": "^12.36.0",
 		"@wordpress/scripts": "latest",
 		"jest": "^30.2.0",

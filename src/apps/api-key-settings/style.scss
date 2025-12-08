@@ -1,0 +1,15 @@
+.suggerence-api-key-settings {
+    margin: 32px auto;
+    max-width: 640px;
+
+    .suggerence-api-key-settings__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .suggerence-api-key-settings__notice {
+        margin-top: 1rem;
+    }
+}

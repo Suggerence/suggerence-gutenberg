@@ -3,6 +3,7 @@
 namespace SuggerenceGutenberg\Functionality;
 
 use SuggerenceGutenberg\Functionality\Endpoints\AiProviders;
+use SuggerenceGutenberg\Functionality\Endpoints\ApiKeySettings;
 use SuggerenceGutenberg\Functionality\Endpoints\BlockGeneration;
 /**
  * Main API Endpoints coordinator
@@ -31,6 +32,9 @@ class ApiEndpoints
 
         // Block Generation endpoints
         new BlockGeneration($this->plugin_name, $this->plugin_version);
+
+        // API key settings
+        new ApiKeySettings($this->plugin_name, $this->plugin_version);
     }
 
 

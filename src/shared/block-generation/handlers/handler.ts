@@ -23,6 +23,7 @@ import { useWriteFileHandler } from '@/shared/block-generation/handlers/writeFil
 import { useWriteFileEndedHandler } from '@/shared/block-generation/handlers/writeFileEnded';
 import { useWriteFileStartedHandler } from '@/shared/block-generation/handlers/writeFileStarted';
 import { useFinishHandler } from '@/shared/block-generation/handlers/finish';
+import { useErrorHandler } from '@/shared/block-generation/handlers/error';
 
 export const useWebsocketHandlers = () =>
 {
@@ -51,6 +52,7 @@ export const useWebsocketHandlers = () =>
     const handleWriteFileEnded = useWriteFileEndedHandler();
     const handleWriteFileStarted = useWriteFileStartedHandler();
     const handleFinish = useFinishHandler();
+    const handleError = useErrorHandler();
 
     return {
         handleBlockPlanningStarted,
@@ -77,6 +79,7 @@ export const useWebsocketHandlers = () =>
         handleWriteFile,
         handleWriteFileEnded,
         handleWriteFileStarted,
-        handleFinish
+        handleFinish,
+        handleError
     };
 }

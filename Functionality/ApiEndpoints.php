@@ -2,7 +2,7 @@
 
 namespace SuggerenceGutenberg\Functionality;
 
-use SuggerenceGutenberg\Functionality\Endpoints\AiProviders;
+use SuggerenceGutenberg\Functionality\Endpoints\Chat;
 use SuggerenceGutenberg\Functionality\Endpoints\ApiKeySettings;
 use SuggerenceGutenberg\Functionality\Endpoints\AuthTokens;
 use SuggerenceGutenberg\Functionality\Endpoints\BlockGeneration;
@@ -28,8 +28,8 @@ class ApiEndpoints
      */
     private function initialize_endpoint_groups()
     {       
-        // AI Providers endpoints
-        new AiProviders($this->plugin_name, $this->plugin_version);
+        // Chat endpoints
+        new Chat($this->plugin_name, $this->plugin_version);
 
         // Block Generation endpoints
         new BlockGeneration($this->plugin_name, $this->plugin_version);

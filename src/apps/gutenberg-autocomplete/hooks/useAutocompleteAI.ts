@@ -1,5 +1,5 @@
 import { useCallback } from '@wordpress/element';
-import apiFetch from '@wordpress/api-fetch';
+import { requestTextCompletion } from '@/shared/api/text';
 
 /**
  * Dedicated AI hook for autocomplete functionality
@@ -28,25 +28,17 @@ Match the tone and style of the input text.`;
 Provide only the continuation, no explanations or metadata.`;
 
                 // Direct API call without the complex assistant context
-                const response = await apiFetch({
-                    path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    method: 'POST',
-                    body: JSON.stringify({
-                        model: 'suggerence-v1',
-                        provider: 'suggerence',
-                        system: systemPrompt,
-                        messages: [
-                            {
-                                role: 'user',
-                                content: userPrompt,
-                            },
-                        ],
-                        // No tools needed for simple text generation
-                    }),
-                }) as any;
+                const response = await requestTextCompletion({
+                    model: 'suggerence-v1',
+                    provider: 'suggerence',
+                    system: systemPrompt,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: userPrompt,
+                        },
+                    ],
+                });
 
                 console.log('[Autocomplete AI] Raw API response:', response);
 

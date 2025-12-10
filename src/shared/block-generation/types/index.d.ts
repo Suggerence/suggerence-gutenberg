@@ -94,7 +94,7 @@ declare global
         };
     }
 
-    type MessageType = 'message' | 'block_planning' | 'todo' | 'reasoning' | 'response' | 'tool_call';
+    type MessageType = 'message' | 'block_planning' | 'todo' | 'reasoning' | 'response' | 'tool_call' | 'error';
 
     interface Message
     {
@@ -141,6 +141,14 @@ declare global
         };
     }
 
+    interface ErrorMessage extends Message
+    {
+        type: 'error';
+        content: {
+            text: string;
+        };
+    }
+
     type ToolName = 'read_project_structure' | 'read_file' | 'write_file' | 'replace_in_file' | 'build_block' | 'load_block' | 'shadcn/get_project_registries' | 'shadcn/list_items_in_registries' | 'shadcn/search_items_in_registries' | 'shadcn/view_items_in_registries' | 'shadcn/get_item_examples_from_registries' | 'shadcn/install_items';
 
     type ToolCallStatus = 'pending' | 'success' | 'error';
@@ -177,7 +185,7 @@ declare global
         children: FileTreeNode[];
     }
 
-    type WebsocketMessageType = 'block_planning_started' | 'block_planning_step'| 'todo_updated'| 'reasoning'| 'reasoning_ended'| 'response'| 'read_project_structure'| 'read_file'| 'write_file_started'| 'write_file'| 'write_file_ended'| 'replace_in_file_started'| 'replace_in_file'| 'replace_in_file_ended'| 'build_block'| 'load_block'| 'shadcn_get_project_registries'| 'shadcn_list_items_in_registries'| 'shadcn_search_items_in_registries'| 'shadcn_view_items_in_registries'| 'shadcn_get_item_examples_from_registries'| 'shadcn_install_items'| 'code_update_success'| 'code_stream'| 'finish';
+    type WebsocketMessageType = 'block_planning_started' | 'block_planning_step'| 'todo_updated'| 'reasoning'| 'reasoning_ended'| 'response'| 'read_project_structure'| 'read_file'| 'write_file_started'| 'write_file'| 'write_file_ended'| 'replace_in_file_started'| 'replace_in_file'| 'replace_in_file_ended'| 'build_block'| 'load_block'| 'shadcn_get_project_registries'| 'shadcn_list_items_in_registries'| 'shadcn_search_items_in_registries'| 'shadcn_view_items_in_registries'| 'shadcn_get_item_examples_from_registries'| 'shadcn_install_items'| 'code_update_success'| 'code_stream'| 'finish'| 'error';
 };
 
 export {};

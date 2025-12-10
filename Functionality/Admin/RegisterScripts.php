@@ -2,6 +2,8 @@
 
 namespace SuggerenceGutenberg\Functionality\Admin;
 
+use SuggerenceGutenberg\Components\ApiKeyEncryption;
+
 class RegisterScripts
 {
 
@@ -18,8 +20,10 @@ class RegisterScripts
 
     public function register_scripts()
     {
-
-        $suggerence_config = get_option('suggerence_suggerence_config');
+        $storedEmail = get_option('suggerence_api_email', '');
+        if (!is_string($storedEmail)) {
+            $storedEmail = '';
+        }
 
         $suggerence_data = 'const SuggerenceData = ' . wp_json_encode([
             'suggerence_api_url' => 'https://api.suggerence.com/v1',
@@ -30,7 +34,12 @@ class RegisterScripts
             'updates_nonce' => wp_create_nonce('updates'),
             'site_url' => home_url(),
             'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php'),
-            'api_key' => $suggerence_config['api_key'] ?? ''
+            'api_key' => ApiKeyEncryption::get(),
+            'api_email' => $storedEmail,
+            'api_key_endpoint' => 'suggerence-gutenberg/settings/v1/suggerence-api-key',
+            'api_key_remove_endpoint' => 'suggerence-gutenberg/settings/v1/suggerence-api-key/remove',
+            'auth_login_endpoint' => 'suggerence-gutenberg/auth/v1/login',
+            'auth_refresh_endpoint' => 'suggerence-gutenberg/auth/v1/refresh',
         ]) . ';';
 
         /**
@@ -72,6 +81,30 @@ class RegisterScripts
             SUGGERENCEGUTENBERG_URL . 'build/style-gutenberg-editor.css',
             [$this->plugin_name . '-components'],
             $asset_file['version'],
+        );
+
+        /**
+         * API key settings
+         */
+        $settings_asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/api-key-settings.asset.php');
+
+        wp_register_script(
+            $this->plugin_name . '-api-key-settings',
+            SUGGERENCEGUTENBERG_URL . 'build/api-key-settings.js',
+            $settings_asset_file['dependencies'],
+            $settings_asset_file['version'],
+            [
+                'in_footer' => true,
+            ]
+        );
+
+        wp_add_inline_script($this->plugin_name . '-api-key-settings', $suggerence_data);
+
+        wp_register_style(
+            $this->plugin_name . '-api-key-settings',
+            SUGGERENCEGUTENBERG_URL . 'build/style-api-key-settings.css',
+            [$this->plugin_name . '-components'],
+            $settings_asset_file['version']
         );
 
         /**

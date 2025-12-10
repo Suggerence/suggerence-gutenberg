@@ -1,4 +1,7 @@
 import apiFetch from "@wordpress/api-fetch";
+import { getWebsocketAuthToken, clearWebsocketAuthToken } from '@/shared/auth/websocketToken';
+
+declare const SuggerenceData: SuggerenceData;
 
 export const generateImageTool: SuggerenceMCPResponseTool = {
     name: 'generate_image',
@@ -70,7 +73,7 @@ export async function generateImage(
     editImageUrl?: string
 ): Promise<{ content: Array<{ type: string, text: string }> }> {
     try {
-        const imageResponse = await generateImageWithAI(prompt, inputImages, editImageUrl);
+        const imageResponse = await generateImageWithAI(prompt, altText, inputImages, editImageUrl);
 
         if (!imageResponse.success) {
             return {
@@ -128,26 +131,29 @@ export async function generateEditedImage(
 
 async function generateImageWithAI(
     prompt: string,
+    altText?: string,
     inputImages?: Array<{ data?: string; media_type?: string; url?: string }>,
     editImageUrl?: string
 ): Promise<{ success: boolean; image_url?: string; attachment_id?: number; error?: string }> {
     try {
-        const data = await apiFetch({
-            path: '/suggerence-gutenberg/ai-providers/v1/providers/image',
-            method: 'POST',
-            data: {
-                prompt: prompt,
-                model: 'suggerence-v1',
-                provider: 'suggerence',
-                ...(editImageUrl && {
-                    edit_mode: true,
-                    edit_image_url: editImageUrl
-                }),
-                ...(inputImages && { input_images: inputImages })
-            }
-        });
+        const payload = await buildSuggerenceImagePayload(prompt, inputImages, editImageUrl);
+        const apiResponse = await requestSuggerenceImage(payload);
+        const imageData = extractGeneratedImage(apiResponse);
 
-        return data as { success: boolean; image_url?: string; attachment_id?: number; error?: string };
+        if (!imageData) {
+            return {
+                success: false,
+                error: 'Suggerence API did not return any image data'
+            };
+        }
+
+        const uploadResult = await uploadImageToWordPress(imageData, prompt, altText || prompt);
+
+        return {
+            success: true,
+            image_url: uploadResult.image_url,
+            attachment_id: uploadResult.attachment_id
+        };
     } catch (error) {
         return {
             success: false,
@@ -155,3 +161,251 @@ async function generateImageWithAI(
         };
     }
 }
+
+type InlineImage = { data: string; mimeType?: string };
+
+const buildSuggerenceImagePayload = async (
+    prompt: string,
+    inputImages?: Array<{ data?: string; media_type?: string; url?: string }>,
+    editImageUrl?: string
+): Promise<Record<string, unknown>> => {
+    const parts: Array<Record<string, unknown>> = [
+        { text: prompt }
+    ];
+
+    const inlineImages: InlineImage[] = [];
+
+    if (Array.isArray(inputImages)) {
+        for (const image of inputImages) {
+            if (image.data && image.media_type) {
+                inlineImages.push({
+                    data: normalizeBase64(image.data),
+                    mimeType: image.media_type
+                });
+            } else if (image.url) {
+                inlineImages.push(await fetchImageAsBase64(image.url));
+            }
+        }
+    }
+
+    if (editImageUrl) {
+        inlineImages.push(await fetchImageAsBase64(editImageUrl));
+    }
+
+    inlineImages.forEach((image) => {
+        parts.push({
+            inline_data: {
+                mime_type: image.mimeType || 'image/png',
+                data: image.data
+            }
+        });
+    });
+
+    return {
+        contents: [
+            {
+                parts
+            }
+        ],
+        generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE']
+        }
+    };
+};
+
+const getSuggerenceImageEndpoint = (): string => {
+    const base = SuggerenceData.suggerence_api_url.replace(/\/$/, '');
+    return `${base}/gutenberg/image`;
+};
+
+const requestSuggerenceImage = async (payload: Record<string, unknown>): Promise<any> => {
+    const requestOnce = async (retry: boolean): Promise<any> => {
+        const token = await getWebsocketAuthToken();
+        const response = await fetch(getSuggerenceImageEndpoint(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'omit',
+            body: JSON.stringify(payload)
+        });
+
+        if ((response.status === 401 || response.status === 403) && retry) {
+            clearWebsocketAuthToken();
+            return requestOnce(false);
+        }
+
+        let data: any = null;
+        try {
+            data = await response.json();
+        } catch {
+            // Ignore JSON parsing errors for now
+        }
+
+        if (!response.ok) {
+            const message = data?.error || data?.message || `Suggerence API request failed (${response.status})`;
+            throw new Error(message);
+        }
+
+        return data;
+    };
+
+    return requestOnce(true);
+};
+
+const extractGeneratedImage = (response: any): InlineImage | null => {
+    if (!response || typeof response !== 'object') {
+        return null;
+    }
+
+    const fromGeneratedImages = Array.isArray(response.generatedImages) ? response.generatedImages[0] : null;
+    if (fromGeneratedImages) {
+        return {
+            data: fromGeneratedImages.bytesBase64Encoded || fromGeneratedImages.data || '',
+            mimeType: fromGeneratedImages.mimeType || fromGeneratedImages.mime_type
+        };
+    }
+
+    const fromPredictions = Array.isArray(response.predictions) ? response.predictions[0] : null;
+    if (fromPredictions) {
+        return {
+            data: fromPredictions.bytesBase64Encoded || fromPredictions.data || '',
+            mimeType: fromPredictions.mimeType || fromPredictions.mime_type
+        };
+    }
+
+    if (Array.isArray(response.candidates)) {
+        for (const candidate of response.candidates) {
+            const content = candidate?.content;
+            const parts = Array.isArray(content?.parts) ? content.parts : candidate?.parts;
+            if (!Array.isArray(parts)) {
+                continue;
+            }
+
+            for (const part of parts) {
+                const inline = part?.inlineData || part?.inline_data;
+                if (inline?.data) {
+                    return {
+                        data: inline.data,
+                        mimeType: inline.mimeType || inline.mime_type
+                    };
+                }
+            }
+        }
+    }
+
+    return null;
+};
+
+const uploadImageToWordPress = async (image: InlineImage, prompt: string, altText: string) => {
+    if (!image.data) {
+        throw new Error('Missing image data');
+    }
+
+    const mimeType = image.mimeType || 'image/png';
+    const arrayBuffer = base64ToArrayBuffer(image.data);
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    const extension = inferFileExtension(mimeType);
+    const filename = buildFilename(prompt, extension);
+
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+    formData.append('title', prompt);
+    formData.append('alt_text', altText);
+
+    const media = await apiFetch<any>({
+        path: '/wp/v2/media',
+        method: 'POST',
+        body: formData
+    });
+
+    if (!media?.id || !media?.source_url) {
+        throw new Error('Failed to save generated image to media library');
+    }
+
+    return {
+        attachment_id: typeof media.id === 'number' ? media.id : Number(media.id),
+        image_url: media.source_url as string
+    };
+};
+
+const fetchImageAsBase64 = async (url: string): Promise<InlineImage> => {
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) {
+        throw new Error(`Failed to load image from ${url}`);
+    }
+
+    const blob = await response.blob();
+    const buffer = await blob.arrayBuffer();
+
+    return {
+        data: arrayBufferToBase64(buffer),
+        mimeType: blob.type || inferMimeFromUrl(url)
+    };
+};
+
+const normalizeBase64 = (input: string): string => {
+    const commaIndex = input.indexOf(',');
+    const base64 = commaIndex >= 0 ? input.substring(commaIndex + 1) : input;
+    return base64.trim();
+};
+
+const inferFileExtension = (mimeType: string): string => {
+    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+        return 'jpg';
+    }
+    if (mimeType === 'image/webp') {
+        return 'webp';
+    }
+    if (mimeType === 'image/gif') {
+        return 'gif';
+    }
+    return 'png';
+};
+
+const buildFilename = (prompt: string, extension: string): string => {
+    const slug = prompt
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50) || 'generated-image';
+
+    return `${slug}-${Date.now()}.${extension}`;
+};
+
+const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+};
+
+const inferMimeFromUrl = (url: string): string => {
+    const extensionMatch = url.split('.').pop()?.toLowerCase();
+    switch (extensionMatch) {
+        case 'jpg':
+        case 'jpeg':
+            return 'image/jpeg';
+        case 'gif':
+            return 'image/gif';
+        case 'webp':
+            return 'image/webp';
+        case 'svg':
+            return 'image/svg+xml';
+        default:
+            return 'image/png';
+    }
+};

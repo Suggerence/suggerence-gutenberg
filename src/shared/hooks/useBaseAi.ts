@@ -1,4 +1,4 @@
-import apiFetch from "@wordpress/api-fetch";
+import { requestTextCompletion, type TextCompletionRequest } from "@/shared/api/text";
 import { convertImageUrlToBase64 } from "../utils/image-utils";
 
 export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
@@ -207,16 +207,13 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
             convertedMessages = messagesWithAssistant;
         }
 
-        const requestBody: any = {
+        const requestPayload: TextCompletionRequest = {
             model: model?.id,
             provider: model?.provider,
             system: systemPrompt,
-            messages: convertedMessages
+            messages: convertedMessages as any,
+            tools
         };
-
-        if (tools) {
-            requestBody.tools = tools;
-        }
 
         // Retry configuration
         const MAX_RETRIES = 3;
@@ -226,15 +223,7 @@ export const useBaseAI = (config: UseBaseAIConfig): UseBaseAIReturn => {
         // Retry loop with exponential backoff
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
             try {                
-                const response = await apiFetch({
-                    path: 'suggerence-gutenberg/ai-providers/v1/providers/text',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    method: "POST",
-                    body: JSON.stringify(requestBody),
-                    signal: abortSignal,
-                }) as any;
+                const response = await requestTextCompletion(requestPayload, abortSignal);
 
                 // Check if response has empty content (treat as error)
                 const hasEmptyContent = 

@@ -333,7 +333,7 @@ export async function uploadOpenverseToMedia(
         
         // Sideload the image from Openverse to WordPress Media Library
         const sideloadResponse: any = await apiFetch({
-            path: '/suggerence-gutenberg/ai-providers/v1/openverse/sideload',
+            path: '/suggerence-gutenberg/chat/v1/openverse/sideload',
             method: 'POST',
             data: {
                 image_url: imageUrl,

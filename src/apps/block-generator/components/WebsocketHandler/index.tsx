@@ -32,14 +32,16 @@ export const WebsocketHandler = () =>
         handleWriteFile,
         handleWriteFileEnded,
         handleWriteFileStarted,
-        handleFinish
+        handleFinish,
+        handleError
     } = useWebsocketHandlers();
     
     useEffect(() =>
     {
         const handleMessage = (event: MessageEvent) =>
         {
-            const message: { type: WebsocketMessageType, data: unknown } = JSON.parse(event.data);
+            const parsed = JSON.parse(event.data);
+            const message: { type: WebsocketMessageType, data?: unknown, message?: string, code?: string | number } = parsed;
 
             switch (message.type) {
                 case 'block_planning_started':
@@ -142,6 +144,10 @@ export const WebsocketHandler = () =>
                     handleFinish();
                     break;
 
+                case 'error':
+                    handleError({ type: 'error', message: message.message || 'Unknown error', code: String(message.code || ''), data: message.data });
+                    break;
+
                 default:
                     console.log(`Received event: ${message.type}`);
                     break;
@@ -149,7 +155,7 @@ export const WebsocketHandler = () =>
         };
 
         return addMessageHandler(handleMessage);
-    }, [addMessageHandler, handleBlockPlanningStarted, handleBlockPlanningStep, handleBuildBlock, handleCodeUpdateSuccess, handleLoadBlock, handleReadFile, handleReadProjectStructure, handleReasoning, handleReasoningEnded, handleReplaceInFile, handleReplaceInFileEnded, handleReplaceInFileStarted, handleResponse, handleShadcnGetItemExamplesFromRegistries, handleShadcnGetProjectRegistries, handleShadcnInstallItems, handleShadcnListItemsInRegistries, handleShadcnSearchItemsInRegistries, handleShadcnViewItemsInRegistries, handleTodoUpdated, handleWriteFile, handleWriteFileEnded, handleWriteFileStarted, handleFinish]);
+    }, [addMessageHandler, handleBlockPlanningStarted, handleBlockPlanningStep, handleBuildBlock, handleCodeUpdateSuccess, handleLoadBlock, handleReadFile, handleReadProjectStructure, handleReasoning, handleReasoningEnded, handleReplaceInFile, handleReplaceInFileEnded, handleReplaceInFileStarted, handleResponse, handleShadcnGetItemExamplesFromRegistries, handleShadcnGetProjectRegistries, handleShadcnInstallItems, handleShadcnListItemsInRegistries, handleShadcnSearchItemsInRegistries, handleShadcnViewItemsInRegistries, handleTodoUpdated, handleWriteFile, handleWriteFileEnded, handleWriteFileStarted, handleFinish, handleError]);
     
     return null;
 }

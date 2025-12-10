@@ -1,13 +1,20 @@
 import { __ } from '@wordpress/i18n';
-import { CaseSensitive, ImageIcon, Braces } from 'lucide-react';
+import { CaseSensitive, ImageIcon, Braces, RotateCcw } from 'lucide-react';
 import { Dashicon } from '@wordpress/components';
 
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message'
 import { ChainOfThought, ChainOfThoughtContent, ChainOfThoughtHeader, ChainOfThoughtImage, ChainOfThoughtSearchResult, ChainOfThoughtSearchResults, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
 import { Queue, QueueItem, QueueItemContent, QueueItemIndicator, QueueList, QueueSection, QueueSectionContent, QueueSectionLabel, QueueSectionTrigger, QueueItemDescription } from '@/components/ai-elements/queue'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
+import { Button } from '@/components/ui/button';
+
+import { useBlocksStore } from '@/apps/block-generator/stores/blocks';
+import { useConversationsStore } from '@/apps/block-generator/stores/conversations';
+import { useSendMessage } from '@/apps/block-generator/hooks/useSendMessage';
 
 import { ToolCallMessage } from '@/apps/block-generator/components/BlockEditor/Chat/Conversation/Message/ToolCall';
+
+import { cn } from '@/lib/utils';
 
 interface BlockEditorChatConversationMessageProps
 {
@@ -131,6 +138,56 @@ export const ReasoningMessage = ({ message }: { message: ReasoningMessage }) =>
     );
 }
 
+export const ErrorMessage = ({ message }: { message: ErrorMessage }) =>
+{
+    const { selectedBlockId } = useBlocksStore();
+    const { getConversation, deleteMessage } = useConversationsStore();
+    const { sendMessage } = useSendMessage();
+
+    const conversation = selectedBlockId ? getConversation(selectedBlockId) : null;
+    const messageIndex = conversation?.messages.findIndex(m => m.id === message.id) ?? -1;
+
+    // Find the last user message before this error message
+    const lastUserMessage = conversation?.messages
+        .slice(0, messageIndex)
+        .reverse()
+        .find(m => m.type === 'message') as TextMessage | undefined;
+
+    const handleRetry = () =>
+    {
+        if (!selectedBlockId || messageIndex === -1) return;
+
+        // Delete the error message
+        deleteMessage(selectedBlockId, messageIndex);
+
+        // Retry the last user message if available
+        if (lastUserMessage?.content.text) {
+            sendMessage(lastUserMessage.content.text);
+        }
+    };
+
+    return (
+        <div className='w-full'>
+            <div className="rounded-lg border p-4 bg-destructive/10 dark:bg-destructive/5 border-destructive/30 dark:border-destructive/20 text-sm text-block-generation-primary">
+                <p className='text-block-generation-primary m-0! mb-3!'>
+                    {message.content.text}
+                </p>
+                {lastUserMessage && (
+                    <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={handleRetry}
+                        className="cursor-pointer hover:bg-block-generation-primary/10!"
+                    >
+                        <RotateCcw className='size-4' />
+                        {__('Retry', 'suggerence-blocks')}
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export const BlockEditorChatConversationMessage = ({ message }: BlockEditorChatConversationMessageProps) =>
 {
     switch (message.type) {
@@ -151,5 +208,8 @@ export const BlockEditorChatConversationMessage = ({ message }: BlockEditorChatC
 
         case 'tool_call':
             return <ToolCallMessage message={message as ToolCallMessage} />;
+
+        case 'error':
+            return <ErrorMessage message={message as ErrorMessage} />;
     }
 }

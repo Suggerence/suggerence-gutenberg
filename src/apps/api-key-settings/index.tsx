@@ -9,6 +9,7 @@ type Status = { status: 'success' | 'error'; message: string } | null;
 
 export const SuggerenceApiKeySettings = () => {
     const [configured, setConfigured] = useState(false);
+    const [email, setEmail] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -20,10 +21,11 @@ export const SuggerenceApiKeySettings = () => {
             try {
                 const response = await getSuggerenceApiKeyStatus();
                 setConfigured(response.configured);
+                setEmail(response.email || '');
             } catch {
                 setStatus({
                     status: 'error',
-                    message: __('Unable to check API key status.', 'suggerence-gutenberg'),
+                    message: __('Unable to check credentials status.', 'suggerence-gutenberg'),
                 });
             } finally {
                 setIsLoading(false);
@@ -34,7 +36,7 @@ export const SuggerenceApiKeySettings = () => {
     const clearStatus = () => setStatus(null);
 
     const handleSave = useCallback(async () => {
-        if (!apiKey.trim()) {
+        if (!apiKey.trim() || !email.trim()) {
             return;
         }
 
@@ -42,22 +44,24 @@ export const SuggerenceApiKeySettings = () => {
         clearStatus();
 
         try {
-            await setSuggerenceApiKey(apiKey.trim());
+            const trimmedEmail = email.trim();
+            await setSuggerenceApiKey(apiKey.trim(), trimmedEmail);
             setConfigured(true);
+            setEmail(trimmedEmail);
             setApiKey('');
             setStatus({
                 status: 'success',
-                message: __('Suggerence API key saved.', 'suggerence-gutenberg'),
+                message: __('Suggerence credentials saved.', 'suggerence-gutenberg'),
             });
         } catch {
             setStatus({
                 status: 'error',
-                message: __('Unable to save API key.', 'suggerence-gutenberg'),
+                message: __('Unable to save credentials.', 'suggerence-gutenberg'),
             });
         } finally {
             setIsSaving(false);
         }
-    }, [apiKey]);
+    }, [apiKey, email]);
 
     const handleRemove = useCallback(async () => {
         setIsRemoving(true);
@@ -66,14 +70,15 @@ export const SuggerenceApiKeySettings = () => {
         try {
             await removeSuggerenceApiKey();
             setConfigured(false);
+            setEmail('');
             setStatus({
                 status: 'success',
-                message: __('Suggerence API key removed.', 'suggerence-gutenberg'),
+                message: __('Suggerence credentials removed.', 'suggerence-gutenberg'),
             });
         } catch {
             setStatus({
                 status: 'error',
-                message: __('Unable to remove API key.', 'suggerence-gutenberg'),
+                message: __('Unable to remove credentials.', 'suggerence-gutenberg'),
             });
         } finally {
             setIsRemoving(false);
@@ -84,14 +89,27 @@ export const SuggerenceApiKeySettings = () => {
         <section className="suggerence-api-key-settings">
             <Card>
                 <CardBody>
-                    <p>{__('Paste the Suggerence API key you received from the portal.', 'suggerence-gutenberg')}</p>
+                    <p>
+                        {__('Enter the email associated with your Suggerence account and paste the API key you received from the portal.', 'suggerence-gutenberg')}
+                    </p>
+                    <TextControl
+                        label={__('Email address', 'suggerence-gutenberg')}
+                        placeholder={__('you@example.com', 'suggerence-gutenberg')}
+                        value={email}
+                        onChange={(value) => setEmail(value)}
+                        type="email"
+                    />
                     <TextControl
                         label={__('Suggerence API key', 'suggerence-gutenberg')}
                         placeholder={__('sk-sgg-...', 'suggerence-gutenberg')}
                         value={apiKey}
                         onChange={(value) => setApiKey(value)}
                         type="password"
-                        help={configured ? __('An API key is configured already.', 'suggerence-gutenberg') : undefined}
+                        help={
+                            configured
+                                ? __('Credentials are configured already.', 'suggerence-gutenberg')
+                                : undefined
+                        }
                     />
 
                     <div className="suggerence-api-key-settings__actions">
@@ -99,9 +117,9 @@ export const SuggerenceApiKeySettings = () => {
                             isPrimary
                             isBusy={isSaving}
                             onClick={handleSave}
-                            disabled={!apiKey.trim() || isSaving || isLoading}
+                            disabled={!apiKey.trim() || !email.trim() || isSaving || isLoading}
                         >
-                            {__('Save API key', 'suggerence-gutenberg')}
+                            {__('Save credentials', 'suggerence-gutenberg')}
                         </Button>
                         {configured && (
                             <Button
@@ -110,14 +128,14 @@ export const SuggerenceApiKeySettings = () => {
                                 onClick={handleRemove}
                                 disabled={isRemoving || isLoading}
                             >
-                                {__('Remove API key', 'suggerence-gutenberg')}
+                                {__('Remove credentials', 'suggerence-gutenberg')}
                             </Button>
                         )}
                     </div>
 
                     {isLoading && (
                         <Notice status="info" className="suggerence-api-key-settings__notice">
-                            {__('Checking API key status…', 'suggerence-gutenberg')}
+                            {__('Checking credentials status…', 'suggerence-gutenberg')}
                         </Notice>
                     )}
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace SuggerenceGutenberg\Functionality\Options;
+namespace SuggerenceGutenberg\Components;
 
 class ApiKeyEncryption
 {

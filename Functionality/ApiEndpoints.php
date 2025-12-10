@@ -4,6 +4,7 @@ namespace SuggerenceGutenberg\Functionality;
 
 use SuggerenceGutenberg\Functionality\Endpoints\AiProviders;
 use SuggerenceGutenberg\Functionality\Endpoints\ApiKeySettings;
+use SuggerenceGutenberg\Functionality\Endpoints\AuthTokens;
 use SuggerenceGutenberg\Functionality\Endpoints\BlockGeneration;
 /**
  * Main API Endpoints coordinator
@@ -35,6 +36,9 @@ class ApiEndpoints
 
         // API key settings
         new ApiKeySettings($this->plugin_name, $this->plugin_version);
+
+        // Authentication helpers
+        new AuthTokens($this->plugin_name, $this->plugin_version);
     }
 
 

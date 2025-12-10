@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { WEBSOCKET_CONFIG } from '../config/websocket';
+import { getWebsocketAuthToken } from '@/shared/auth/websocketToken';
 
 interface WebSocketContextValue {
     isConnected: boolean;
@@ -104,50 +105,61 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
             return;
         }
 
-        const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
-        const apiKey = WEBSOCKET_CONFIG.getApiKey();
-
-        const ws = new WebSocket(wsUrl + '?api_key=' + apiKey);
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-            setIsConnected(true);
-        };
-
-        ws.onmessage = (event) => {
+        const establishConnection = async () => {
             try {
-                const data = JSON.parse(event.data);
+                const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
+                const token = await getWebsocketAuthToken();
+                const ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
+                wsRef.current = ws;
 
-                const handler = resolveHandlerForIncomingMessage(data);
-                if (!handler) {
-                    console.warn('Received WebSocket message with no active handler', data);
-                    return;
-                }
+                ws.onopen = () => {
+                    setIsConnected(true);
+                };
 
-                handler.onMessage(data);
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
 
-                if (data.type === 'done' || data.type === 'error') {
-                    cleanupHandler(handler.clientRequestId);
-                }
+                        const handler = resolveHandlerForIncomingMessage(data);
+                        if (!handler) {
+                            console.warn('Received WebSocket message with no active handler', data);
+                            return;
+                        }
+
+                        handler.onMessage(data);
+
+                        if (data.type === 'done' || data.type === 'error') {
+                            cleanupHandler(handler.clientRequestId);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('❌ Persistent WebSocket error:', error);
+                };
+
+                ws.onclose = () => {
+                    setIsConnected(false);
+                    wsRef.current = null;
+
+                    // Auto-reconnect after 3 seconds
+                    setTimeout(() => {
+                        connect();
+                    }, 3000);
+                };
             } catch (error) {
-                console.error('Error parsing WebSocket message:', error);
+                console.error('Failed to initialize Gutenberg WebSocket connection', error);
+
+                setTimeout(() => {
+                    connect();
+                }, 5000);
             }
         };
 
-        ws.onerror = (error) => {
-            console.error('❌ Persistent WebSocket error:', error);
-        };
-
-        ws.onclose = () => {
-            setIsConnected(false);
-            wsRef.current = null;
-
-            // Auto-reconnect after 3 seconds
-            setTimeout(() => {
-                connect();
-            }, 3000);
-        };
-    }, []);
+        void establishConnection();
+    }, [cleanupHandler, resolveHandlerForIncomingMessage]);
 
     const sendRequest = useCallback((request: any, onMessage: (data: any) => void, onComplete: () => void) => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { BLOCKS_WEBSOCKET_URL } from '@/apps/block-generator/constants/api';
+import { getWebsocketAuthToken } from '@/shared/auth/websocketToken';
 
 interface WebsocketStore
 {
@@ -27,47 +28,49 @@ export const useWebsocketStore = create<WebsocketStore>((set, get) => ({
             return;
         }
 
-        try {
-            const apiKey = SuggerenceData.api_key || 'sk-sgg-demo-key';
-            
-            const ws = new WebSocket(`${BLOCKS_WEBSOCKET_URL}?api_key=${apiKey}`);
+        const connectWithToken = async () => {
+            try {
+                const token = await getWebsocketAuthToken();
+                const ws = new WebSocket(`${BLOCKS_WEBSOCKET_URL}?token=${encodeURIComponent(token)}`);
 
-            ws.onopen = () =>
-            {
-                console.log('WebSocket connected');
-                set({ connected: true });
-            };
+                ws.onopen = () =>
+                {
+                    console.log('WebSocket connected');
+                    set({ connected: true });
+                };
 
-            ws.onclose = () =>
-            {
-                console.log('WebSocket disconnected');
-                set({ connected: false, socket: null });
-            };
+                ws.onclose = () =>
+                {
+                    console.log('WebSocket disconnected');
+                    set({ connected: false, socket: null });
+                };
 
-            ws.onmessage = (event) =>
-            {
-                const { messageHandlers } = get();
+                ws.onmessage = (event) =>
+                {
+                    const { messageHandlers } = get();
 
-                for (const handler of messageHandlers) {
-                    try {
-                        handler(event);
+                    for (const handler of messageHandlers) {
+                        try {
+                            handler(event);
+                        }
+                        catch (error) {
+                            console.error('Error handling message:', error);
+                        }
                     }
-                    catch (error) {
-                        console.error('Error handling message:', error);
-                    }
-                }
-            };
+                };
 
-            ws.onerror = (error) =>
-            {
-                console.error('WebSocket error:', error);
-            };
+                ws.onerror = (error) =>
+                {
+                    console.error('WebSocket error:', error);
+                };
 
-            set({ socket: ws });
-        }
-        catch (error) {
-            console.error('WebSocket connection error:', error);
-        }
+                set({ socket: ws });
+            } catch (error) {
+                console.error('WebSocket connection error:', error);
+            }
+        };
+
+        void connectWithToken();
     },
 
     addMessageHandler: (handler: (event: MessageEvent) => void) =>

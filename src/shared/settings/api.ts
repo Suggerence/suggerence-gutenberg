@@ -8,6 +8,7 @@ const attachNonce = () => {
 
 export type SuggerenceApiKeyStatusResponse = {
     configured: boolean;
+    email: string;
 };
 
 export const getSuggerenceApiKeyStatus = async (): Promise<SuggerenceApiKeyStatusResponse> => {
@@ -19,13 +20,13 @@ export const getSuggerenceApiKeyStatus = async (): Promise<SuggerenceApiKeyStatu
     });
 };
 
-export const setSuggerenceApiKey = async (apiKey: string): Promise<SuggerenceApiKeyStatusResponse> => {
+export const setSuggerenceApiKey = async (apiKey: string, email: string): Promise<SuggerenceApiKeyStatusResponse> => {
     attachNonce();
 
     return apiFetch({
         path: SuggerenceData.api_key_endpoint,
         method: 'POST',
-        data: { api_key: apiKey },
+        data: { api_key: apiKey, email },
     });
 };
 

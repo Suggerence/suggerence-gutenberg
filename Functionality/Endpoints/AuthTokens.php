@@ -11,7 +11,6 @@ class AuthTokens extends BaseApiEndpoints
 {
     private const API_EMAIL_OPTION = 'suggerence_api_email';
     private const API_BASE_URL = 'https://api.suggerence.com/v1';
-    // private const API_BASE_URL = 'https://c831e75579a2.ngrok-free.app/v1';
 
     public function __construct($plugin_name, $plugin_version)
     {

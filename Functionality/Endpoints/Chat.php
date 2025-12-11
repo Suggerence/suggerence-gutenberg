@@ -27,9 +27,6 @@ class Chat extends BaseApiEndpoints
         // CORS middleware for MCP client endpoints
         $corsMiddleware = new Cors('*', ['GET', 'POST', 'OPTIONS'], ['Content-Type', 'Authorization', 'X-Requested-With']);
 
-        $endpoints = [];
-
-        // POST /openverse/sideload - Download and upload Openverse image
         $openverse_sideload_endpoint = new PostEndpoint(
             $this->namespace,
             'openverse/sideload',
@@ -37,9 +34,10 @@ class Chat extends BaseApiEndpoints
             [$this, 'admin_permissions_check']
         );
         $openverse_sideload_endpoint->useMiddleware($corsMiddleware);
-        $endpoints[] = $openverse_sideload_endpoint;
 
-        return $endpoints;
+        return [
+            $openverse_sideload_endpoint,
+        ];
     }
 
     /**
@@ -145,7 +143,7 @@ class Chat extends BaseApiEndpoints
         if (!empty($uploaded_image['error'])) {
             return new WP_REST_Response([
                 'success' => false,
-                'error' => 'Failed to upload image: ' . $uploaded_image['error']
+                'error' => esc_html__('Failed to upload image: ', 'suggerence-gutenberg') . $uploaded_image['error']
             ], 500);
         }
 
@@ -195,7 +193,7 @@ class Chat extends BaseApiEndpoints
 
         return new WP_REST_Response([
             'success' => true,
-            'message' => 'Openverse image uploaded successfully',
+            'message' => esc_html__('Openverse image uploaded successfully', 'suggerence-gutenberg'),
             'attachment_id' => $attachment_id,
             'image_url' => $attachment_url,
             'alt_text' => $alt_text,

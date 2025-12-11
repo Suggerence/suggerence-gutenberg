@@ -71,12 +71,6 @@ class PostCustomCss
             return;
         }
 
-        // $scope_selector = $this->get_scope_selector($post);
-
-        // if (!$this->is_css_scoped($css, $scope_selector)) {
-        //     $css = $this->scope_css($css, $scope_selector);
-        // }
-
         $scoped_css = str_ireplace('</style', '<\\/style', $css);
 
         printf(
@@ -86,52 +80,4 @@ class PostCustomCss
         );
     }
 
-    private function get_scope_selector(\WP_Post $post): string
-    {
-        $post_type = get_post_type($post);
-
-        if ($post_type === 'page') {
-            return "body.page-id-{$post->ID}";
-        }
-
-        return "body.postid-{$post->ID}";
-    }
-
-    private function is_css_scoped(string $css, string $scope): bool
-    {
-        return strpos($css, $scope) !== false;
-    }
-
-    private function scope_css(string $css, string $scope): string
-    {
-        $callback = function ($matches) use ($scope) {
-            $selector = trim($matches[1]);
-
-            if ($selector === '' || str_starts_with($selector, '@')) {
-                return $matches[0];
-            }
-
-            $parts = array_filter(
-                array_map(
-                    'trim',
-                    explode(',', $selector)
-                )
-            );
-
-            if (empty($parts)) {
-                return $matches[0];
-            }
-
-            $prefixed = array_map(
-                fn ($part) => "{$scope} {$part}",
-                $parts
-            );
-
-            return implode(', ', $prefixed) . '{';
-        };
-
-        $scoped = preg_replace_callback('/([^{}]+)\{/', $callback, $css);
-
-        return $scoped ?? $css;
-    }
 }

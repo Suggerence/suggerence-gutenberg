@@ -7,8 +7,6 @@ interface SuggerenceData {
     updates_nonce: string;
     site_url: string;
     has_kadence_blocks: boolean;
-    api_key: string;
-    api_email: string;
     api_key_endpoint: string;
     api_key_remove_endpoint: string;
     auth_login_endpoint: string;

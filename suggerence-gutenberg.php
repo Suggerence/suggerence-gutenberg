@@ -5,7 +5,7 @@
  * Plugin Name:       Suggerence - Gutenberg
  * Plugin URI:        https://sirvelia.com/
  * Description:       An AI Assistant for the Gutenberg editor.
- * Version:           0.3.0
+ * Version:           0.3.1
  * Author:            Sirvelia
  * Author URI:        https://sirvelia.com/
  * License:           GPL-3.0+
@@ -22,7 +22,7 @@ if (!defined('WPINC')) {
 
 // PLUGIN CONSTANTS
 define('SUGGERENCEGUTENBERG_NAME', 'suggerence-gutenberg');
-define('SUGGERENCEGUTENBERG_VERSION', '0.3.0');
+define('SUGGERENCEGUTENBERG_VERSION', '0.3.1');
 define('SUGGERENCEGUTENBERG_PATH', plugin_dir_path(__FILE__));
 define('SUGGERENCEGUTENBERG_BASENAME', plugin_basename(__FILE__));
 define('SUGGERENCEGUTENBERG_URL', plugin_dir_url(__FILE__));

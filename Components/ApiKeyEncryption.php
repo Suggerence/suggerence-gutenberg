@@ -16,7 +16,7 @@ class ApiKeyEncryption
 
     public static function save(string $value): bool
     {
-        return update_option(self::OPTION_NAME, self::encrypt($value));
+        return update_option(self::OPTION_NAME, self::encrypt($value), false);
     }
 
     public static function remove(): bool

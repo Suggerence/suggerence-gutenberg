@@ -124,8 +124,6 @@ class AuthTokens extends BaseApiEndpoints
 
         $status = (int)wp_remote_retrieve_response_code($response);
         $body = json_decode(wp_remote_retrieve_body($response), true);
-        error_log(print_r($body, true));
-        error_log(print_r($status, true));
         $body = is_array($body) ? $body : [];
 
         if ($status < 200 || $status >= 300) {

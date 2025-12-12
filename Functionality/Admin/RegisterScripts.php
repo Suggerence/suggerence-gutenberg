@@ -20,11 +20,6 @@ class RegisterScripts
 
     public function register_scripts()
     {
-        $storedEmail = get_option('suggerence_api_email', '');
-        if (!is_string($storedEmail)) {
-            $storedEmail = '';
-        }
-
         $suggerence_data = 'const SuggerenceData = ' . wp_json_encode([
             'suggerence_api_url' => 'https://api.suggerence.com/v1',
             'locale' => get_locale(),
@@ -34,8 +29,6 @@ class RegisterScripts
             'updates_nonce' => wp_create_nonce('updates'),
             'site_url' => home_url(),
             'has_kadence_blocks' => is_plugin_active('kadence-blocks/kadence-blocks.php'),
-            'api_key' => ApiKeyEncryption::get(),
-            'api_email' => $storedEmail,
             'api_key_endpoint' => 'suggerence-gutenberg/settings/v1/suggerence-api-key',
             'api_key_remove_endpoint' => 'suggerence-gutenberg/settings/v1/suggerence-api-key/remove',
             'auth_login_endpoint' => 'suggerence-gutenberg/auth/v1/login',

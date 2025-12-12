@@ -20,8 +20,6 @@ class ApiKeySettings extends BaseApiEndpoints
     {
         $cors = new Cors('*', ['GET', 'POST', 'OPTIONS'], ['Content-Type', 'Authorization', 'X-Requested-With']);
 
-        $endpoints = [];
-
         $getEndpoint = new GetEndpoint(
             $this->namespace,
             'suggerence-api-key',
@@ -29,7 +27,6 @@ class ApiKeySettings extends BaseApiEndpoints
             [$this, 'admin_permissions_check']
         );
         $getEndpoint->useMiddleware($cors);
-        $endpoints[] = $getEndpoint;
 
         $setEndpoint = new PostEndpoint(
             $this->namespace,
@@ -38,7 +35,6 @@ class ApiKeySettings extends BaseApiEndpoints
             [$this, 'admin_permissions_check']
         );
         $setEndpoint->useMiddleware($cors);
-        $endpoints[] = $setEndpoint;
 
         $removeEndpoint = new PostEndpoint(
             $this->namespace,
@@ -47,9 +43,12 @@ class ApiKeySettings extends BaseApiEndpoints
             [$this, 'admin_permissions_check']
         );
         $removeEndpoint->useMiddleware($cors);
-        $endpoints[] = $removeEndpoint;
 
-        return $endpoints;
+        return [
+            $getEndpoint,
+            $setEndpoint,
+            $removeEndpoint,
+        ];
     }
 
     public function get_api_key()
@@ -73,20 +72,20 @@ class ApiKeySettings extends BaseApiEndpoints
 
         $sanitizedEmail = \sanitize_email($email);
         if ($sanitizedEmail === '' || !\is_email($sanitizedEmail)) {
-            return new \WP_Error(self::HTTP_BAD_REQUEST, 'A valid email address is required');
+            return new \WP_Error(self::HTTP_BAD_REQUEST, esc_html__('A valid email address is required', 'suggerence-gutenberg'));
         }
 
         if (trim($apiKey) === '') {
-            return new \WP_Error(self::HTTP_BAD_REQUEST, 'API key is required');
+            return new \WP_Error(self::HTTP_BAD_REQUEST, esc_html__('API key is required', 'suggerence-gutenberg'));
         }
 
         if (!ApiKeyEncryption::save($apiKey)) {
-            return new \WP_Error(self::HTTP_INTERNAL_SERVER_ERROR, 'Unable to save API key');
+            return new \WP_Error(self::HTTP_INTERNAL_SERVER_ERROR, esc_html__('Unable to save API key', 'suggerence-gutenberg'));
         }
 
         if (!$this->save_api_email($sanitizedEmail)) {
             ApiKeyEncryption::remove();
-            return new \WP_Error(self::HTTP_INTERNAL_SERVER_ERROR, 'Unable to save email');
+            return new \WP_Error(self::HTTP_INTERNAL_SERVER_ERROR, esc_html__('Unable to save email', 'suggerence-gutenberg'));
         }
 
         return new \WP_REST_Response([

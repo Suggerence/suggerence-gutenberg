@@ -21,16 +21,90 @@ class Block
     }
 
     /**
+     * Validates and sanitizes a relative path to prevent directory traversal attacks
+     * @param string $relative_path
+     * @return string|false Returns the sanitized path or false if path is invalid
+     */
+    private function sanitize_path( $relative_path = '' )
+    {
+        if ( empty( $relative_path ) ) {
+            return '';
+        }
+
+        // Remove leading slashes and dots
+        $relative_path = ltrim( $relative_path, '/' );
+        $relative_path = preg_replace( '/^\.\//', '', $relative_path );
+
+        // Normalize path separators (handle both / and \)
+        $relative_path = str_replace( '\\', '/', $relative_path );
+
+        // Split path into components
+        $parts = array_filter( explode( '/', $relative_path ), function( $part ) {
+            return $part !== '' && $part !== '.';
+        } );
+
+        // Resolve path traversal sequences (..)
+        $resolved = [];
+        foreach ( $parts as $part ) {
+            if ( $part === '..' ) {
+                // Attempting to go up - remove last resolved component if exists
+                if ( !empty( $resolved ) ) {
+                    array_pop( $resolved );
+                } else {
+                    // Path traversal outside block directory - invalid
+                    return false;
+                }
+            } else {
+                $resolved[] = $part;
+            }
+        }
+
+        // Reconstruct the sanitized path
+        return implode( '/', $resolved );
+    }
+
+    /**
      * Get the full path for a file or folder relative to the root folder
      * @param string $relative_path
-     * @return string
+     * @return string|false Returns the full path or false if path is invalid
      */
     public function file_path( $relative_path = '' )
     {
-        $base_folder = rtrim( $this->root(), '/' );
-        $relative_path = ltrim( $relative_path, '/' );
+        $sanitized_path = $this->sanitize_path( $relative_path );
+        
+        if ( $sanitized_path === false ) {
+            return false;
+        }
 
-        return $base_folder . '/' . $relative_path;
+        $base_folder = rtrim( $this->root(), '/' );
+        $full_path = $base_folder . '/' . $sanitized_path;
+        
+        // Normalize paths for comparison
+        $normalized_full = str_replace( '\\', '/', $full_path );
+        $normalized_base = str_replace( '\\', '/', $base_folder );
+        
+        // Ensure the resolved path is within the block's root directory
+        // The sanitize_path method already prevents '../' from escaping,
+        // but we add an extra check here for defense in depth
+        if ( strpos( $normalized_full, $normalized_base . '/' ) !== 0 && $normalized_full !== $normalized_base ) {
+            return false;
+        }
+        
+        // Additional validation: use realpath if the file/directory exists
+        // This catches any edge cases that might slip through
+        if ( file_exists( $full_path ) || file_exists( dirname( $full_path ) ) ) {
+            $real_base = realpath( $base_folder );
+            $real_full = realpath( $full_path );
+            
+            if ( $real_base !== false && $real_full !== false ) {
+                // Ensure the real path is within the base directory
+                if ( strpos( $real_full, $real_base . DIRECTORY_SEPARATOR ) !== 0 && $real_full !== $real_base ) {
+                    return false;
+                }
+            }
+        }
+
+        return $full_path;
     }
 
     /**
@@ -40,7 +114,11 @@ class Block
      */
     public function file_exists( $relative_path = '' )
     {
-        return file_exists( $this->file_path( $relative_path ) );
+        $file_path = $this->file_path( $relative_path );
+        if ( $file_path === false ) {
+            return false;
+        }
+        return file_exists( $file_path );
     }
 
     /**
@@ -51,6 +129,10 @@ class Block
     public function make_folder( $relative_path = '' )
     {
         $folder_path = $this->file_path( $relative_path );
+        
+        if ( $folder_path === false ) {
+            return false;
+        }
 
         if ( !file_exists( $folder_path ) ) {
             if ( !wp_mkdir_p( $folder_path ) ) {
@@ -87,6 +169,10 @@ class Block
     public function read_file( $relative_path = '' )
     {
         $file_path = $this->file_path( $relative_path );
+        
+        if ( $file_path === false ) {
+            return false;
+        }
 
         if ( !file_exists( $file_path ) ) {
             return false;
@@ -255,8 +341,13 @@ class Block
                 continue;
             }
 
-            // Remove leading './' from the path
-            $clean_path = preg_replace( '/^\.\//', '', $file->get_path() );
+            // Sanitize the path (this will handle './' removal and path traversal prevention)
+            $clean_path = $this->sanitize_path( $file->get_path() );
+            
+            // Skip invalid paths (path traversal attempts)
+            if ( $clean_path === false ) {
+                continue;
+            }
 
             // Extract directory path from file path
             $last_slash_pos = strrpos( $clean_path, '/' );

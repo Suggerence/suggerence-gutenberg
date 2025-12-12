@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from '@wordpress/element';
-import { WEBSOCKET_CONFIG } from '../config/websocket';
+import { CHAT_WEBSOCKET_URL } from '../config/websocket';
 import { getWebsocketAuthToken } from '@/shared/auth/websocketToken';
 
 interface WebSocketContextValue {
@@ -107,9 +107,8 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
 
         const establishConnection = async () => {
             try {
-                const wsUrl = WEBSOCKET_CONFIG.getWebSocketUrl();
                 const token = await getWebsocketAuthToken();
-                const ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
+                const ws = new WebSocket(`${CHAT_WEBSOCKET_URL}?token=${encodeURIComponent(token)}`);
                 wsRef.current = ws;
 
                 ws.onopen = () => {

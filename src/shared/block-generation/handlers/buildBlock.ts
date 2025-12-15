@@ -10,24 +10,27 @@ import { useConversationsStore } from "@/apps/block-generator/stores/conversatio
 
 export const useBuildBlockHandler = () =>
 {
-    const { blockId } = useBlocksStore();
+    const { blockId, selectedBlockId } = useBlocksStore();
     const { getConversation, addMessage, updateMessage } = useConversationsStore();
     const queryClient = useQueryClient();
     const { mutate: updateBlock } = useMutation(updateBlockMutationOptions());
 
     return useCallback((data: { status: 'building' | 'built', success: boolean, build_output?: string, error?: string, files?: Record<string, string> }) =>
     {
-        if (!blockId) return;
+        if (!blockId && !selectedBlockId) return;
 
-        const block = queryClient.getQueryData<Partial<GeneratedBlock>>(['block', blockId]);
+        const blockIdToUse = blockId ?? selectedBlockId;
+        if (!blockIdToUse) return;
+
+        const block = queryClient.getQueryData<Partial<GeneratedBlock>>(['block', blockIdToUse]);
         if (!block) return;
 
-        const conversation = getConversation(blockId);
+        const conversation = getConversation(blockIdToUse);
         if (!conversation) return;
 
         if (data.status === 'building') {
             const messageId = nanoid();
-            addMessage(blockId, { id: messageId, createdAt: new Date().toISOString(), type: 'tool_call', content: {
+            addMessage(blockIdToUse, { id: messageId, createdAt: new Date().toISOString(), type: 'tool_call', content: {
                 name: 'build_block',
                 arguments: {},
                 status: 'pending'
@@ -39,9 +42,9 @@ export const useBuildBlockHandler = () =>
             };
 
             // Optimistically update the cache immediately
-            queryClient.setQueryData(['block', blockId], updatedBlock);
+            queryClient.setQueryData(['block', blockIdToUse], updatedBlock);
 
-            updateBlock({ blockId, block: updatedBlock });
+            updateBlock({ blockId: blockIdToUse, block: updatedBlock });
 
             return;
         }
@@ -52,7 +55,7 @@ export const useBuildBlockHandler = () =>
         );
         if (!buildBlockMessage) return;
 
-        updateMessage(blockId, buildBlockMessage.id, { content: {
+        updateMessage(blockIdToUse, buildBlockMessage.id, { content: {
             name: 'build_block',
             arguments: {},
             result: {
@@ -101,11 +104,11 @@ export const useBuildBlockHandler = () =>
             };
 
             // Optimistically update the cache immediately
-            queryClient.setQueryData(['block', blockId], updatedBlock);
+            queryClient.setQueryData(['block', blockIdToUse], updatedBlock);
 
             updateBlock({
-                blockId, block: updatedBlock
+                blockId: blockIdToUse, block: updatedBlock
             });
         }
-    }, [blockId, getConversation, addMessage, updateMessage, updateBlock, queryClient]);    
+    }, [blockId, selectedBlockId, getConversation, addMessage, updateMessage, updateBlock, queryClient]);    
 }

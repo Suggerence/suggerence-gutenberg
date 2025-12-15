@@ -94,7 +94,7 @@ declare global
         };
     }
 
-    type MessageType = 'message' | 'block_planning' | 'todo' | 'reasoning' | 'response' | 'tool_call' | 'error';
+    type MessageType = 'message' | 'block_planning' | 'todo' | 'reasoning' | 'response' | 'tool_call' | 'error' | 'suggestion';
 
     interface Message
     {
@@ -146,6 +146,16 @@ declare global
         type: 'error';
         content: {
             text: string;
+        };
+    }
+
+    interface SuggestionMessage extends Message
+    {
+        type: 'suggestion';
+        content: {
+            description: string;
+            type: 'error';
+            data: any;
         };
     }
 

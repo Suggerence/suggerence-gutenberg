@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid';
 import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { useQuery } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import apiFetch from '@wordpress/api-fetch';
 
 import { getBlockQueryOptions } from '@/shared/block-generation/query-options';
 import { useBlocksStore } from '@/apps/block-generator/stores/blocks';
+import { useConversationsStore } from '@/apps/block-generator/stores/conversations';
 import { Spinner } from '@/components/ui/spinner';
 import { getBlockFile } from '@/lib/block';
 
@@ -23,6 +25,7 @@ interface BlockEditorPreviewFrontendProps {
 export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFrontendProps) => {
     const { selectedBlockId } = useBlocksStore();
     const { data: block } = useQuery(getBlockQueryOptions(selectedBlockId ?? ''));
+    const { addMessage } = useConversationsStore();
 
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [previewState, setPreviewState] = useState<PreviewState>({
@@ -169,6 +172,33 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
         renderPreview();
     }, [renderPreview]);
 
+    // Listen for error messages from iframe
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            // Verify message origin for security (adjust if needed)
+            // For same-origin iframes, you can check event.origin
+            if (event.data && event.data.type === 'IFRAME_ERROR') {
+                const errorData = {
+                    type: event.data.errorType || 'error',
+                    message: event.data.message || 'Unknown error',
+                    stack: event.data.stack,
+                    timestamp: Date.now()
+                };
+                
+                addMessage(selectedBlockId ?? '', { id: nanoid(), createdAt: new Date().toISOString(), type: 'suggestion', content: {
+                    description: `An error occurred while testing out the block.`,
+                    type: 'error',
+                    data: errorData
+                } });
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
     useEffect(() => {
         if (!iframeRef.current || !previewState.html) return;
 
@@ -188,6 +218,73 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             <script>
                 window.wp = window.parent.wp;
                 window.ReactJSXRuntime = window.parent.ReactJSXRuntime;
+            </script>
+        `;
+
+        // Error handling script to capture all errors in iframe
+        const errorHandlerScript = `
+            <script>
+                (function() {
+                    // Function to send error to parent window
+                    function sendErrorToParent(errorType, message, stack) {
+                        try {
+                            window.parent.postMessage({
+                                type: 'IFRAME_ERROR',
+                                errorType: errorType,
+                                message: message,
+                                stack: stack
+                            }, '*'); // Use '*' for same-origin, or specify exact origin for security
+                        } catch (e) {
+                            // Fallback if postMessage fails
+                            console.error('Failed to send error to parent:', e);
+                        }
+                    }
+
+                    // Override console methods to capture logs
+                    const originalConsole = {
+                        error: console.error,
+                        warn: console.warn,
+                        log: console.log,
+                        info: console.info
+                    };
+
+                    console.error = function(...args) {
+                        originalConsole.error.apply(console, args);
+                        const message = args.map(arg => 
+                            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+                        ).join(' ');
+                        sendErrorToParent('console.error', message, new Error().stack);
+                    };
+
+                    console.warn = function(...args) {
+                        originalConsole.warn.apply(console, args);
+                        const message = args.map(arg => 
+                            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+                        ).join(' ');
+                        sendErrorToParent('console.warn', message, new Error().stack);
+                    };
+
+                    // Capture unhandled errors
+                    window.addEventListener('error', function(event) {
+                        sendErrorToParent(
+                            'unhandled-error',
+                            event.message || 'Unhandled error',
+                            event.error ? event.error.stack : event.filename + ':' + event.lineno + ':' + event.colno
+                        );
+                    }, true);
+
+                    // Capture unhandled promise rejections
+                    window.addEventListener('unhandledrejection', function(event) {
+                        const reason = event.reason;
+                        const message = reason instanceof Error 
+                            ? reason.message 
+                            : String(reason);
+                        const stack = reason instanceof Error 
+                            ? reason.stack 
+                            : 'No stack trace available';
+                        sendErrorToParent('unhandled-promise-rejection', message, stack);
+                    }, true);
+                })();
             </script>
         `;
 
@@ -224,6 +321,7 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
             </head>
             <body>
                 ${previewState.html}
+                ${errorHandlerScript}
                 ${wpScript}
                 ${viewJsScript}
             </body>

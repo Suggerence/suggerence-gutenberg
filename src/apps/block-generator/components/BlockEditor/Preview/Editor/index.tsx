@@ -54,31 +54,54 @@ export const BlockEditorPreviewEditor = ({ blocks, isReady, onInput, onChange }:
 
         const fullStack = [stack, componentStack].filter(Boolean).join('\n');
         
-        // Primary check: Stack trace contains evidence of block eval context
-        // This is the most reliable indicator - errors from eval'd block code
-        const hasEvalContext = fullStack.includes('eval') && 
-                              (fullStack.includes('executeBlockRegistrationCode') || 
-                               fullStack.match(/VM\d+/) || // VM8420, VM1234, etc.
-                               (fullStack.includes('at <anonymous>') && fullStack.includes('eval')));
+        // Check for development context: VMXXXX patterns (dynamically evaluated code)
+        const hasVMContext = Boolean(fullStack.match(/VM\d+/));
         
-        // Secondary check: React component error during block rendering
-        // Only if it's happening in a block edit component AND has eval context
-        const isReactBlockError = componentStack && 
-                                (componentStack.includes('BlockEdit') || 
-                                 componentStack.includes('edit') ||
-                                 componentStack.includes('BlockList')) &&
-                                (stack?.includes('eval') || stack?.match(/VM\d+/));
+        // Check for production context: block-generator.js (bundled code)
+        const hasBlockGeneratorFile = fullStack.includes('block-generator.js');
+        
+        // Check for executeBlockRegistrationCode (indicates block eval context)
+        // Note: In production builds, function names may be minified, so this might not always match
+        const hasExecuteBlockRegistration = fullStack.includes('executeBlockRegistrationCode');
         
         // Check if error is related to current block component (suggerence/block-name)
         const hasBlockName = currentBlockNameRef.current && 
                             fullStack.includes(currentBlockNameRef.current);
         
+        // Development mode: Check for VMXXXX patterns with eval context
+        const hasDevelopmentEvalContext = hasVMContext && 
+                                         (fullStack.includes('eval') || 
+                                          hasExecuteBlockRegistration ||
+                                          (fullStack.includes('at <anonymous>') && fullStack.includes('eval')));
+        
+        // Production mode: Check for block-generator.js with block-related context
+        // In production, errors from eval'd block code will reference block-generator.js
+        const hasProductionEvalContext = hasBlockGeneratorFile && 
+                                        (hasExecuteBlockRegistration || 
+                                         hasBlockName ||
+                                         fullStack.includes('eval'));
+        
+        // Primary check: Stack trace contains evidence of block eval context
+        // Works for both development (VMXXXX) and production (block-generator.js)
+        const hasEvalContext = hasDevelopmentEvalContext || hasProductionEvalContext;
+        
+        // Secondary check: React component error during block rendering
+        // In production, if it's a React block error from block-generator.js, it's likely from eval'd block code
+        const isReactBlockError = componentStack && 
+                                (componentStack.includes('BlockEdit') || 
+                                 componentStack.includes('edit') ||
+                                 componentStack.includes('BlockList')) &&
+                                (hasVMContext || 
+                                 hasProductionEvalContext ||
+                                 (hasBlockGeneratorFile && (stack?.includes('eval') || hasBlockName)));
+        
         // Only report if:
-        // 1. It has eval context (most reliable)
-        // 2. OR it's a React block error with eval context
+        // 1. It has eval context (most reliable - development or production)
+        // 2. OR it's a React block error with eval context (development or production)
         // 3. OR it has block name AND eval context (double confirmation)
-        // Ensure all checks result in a boolean value
-        return Boolean(hasEvalContext) || Boolean(isReactBlockError) || (Boolean(hasBlockName) && Boolean(hasEvalContext));
+        return Boolean(hasEvalContext) || 
+               Boolean(isReactBlockError) || 
+               (Boolean(hasBlockName) && Boolean(hasEvalContext));
     }, []);
 
     const reportError = useCallback((errorType: string, message: string, stack?: string, componentStack?: string) => {

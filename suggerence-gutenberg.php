@@ -22,7 +22,7 @@ if (!defined('WPINC')) {
 
 // PLUGIN CONSTANTS
 define('SUGGERENCEGUTENBERG_NAME', 'suggerence-gutenberg');
-define('SUGGERENCEGUTENBERG_VERSION', '0.3.2');
+define('SUGGERENCEGUTENBERG_VERSION', '0.3.3');
 define('SUGGERENCEGUTENBERG_PATH', plugin_dir_path(__FILE__));
 define('SUGGERENCEGUTENBERG_BASENAME', plugin_basename(__FILE__));
 define('SUGGERENCEGUTENBERG_URL', plugin_dir_url(__FILE__));

@@ -5,7 +5,7 @@
  * Plugin Name:       Suggerence - Gutenberg
  * Plugin URI:        https://sirvelia.com/
  * Description:       An AI Assistant for the Gutenberg editor.
- * Version:           0.3.2
+ * Version:           0.3.3
  * Author:            Sirvelia
  * Author URI:        https://sirvelia.com/
  * License:           GPL-3.0+

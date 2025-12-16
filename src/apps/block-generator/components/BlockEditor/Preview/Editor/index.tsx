@@ -23,7 +23,7 @@ interface BlockEditorPreviewEditorProps {
 
 export const BlockEditorPreviewEditor = ({ blocks, isReady, onInput, onChange }: BlockEditorPreviewEditorProps) =>
 {
-    const { selectedBlockId } = useBlocksStore();
+    const { blockId, selectedBlockId } = useBlocksStore();
     const { addMessage } = useConversationsStore();
     const errorHandlersSetupRef = useRef(false);
     const currentBlockNameRef = useRef<string>('');
@@ -129,6 +129,9 @@ export const BlockEditorPreviewEditor = ({ blocks, isReady, onInput, onChange }:
             timestamp: Date.now(),
             context: 'editor-preview'
         };
+
+        // Avoid reporting errors for blocks still being generated
+        if (blockId === selectedBlockId) return;
 
         addMessage(selectedBlockId ?? '', {
             id: nanoid(),

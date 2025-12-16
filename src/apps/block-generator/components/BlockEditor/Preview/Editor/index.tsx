@@ -158,33 +158,25 @@ export const BlockEditorPreviewEditor = ({ blocks, isReady, onInput, onChange }:
         };
 
         // Intercept console.error
-        console.error = function(...args: unknown[]) {
+        console.error = function(...args: Record<string, unknown>[]) {
             originalConsole.error.apply(console, args);
             
-            const message = args.map(arg => 
-                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-            ).join(' ');
+            const { message, stack } = args[0] as { message: string; stack: string };
+
+            if (!message || !stack) return;
             
-            // Only report if it's a meaningful error (not just warnings) and from block context
-            if (message && !message.includes('[Deprecation]')) {
-                const stack = new Error().stack;
-                reportError('console.error', message, stack);
-            }
+            reportError('console.error', message, stack);
         };
 
         // Intercept console.warn for potential errors
-        console.warn = function(...args: unknown[]) {
+        console.warn = function(...args: Record<string, unknown>[]) {
             originalConsole.warn.apply(console, args);
             
-            const message = args.map(arg => 
-                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-            ).join(' ');
+            const { message, stack } = args[0] as { message: string; stack: string };
+
+            if (!message || !stack) return;
             
-            // Report warnings that look like errors (e.g., ReferenceError, TypeError) and from block context
-            if (message && (message.includes('Error') || message.includes('not defined') || message.includes('undefined'))) {
-                const stack = new Error().stack;
-                reportError('console.warn', message, stack);
-            }
+            reportError('console.warn', message, stack);
         };
 
         // Handle unhandled errors

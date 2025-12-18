@@ -121,5 +121,27 @@ class RegisterScripts
         );
 
         // wp_add_inline_script($this->plugin_name . '-block-generator', $suggerence_data);
+
+        /**
+         * Theme editor
+         */
+        $asset_file = include(SUGGERENCEGUTENBERG_PATH . 'build/theme-editor.asset.php');
+
+        wp_register_script(
+            $this->plugin_name . '-theme-editor',
+            SUGGERENCEGUTENBERG_URL . 'build/theme-editor.js',
+            $asset_file['dependencies'],
+            $asset_file['version'],
+            ['in_footer' => true]
+        );
+
+        wp_register_style(
+            $this->plugin_name . '-theme-editor',
+            SUGGERENCEGUTENBERG_URL . 'build/style-theme-editor.css',
+            [$this->plugin_name . '-components'],
+            $asset_file['version']
+        );
+
+        // wp_add_inline_script($this->plugin_name . '-theme-editor', $suggerence_data);
     }
 }

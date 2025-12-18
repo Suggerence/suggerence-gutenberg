@@ -1,0 +1,153 @@
+// Floating Chat Window Styles
+.theme-editor-chat-window {
+    // Glassmorphism effect
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    
+    // Smooth animations
+    animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    
+    // Shadow with glow
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+        0 0 40px rgba(156, 163, 175, 0.1);
+    
+    // Dark mode adjustments
+    .dark & {
+        box-shadow: 
+            0 20px 25px -5px rgba(0, 0, 0, 0.3),
+            0 10px 10px -5px rgba(0, 0, 0, 0.2),
+            0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+            0 0 40px rgba(99, 102, 241, 0.15);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+// Resize handle styles
+.theme-editor-chat-window .resize-handle {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    
+    &:hover {
+        opacity: 1;
+    }
+}
+
+.theme-editor-chat-window:hover .resize-handle {
+    opacity: 0.3;
+}
+
+.theme-editor-chat-window:hover .resize-handle:hover {
+    opacity: 1;
+}
+
+// Custom scrollbar for chat window
+.theme-editor-chat-window .sugg-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(156, 163, 175, 0.3);
+        border-radius: 3px;
+        
+        &:hover {
+            background: rgba(156, 163, 175, 0.5);
+        }
+    }
+}
+
+// Message bubbles animation
+.theme-editor-chat-window [class*="bg-muted"],
+.theme-editor-chat-window [class*="bg-primary"] {
+    animation: fadeInMessage 0.3s ease-out;
+}
+
+@keyframes fadeInMessage {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// Typing indicator animation
+.theme-editor-chat-window .delay-75 {
+    animation-delay: 0.15s;
+}
+
+.theme-editor-chat-window .delay-150 {
+    animation-delay: 0.3s;
+}
+
+// Pulse animation for status indicator
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.theme-editor-chat-window .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// Header drag indicator
+.theme-editor-chat-window [class*="cursor-move"] {
+    cursor: move !important;
+    
+    &:active {
+        cursor: grabbing !important;
+    }
+}
+
+// Minimized state
+.theme-editor-chat-window:has([class*="minimized"]) {
+    height: auto !important;
+    min-height: auto !important;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+    .theme-editor-chat-window {
+        width: calc(100vw - 2rem) !important;
+        height: calc(100vh - 8rem) !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        top: 4rem !important;
+        max-width: none !important;
+        max-height: none !important;
+    }
+}
+
+// Prevent text selection during drag/resize
+body:has(.theme-editor-chat-window:has(.resize-handle:hover)),
+body:has(.theme-editor-chat-window[style*="cursor: move"]) {
+    user-select: none;
+    -webkit-user-select: none;
+}

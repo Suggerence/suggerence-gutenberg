@@ -356,12 +356,19 @@ export const BlockEditorPreviewFrontend = ({ blocks }: BlockEditorPreviewFronten
     }
 
     return (
-        <div className='size-full bg-white overflow-auto!'>
+        <div className='size-full overflow-auto! relative'>
             <iframe
                 ref={iframeRef}
-                className='size-full border-0'
+                className='size-full border-0 absolute top-0 left-0 z-20'
                 title={__('Frontend Preview', 'suggerence-blocks')}
             />
+
+            <div className='absolute bg-white z-10 top-0 left-0 size-full flex flex-col items-center justify-center text-block-generation-secondary!'>
+                <div className='flex items-center gap-4'>
+                    <Spinner className='size-8' />
+                    <span className='text-2xl'>{__('Loading preview...', 'suggerence-blocks')}</span>
+                </div>
+            </div>
         </div>
     );
 };

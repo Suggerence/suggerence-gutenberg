@@ -142,6 +142,6 @@ class RegisterScripts
             $asset_file['version']
         );
 
-        // wp_add_inline_script($this->plugin_name . '-theme-editor', $suggerence_data);
+        wp_add_inline_script($this->plugin_name . '-theme-editor', $suggerence_data);
     }
 }

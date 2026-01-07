@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { MessageCircle, GripVertical, X } from 'lucide-react';
+import { MessageCircle, GripVertical, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SuggerenceSurface } from '@/shared/components/SuggerenceSurface';
 import { ThemeProvider } from 'next-themes';
+import { useWebsocketStore } from '../stores/websocket';
+import { useConversationsStore } from '../stores/conversations';
+import { Conversation } from './Chat/Conversation';
+import { InputArea } from './Chat/InputArea';
+import { WebsocketHandler } from './Chat/WebsocketHandler';
 
 interface FloatingChatWindowProps {
     isOpen: boolean;
@@ -14,13 +19,31 @@ interface FloatingChatWindowProps {
 export const FloatingChatWindow = ({ isOpen, onClose }: FloatingChatWindowProps) => {
     const [isDragging, setIsDragging] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [size, setSize] = useState({ width: 420, height: 600 });
+    const [size, setSize] = useState({ width: 500, height: 800 });
     const [isResizing, setIsResizing] = useState(false);
     const [resizeHandle, setResizeHandle] = useState<string | null>(null);
     
     const windowRef = useRef<HTMLDivElement>(null);
     const dragStartPos = useRef({ x: 0, y: 0 });
     const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
+    
+    const { connect, disconnect } = useWebsocketStore();
+    const { clearConversation, currentConversationId } = useConversationsStore();
+
+    // Connect WebSocket when window opens
+    useEffect(() => {
+        if (isOpen) {
+            connect();
+        } else {
+            disconnect();
+        }
+    }, [isOpen, connect, disconnect]);
+
+    const handleClearConversation = () => {
+        if (currentConversationId) {
+            clearConversation(currentConversationId);
+        }
+    };
 
     // Initialize position on mount
     useEffect(() => {
@@ -206,7 +229,7 @@ export const FloatingChatWindow = ({ isOpen, onClose }: FloatingChatWindowProps)
             <div
                 ref={windowRef}
                 className={cn(
-                    "fixed z-[999998] pointer-events-auto",
+                    "fixed z-999998 pointer-events-auto",
                     "bg-card/95 backdrop-blur-xl",
                     "border border-border/50",
                     "rounded-xl shadow-2xl",
@@ -266,7 +289,7 @@ export const FloatingChatWindow = ({ isOpen, onClose }: FloatingChatWindowProps)
                     className={cn(
                         "flex items-center justify-between px-4 py-3",
                         "border-b border-border/50",
-                        "bg-gradient-to-r from-card/90 via-card/80 to-card/90 backdrop-blur-sm",
+                        "bg-linear-to-r from-card/90 via-card/80 to-card/90 backdrop-blur-sm",
                         "rounded-t-xl",
                         "select-none",
                         isDragging && "cursor-move"
@@ -284,6 +307,18 @@ export const FloatingChatWindow = ({ isOpen, onClose }: FloatingChatWindowProps)
                         </h3>
                     </div>
                     <div className="flex items-center gap-1">
+                        {currentConversationId && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={handleClearConversation}
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                aria-label={__("Clear conversation", "suggerence")}
+                                title={__("Clear conversation", "suggerence")}
+                            >
+                                <Trash2 className="size-3.5" />
+                            </Button>
+                        )}
                         <Button
                             variant="ghost"
                             size="icon-sm"
@@ -298,132 +333,12 @@ export const FloatingChatWindow = ({ isOpen, onClose }: FloatingChatWindowProps)
 
                 {/* Content */}
                 <SuggerenceSurface className="flex flex-col h-[calc(100%-3.5rem)] overflow-hidden">
-                        <div className="flex-1 overflow-y-auto p-4 sugg-scrollbar">
-                            {/* Chat messages area - placeholder for now */}
-                            <div className="flex flex-col gap-4">
-                                <div className="flex items-start gap-3">
-                                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <MessageCircle className="size-4 text-primary" />
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="text-xs text-muted-foreground font-medium">
-                                            {__("AI Assistant", "suggerence")}
-                                        </div>
-                                        <div className="text-sm text-foreground bg-muted/50 rounded-lg p-3">
-                                            {__("Hello! I'm your AI Site Editor Assistant. I can help you design and customize your WordPress site. What would you like to work on today?", "suggerence")}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Example user message */}
-                                <div className="flex items-start gap-3 justify-end">
-                                    <div className="flex-1 space-y-1 text-right">
-                                        <div className="text-xs text-muted-foreground font-medium">
-                                            {__("You", "suggerence")}
-                                        </div>
-                                        <div className="text-sm text-primary-foreground bg-primary rounded-lg p-3 inline-block">
-                                            {__("Can you help me change the header color?", "suggerence")}
-                                        </div>
-                                    </div>
-                                    <div className="size-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                                        <span className="text-xs text-primary-foreground font-semibold">U</span>
-                                    </div>
-                                </div>
-
-                                {/* Example AI response */}
-                                <div className="flex items-start gap-3">
-                                    <div className="size-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20">
-                                        <MessageCircle className="size-4 text-primary" />
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="text-xs text-muted-foreground font-medium">
-                                            {__("AI Assistant", "suggerence")}
-                                        </div>
-                                        <div className="text-sm text-foreground bg-gradient-to-br from-muted/60 to-muted/40 rounded-lg p-3 border border-border/30 shadow-sm">
-                                            {__("Of course! I can help you change the header color. Would you like to:", "suggerence")}
-                                            <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-                                                <li>{__("Use a specific color code?", "suggerence")}</li>
-                                                <li>{__("Pick from a color palette?", "suggerence")}</li>
-                                                <li>{__("Match an existing color from your site?", "suggerence")}</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Typing indicator example */}
-                                <div className="flex items-start gap-3 opacity-60">
-                                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <MessageCircle className="size-4 text-primary" />
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="text-xs text-muted-foreground font-medium">
-                                            {__("AI Assistant", "suggerence")}
-                                        </div>
-                                        <div className="text-sm text-foreground bg-muted/50 rounded-lg p-3 inline-flex items-center gap-1">
-                                            <span className="size-1.5 bg-foreground rounded-full animate-pulse" />
-                                            <span className="size-1.5 bg-foreground rounded-full animate-pulse delay-75" />
-                                            <span className="size-1.5 bg-foreground rounded-full animate-pulse delay-150" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Quick actions */}
-                        <div className="px-4 pb-2 border-b border-border/30">
-                            <div className="flex flex-wrap gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-7"
-                                >
-                                    {__("Change colors", "suggerence")}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-7"
-                                >
-                                    {__("Add block", "suggerence")}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-7"
-                                >
-                                    {__("Fix layout", "suggerence")}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Input area */}
-                        <div className="border-t border-border/50 p-4 bg-card/50">
-                            <div className="flex items-end gap-2">
-                                <textarea
-                                    placeholder={__("Ask me anything about your site...", "suggerence")}
-                                    className={cn(
-                                        "flex-1 min-h-[60px] max-h-[120px]",
-                                        "px-3 py-2 rounded-lg",
-                                        "bg-background border border-border",
-                                        "text-sm text-foreground placeholder:text-muted-foreground",
-                                        "resize-none focus:outline-none focus:ring-2 focus:ring-primary/50",
-                                        "sugg-scrollbar"
-                                    )}
-                                    rows={2}
-                                />
-                                <Button
-                                    size="icon"
-                                    className="h-[60px] w-[60px] rounded-lg bg-gradient-to-br from-primary via-primary/90 to-primary/80 hover:from-primary/90 hover:via-primary/80 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-                                    aria-label={__("Send message", "suggerence")}
-                                >
-                                    <MessageCircle className="size-5" />
-                                </Button>
-                            </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{__("Press Enter to send, Shift+Enter for new line", "suggerence")}</span>
-                            </div>
-                        </div>
-                    </SuggerenceSurface>
+                    <WebsocketHandler />
+                    <div className="flex-1 overflow-y-auto p-4 sugg-scrollbar">
+                        <Conversation />
+                    </div>
+                    <InputArea />
+                </SuggerenceSurface>
                 </div>
             </ThemeProvider>
         );

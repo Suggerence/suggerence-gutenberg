@@ -19,6 +19,7 @@ import {
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { CodeBlock } from "./code-block";
+import { truncateJsonToMaxLines, truncateToMaxLines } from "@/shared/utils/truncate-text";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
@@ -108,7 +109,7 @@ export type ToolInputProps = ComponentProps<"div"> & {
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
   console.log('ToolInput rendering with input:', input);
-  const jsonString = JSON.stringify(input, null, 2);
+  const jsonString = truncateJsonToMaxLines(input, 10);
   console.log('ToolInput JSON string:', jsonString);
 
   return (
@@ -116,7 +117,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         Parameters
       </h4>
-      <div className="rounded-md bg-muted/50">
+      <div className="rounded-md bg-muted/50 overflow-x-auto">
         <CodeBlock code={jsonString} language="json" />
       </div>
     </div>
@@ -144,14 +145,15 @@ export const ToolOutput = ({
   let Output = <div>{output as ReactNode}</div>;
 
   if (typeof output === "object" && !isValidElement(output)) {
-    const jsonString = JSON.stringify(output, null, 2);
+    const jsonString = truncateJsonToMaxLines(output, 10);
     console.log('ToolOutput: Rendering object as JSON:', jsonString);
     Output = (
       <CodeBlock code={jsonString} language="json" />
     );
   } else if (typeof output === "string") {
-    console.log('ToolOutput: Rendering string output:', output);
-    Output = <CodeBlock code={output} language="json" />;
+    const truncatedOutput = truncateToMaxLines(output, 10);
+    console.log('ToolOutput: Rendering string output:', truncatedOutput);
+    Output = <CodeBlock code={truncatedOutput} language="json" />;
   }
 
   return (
@@ -161,7 +163,7 @@ export const ToolOutput = ({
       </h4>
       <div
         className={cn(
-          "overflow-x-auto rounded-md text-xs [&_table]:w-full",
+          "overflow-x-auto rounded-md text-xs [&_table]:w-full break-words",
           errorText
             ? "bg-destructive/10 text-destructive"
             : "bg-muted/50 text-foreground"

@@ -145,6 +145,57 @@
     }
 }
 
+// Tools Panel Styles
+.theme-editor-tools-panel {
+    // Ensure panel is above other content but below modals
+    z-index: 999997;
+    
+    // Smooth transitions
+    transition: all 0.3s ease;
+    
+    // Glassmorphism effect
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+// Tool card hover effects
+.theme-editor-tool-card {
+    transition: all 0.2s ease;
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+}
+
+// Form input styles
+.theme-editor-tool-form {
+    .form-field {
+        margin-bottom: 1rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .form-error {
+        color: var(--destructive);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+}
+
+// Output display
+.theme-editor-tool-output {
+    pre {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.75rem;
+        line-height: 1.5;
+    }
+}
+
 // Prevent text selection during drag/resize
 body:has(.theme-editor-chat-window:has(.resize-handle:hover)),
 body:has(.theme-editor-chat-window[style*="cursor: move"]) {

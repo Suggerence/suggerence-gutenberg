@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useState, useCallback } from '@wordpress/element';
 import { getToolDisplayName } from '@/shared/utils/tool-names';
+import { truncateJsonToMaxLines } from '@/shared/utils/truncate-text';
 import {
     Confirmation,
     ConfirmationTitle,
@@ -77,8 +78,8 @@ export const ToolConfirmationMessage = ({
                                 </button>
 
                                 {isArgsExpanded && (
-                                    <pre className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-md p-2 text-[11px] font-mono text-yellow-900 dark:text-yellow-100 max-h-32 overflow-y-auto whitespace-pre-wrap break-words">
-                                        {JSON.stringify(message.toolArgs, null, 2)}
+                                    <pre className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-md p-2 text-[11px] font-mono text-yellow-900 dark:text-yellow-100 max-h-32 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words">
+                                        {truncateJsonToMaxLines(message.toolArgs, 10)}
                                     </pre>
                                 )}
                             </div>

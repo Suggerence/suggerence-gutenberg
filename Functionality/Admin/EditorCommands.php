@@ -25,7 +25,6 @@ class EditorCommands
     public function enqueue_editor_commands()
     {
         // Enqueue the theme editor script
-        error_log("ENQUEUEING THEME EDITOR");
         wp_enqueue_script($this->plugin_name . '-theme-editor');
         wp_enqueue_style($this->plugin_name . '-theme-editor');
 

@@ -15,7 +15,7 @@ export const FloatingChatButton = ({ isOpen, onClick }: FloatingChatButtonProps)
             onClick={onClick}
             className={cn(
                 "size-14 rounded-full shadow-lg",
-                "bg-gradient-to-br from-primary via-primary/90 to-primary/80",
+                "bg-linear-to-br from-primary via-primary/90 to-primary/80",
                 "hover:from-primary/90 hover:via-primary/80 hover:to-primary/70",
                 "border-2 border-primary/20",
                 "transition-all duration-300 ease-out",

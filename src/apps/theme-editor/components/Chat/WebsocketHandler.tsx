@@ -109,6 +109,7 @@ export const WebsocketHandler = () => {
 
                                     // Send result back to server
                                     sendMessage(`Tool ${toolName} executed successfully with result: ${JSON.stringify(executionResult.result)}`, false);
+                                    // console.log(`Tool ${toolName} executed successfully with result: ${JSON.stringify(executionResult.result)}`)
                                 } else {
                                     // Update tool_call message with error status
                                     updateMessage(conversationId, toolMessageId, {

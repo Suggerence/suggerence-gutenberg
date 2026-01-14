@@ -1,4 +1,6 @@
+import apiFetch from '@wordpress/api-fetch';
 import { getStyle, mergeGlobalStyles } from '@/lib/global-styles-engine';
+import { THEME_EDITOR_API_NAMESPACE } from '../../constants/api';
 import { getThemeDefaultStyles, getUserConfiguredStyles } from './listStyles';
 
 export default async (data: { path: string, block?: string, var_value?: boolean }) => {
@@ -12,20 +14,27 @@ export default async (data: { path: string, block?: string, var_value?: boolean 
 
     const themeDefaultStyles = getThemeDefaultStyles();
     const userConfiguredStyles = getUserConfiguredStyles();
-    // TODO: Add child theme check
+    const childThemeStyles = await apiFetch({
+        path: `${THEME_EDITOR_API_NAMESPACE}/styles`,
+        method: 'GET',
+    }) || { styles: {}, settings: {} };
 
     const userValue = getStyle(userConfiguredStyles || {}, finalPath, block, false);
     const themeValue = getStyle(themeDefaultStyles || {}, finalPath, block, false);
+    const childThemeValue = getStyle(childThemeStyles || {}, finalPath, block, false);
 
-    let origin: 'theme' | 'user' | undefined;
+    let origin: 'ai' | 'theme' | 'user' | undefined;
     if (userValue !== undefined) {
         origin = 'user';
     } else if (themeValue !== undefined) {
         origin = 'theme';
+    } else if (childThemeValue !== undefined) {
+        origin = 'ai';
     }
 
     const mergedGlobalStyles = mergeGlobalStyles(themeDefaultStyles || {}, userConfiguredStyles || {});
-    const value = getStyle(mergedGlobalStyles, finalPath, block, shouldResolve);
+    const finalGlobalStyles = mergeGlobalStyles(mergedGlobalStyles, childThemeStyles || {});
+    const value = getStyle(finalGlobalStyles, finalPath, block, shouldResolve);
 
     return {
         value,

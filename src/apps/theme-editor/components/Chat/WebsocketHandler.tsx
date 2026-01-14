@@ -1,15 +1,46 @@
-import { useEffect } from '@wordpress/element';
+import { useEffect, useCallback } from '@wordpress/element';
 import { nanoid } from 'nanoid';
 import { useWebsocketStore } from '../../stores/websocket';
 import { useConversationsStore } from '../../stores/conversations';
-import { executeTool } from '../../tools/utils';
 import type { TextMessage, ToolCallMessage } from '../../types/message';
 import { useSendMessage } from '../../hooks/useSendMessage';
+import { useToolCallQueue, type QueuedToolCall } from '../../hooks/useToolCallQueue';
 
 export const WebsocketHandler = () => {
     const { sendMessage } = useSendMessage();
     const { addMessageHandler } = useWebsocketStore();
     const { addMessage, updateMessage, getCurrentConversation, currentConversationId } = useConversationsStore();
+
+    // Callback to format and send consolidated tool results
+    const handleResultsReady = useCallback((results: Array<{ toolName: string; success: boolean; result?: unknown; error?: string }>) => {
+        const toolNames = results.map(r => r.toolName).join(', ');
+        const successResults = results.filter(r => r.success);
+        const errorResults = results.filter(r => !r.success);
+
+        let resultMessage = `Tools ${toolNames} executed. `;
+        
+        if (successResults.length > 0) {
+            const successDetails = successResults.map(r => 
+                `${r.toolName}: ${JSON.stringify(r.result)}`
+            ).join('; ');
+            resultMessage += `Received response(s): ${successDetails}`;
+        }
+        
+        if (errorResults.length > 0) {
+            const errorDetails = errorResults.map(r => 
+                `${r.toolName}: ${r.error}`
+            ).join('; ');
+            resultMessage += (successResults.length > 0 ? '; ' : '') + `Errors: ${errorDetails}`;
+        }
+
+        sendMessage(resultMessage, false);
+    }, [sendMessage]);
+
+    const { addToQueue, processQueue } = useToolCallQueue({
+        conversationId: currentConversationId,
+        updateMessage,
+        onResultsReady: handleResultsReady
+    });
 
     useEffect(() => {
         if (!currentConversationId) return;
@@ -17,7 +48,7 @@ export const WebsocketHandler = () => {
         const handleMessage = (event: MessageEvent) => {
             try {
                 const parsed = JSON.parse(event.data);
-                const message: { type: string; data?: { chunk?: string; message?: string; tool_name?: string; input?: Record<string, unknown> }; chunk?: string } = parsed;
+                const message: { type: string; data?: { chunk?: string; message?: string; tool_name?: string; input?: Record<string, unknown>; tool_call_id?: string }; chunk?: string } = parsed;
 
                 const conversation = getCurrentConversation();
                 if (!conversation) return;
@@ -66,8 +97,8 @@ export const WebsocketHandler = () => {
                     case 'tool_call': {
                         const toolName = message.data?.tool_name || '';
                         const toolInput = message.data?.input || {};
-                        const toolCallId = (message.data as any)?.tool_call_id || nanoid(); // Use provided ID or generate one
-                        const conversationId = currentConversationId; // Capture for async operations
+                        const toolCallId = message.data?.tool_call_id || nanoid();
+                        const conversationId = currentConversationId;
 
                         if (!toolName || !toolInput) {
                             console.error('[Theme Editor] Tool call message missing required fields');
@@ -93,57 +124,20 @@ export const WebsocketHandler = () => {
                         const toolMessageId = toolCallMessage.id;
                         addMessage(conversationId, toolCallMessage);
 
-                        // Execute tool using unified execution utility
-                        executeTool(toolName, toolInput as Record<string, unknown>)
-                            .then((executionResult) => {
-                                if (executionResult.success) {
-                                    // Update tool_call message with success status and result
-                                    updateMessage(conversationId, toolMessageId, {
-                                        content: {
-                                            name: toolName,
-                                            arguments: toolInput as Record<string, unknown>,
-                                            status: 'success' as const,
-                                            result: executionResult.result
-                                        }
-                                    });
+                        // Queue the tool call instead of executing immediately
+                        addToQueue({
+                            toolName,
+                            toolInput: toolInput as Record<string, unknown>,
+                            toolCallId,
+                            toolMessageId,
+                            conversationId
+                        });
+                        break;
+                    }
 
-                                    // Send result back to server
-                                    sendMessage(`Tool ${toolName} executed successfully with result: ${JSON.stringify(executionResult.result)}`, false);
-                                    // console.log(`Tool ${toolName} executed successfully with result: ${JSON.stringify(executionResult.result)}`)
-                                } else {
-                                    // Update tool_call message with error status
-                                    updateMessage(conversationId, toolMessageId, {
-                                        content: {
-                                            name: toolName,
-                                            arguments: toolInput as Record<string, unknown>,
-                                            status: 'error' as const,
-                                            error: executionResult.error
-                                        }
-                                    });
-
-                                    // Send error back to server
-                                    sendMessage(`Tool ${toolName} executed with error: ${executionResult.error}`, false);
-                                }
-                            })
-                            .catch((error) => {
-                                console.error('[Theme Editor] Error executing tool:', error);
-                                if (conversationId) {
-                                    const errorMessage = error?.message || 'Unknown error';
-                                    
-                                    // Update tool_call message with error status
-                                    updateMessage(conversationId, toolMessageId, {
-                                        content: {
-                                            name: toolName,
-                                            arguments: toolInput as Record<string, unknown>,
-                                            status: 'error' as const,
-                                            error: errorMessage
-                                        }
-                                    });
-
-                                    // Send error back to server
-                                    sendMessage(`Tool ${toolName} executed with error: ${errorMessage}`, false);
-                                }
-                            });
+                    case 'finish': {
+                        // Process all queued tool calls when stream finishes
+                        processQueue();
                         break;
                     }
 
@@ -157,7 +151,7 @@ export const WebsocketHandler = () => {
 
         const cleanup = addMessageHandler(handleMessage);
         return cleanup;
-    }, [currentConversationId, addMessageHandler, addMessage, updateMessage, getCurrentConversation, sendMessage]);
+    }, [currentConversationId, addMessageHandler, addMessage, updateMessage, getCurrentConversation, addToQueue, processQueue]);
 
     return null;
 };

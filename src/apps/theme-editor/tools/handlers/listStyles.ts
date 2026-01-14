@@ -1,4 +1,4 @@
-import { select, dispatch } from '@wordpress/data';
+import { select } from '@wordpress/data';
 
 export const WPCore = () => {
     return select('core');

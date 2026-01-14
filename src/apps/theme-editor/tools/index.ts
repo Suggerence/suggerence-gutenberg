@@ -4,11 +4,12 @@ import { navigateTool } from './navigate';
 import { listStylesTool } from './listStyles';
 import { readStyleTool } from './readStyle';
 import { editStyleTool } from './editStyle';
+import { searchStylesTool } from './searchStyles';
 
 export const tools: ToolDefinition[] = [
     listPathsTool,
     navigateTool,
-    listStylesTool,
+    searchStylesTool,
     readStyleTool,
     editStyleTool
 ];

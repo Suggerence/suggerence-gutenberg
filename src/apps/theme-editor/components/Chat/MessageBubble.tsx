@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { MessageCircle, Wrench, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import type { Message } from '../../types/message';
 import { truncateJsonToMaxLines, truncateToMaxLines } from '@/shared/utils/truncate-text';
+import { Response } from '@/components/ai-elements/response';
 
 interface MessageBubbleProps {
     message: Message;
@@ -20,8 +21,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                     <div className="text-xs text-muted-foreground font-medium">
                         {__("You", "suggerence")}
                     </div>
-                    <div className="text-sm text-primary-foreground bg-primary rounded-lg p-3 inline-block max-w-[80%]">
-                        {message.content.text}
+                    <div className="text-sm text-primary-foreground bg-primary rounded-lg p-3 inline-block max-w-[80%] prose prose-sm dark:prose-invert prose-p:my-0! prose-p:text-primary-foreground! prose-p:last:mb-0!">
+                        <Response parseIncompleteMarkdown={true}>
+                            {message.content.text}
+                        </Response>
                     </div>
                 </div>
                 <div className="size-8 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -41,8 +44,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                     <div className="text-xs text-muted-foreground font-medium">
                         {__("AI Assistant", "suggerence")}
                     </div>
-                    <div className="text-sm text-foreground bg-muted/50 rounded-lg p-3 max-w-[85%]">
-                        {message.content.text}
+                    <div className="text-sm text-foreground bg-muted/50 rounded-lg p-3 max-w-[85%] prose prose-sm dark:prose-invert prose-p:my-0! prose-p:text-foreground! prose-p:last:mb-0!">
+                        <Response parseIncompleteMarkdown={true}>
+                            {message.content.text}
+                        </Response>
                     </div>
                 </div>
             </div>
@@ -95,11 +100,11 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                     <div className={`text-sm rounded-lg p-3 max-w-[85%] ${
                         isPending ? 'bg-muted/30' : isSuccess ? 'bg-green-500/10 border border-green-500/20' : 'bg-destructive/10 border border-destructive/20'
                     }`}>
-                        <div className="font-mono text-xs mb-2 break-words">
+                        <div className="font-mono text-xs mb-2 wrap-break-word">
                             <div className="text-xs text-muted-foreground mb-1 font-semibold">
                                 {__("Arguments", "suggerence")}:
                             </div>
-                            <pre className="whitespace-pre-wrap break-words overflow-x-auto">{truncateJsonToMaxLines(toolCall.arguments, 10)}</pre>
+                            <pre className="whitespace-pre-wrap wrap-break-word overflow-x-auto">{truncateJsonToMaxLines(toolCall.arguments, 10)}</pre>
                         </div>
                         {isPending && (
                             <div className="text-xs text-muted-foreground italic">
@@ -111,8 +116,8 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                                 <div className="text-xs text-muted-foreground mb-1 font-semibold">
                                     {__("Result", "suggerence")}:
                                 </div>
-                                <div className="font-mono text-xs break-words">
-                                    <pre className="whitespace-pre-wrap break-words overflow-x-auto">
+                                <div className="font-mono text-xs wrap-break-word">
+                                    <pre className="whitespace-pre-wrap wrap-break-word overflow-x-auto">
                                         {typeof toolCall.result === 'string' 
                                             ? truncateToMaxLines(toolCall.result, 10)
                                             : truncateJsonToMaxLines(toolCall.result, 10)}

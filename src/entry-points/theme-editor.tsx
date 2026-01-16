@@ -6,7 +6,6 @@ import { ThemeEditor } from '@/apps/theme-editor';
 
 domReady(() => 
 {
-    console.log('theme-editor');
     // Only load in the site editor
     if (!select || !select('core/edit-site')) {
         return;

@@ -153,4 +153,77 @@ class ChildTheme
             wp_clean_themes_cache();
         }
     }
+
+    /**
+     * Saves a font asset file to the child theme's assets/fonts directory.
+     * @param string $filename The filename for the font file
+     * @param string $file_content The binary content of the font file
+     * @return string|false The relative path to the saved font file, or false on failure
+     */
+    public static function saveFontAsset($filename, $file_content)
+    {
+        self::setup();
+
+        $child_path = get_theme_root() . '/' . self::CHILD_SLUG;
+        $assets_path = $child_path . '/assets';
+        $fonts_path = $assets_path . '/fonts';
+
+        // Create assets/fonts directory if it doesn't exist
+        if (!wp_mkdir_p($fonts_path)) {
+            error_log('Failed to create fonts directory: ' . $fonts_path);
+            return false;
+        }
+
+        // Sanitize filename to prevent directory traversal
+        $sanitized_filename = sanitize_file_name($filename);
+        if (empty($sanitized_filename)) {
+            error_log('Invalid filename provided: ' . $filename);
+            return false;
+        }
+
+        $file_path = $fonts_path . '/' . $sanitized_filename;
+
+        // Write the file
+        if (file_put_contents($file_path, $file_content) === false) {
+            error_log('Failed to write font file: ' . $file_path);
+            return false;
+        }
+
+        // Return relative path from child theme root
+        return 'assets/fonts/' . $sanitized_filename;
+    }
+
+    /**
+     * Gets the URL for a font asset file in the child theme.
+     * @param string $relative_path The relative path from the child theme root (e.g., 'assets/fonts/font.woff2')
+     * @return string|false The URL to the font file, or false on failure
+     */
+    public static function getFontAssetUrl($relative_path)
+    {
+        self::setup();
+
+        $child_path = get_theme_root() . '/' . self::CHILD_SLUG;
+        $file_path = $child_path . '/' . $relative_path;
+
+        // Validate that the file exists and is within the child theme directory
+        if (!file_exists($file_path)) {
+            error_log('Font file does not exist: ' . $file_path);
+            return false;
+        }
+
+        // Ensure the path is within the child theme directory (security check)
+        $normalized_file_path = wp_normalize_path(realpath($file_path));
+        $normalized_child_path = wp_normalize_path(realpath($child_path));
+
+        if (!$normalized_file_path || strpos($normalized_file_path, $normalized_child_path) !== 0) {
+            error_log('Font file path is outside child theme directory: ' . $file_path);
+            return false;
+        }
+
+        // Get the relative path from child theme root
+        $relative_path_from_root = str_replace($normalized_child_path . '/', '', $normalized_file_path);
+
+        // Return the theme file URI
+        return get_theme_file_uri($relative_path_from_root);
+    }
 }

@@ -45,6 +45,16 @@ export const getToolDisplayNames = (): Record<string, string> => ({
     'generate_custom_css': __('Generate custom CSS', 'suggerence'),
     'get_post_content': __('Get post content', 'suggerence'),
     'capture_frontend_screenshot': __('Screenshot', 'suggerence'),
+
+    // Theme editor tools
+    'edit_style': __('Edit style', 'suggerence'),
+    'list_styles': __('List styles', 'suggerence'),
+    'read_style': __('Read style', 'suggerence'),
+    'search_styles': __('Search styles', 'suggerence'),
+    'search_fonts': __('Search fonts', 'suggerence'),
+    'install_font': __('Install font', 'suggerence'),
+    'navigate': __('Navigate', 'suggerence'),
+    'list_paths': __('List paths', 'suggerence'),
 });
 
 /**

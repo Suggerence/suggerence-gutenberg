@@ -1,8 +1,8 @@
 import { __ } from '@wordpress/i18n';
-import { MessageCircle, Wrench, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import type { Message } from '../../types/message';
-import { truncateJsonToMaxLines, truncateToMaxLines } from '@/shared/utils/truncate-text';
 import { Response } from '@/components/ai-elements/response';
+import { formatToolMessage, getToolStatusIcon } from '../../utils/formatToolMessage';
 
 interface MessageBubbleProps {
     message: Message;
@@ -79,50 +79,40 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
         const isSuccess = status === 'success';
         const isError = status === 'error';
 
+        // Format the tool message
+        const formattedMessage = formatToolMessage(toolCall.name, toolCall.arguments || {});
+        const StatusIcon = getToolStatusIcon(status);
+        const ToolIcon = formattedMessage.icon;
+
         return (
             <div className="flex items-start gap-3">
                 <div className={`size-8 rounded-full flex items-center justify-center shrink-0 ${
                     isPending ? 'bg-primary/10' : isSuccess ? 'bg-green-500/10' : 'bg-destructive/10'
                 }`}>
                     {isPending ? (
-                        <Loader2 className="size-4 text-primary animate-spin" />
+                        <StatusIcon className="size-4 text-primary animate-spin" />
                     ) : isSuccess ? (
-                        <CheckCircle2 className="size-4 text-green-500" />
+                        <StatusIcon className="size-4 text-green-500" />
                     ) : (
-                        <XCircle className="size-4 text-destructive" />
+                        <StatusIcon className="size-4 text-destructive" />
                     )}
                 </div>
                 <div className="flex-1 space-y-1">
                     <div className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                        <Wrench className="size-3" />
-                        {__("Tool Call", "suggerence")}: {toolCall.name}
+                        <ToolIcon className="size-3" />
+                        {formattedMessage.message}
                     </div>
                     <div className={`text-sm rounded-lg p-3 max-w-[85%] ${
                         isPending ? 'bg-muted/30' : isSuccess ? 'bg-green-500/10 border border-green-500/20' : 'bg-destructive/10 border border-destructive/20'
                     }`}>
-                        <div className="font-mono text-xs mb-2 wrap-break-word">
-                            <div className="text-xs text-muted-foreground mb-1 font-semibold">
-                                {__("Arguments", "suggerence")}:
-                            </div>
-                            <pre className="whitespace-pre-wrap wrap-break-word overflow-x-auto">{truncateJsonToMaxLines(toolCall.arguments, 10)}</pre>
-                        </div>
                         {isPending && (
                             <div className="text-xs text-muted-foreground italic">
-                                {__("Waiting for frontend response...", "suggerence")}
+                                {__("Executing...", "suggerence")}
                             </div>
                         )}
-                        {isSuccess && toolCall.result !== undefined && (
-                            <div className="mt-3 pt-3 border-t border-green-500/20">
-                                <div className="text-xs text-muted-foreground mb-1 font-semibold">
-                                    {__("Result", "suggerence")}:
-                                </div>
-                                <div className="font-mono text-xs wrap-break-word">
-                                    <pre className="whitespace-pre-wrap wrap-break-word overflow-x-auto">
-                                        {typeof toolCall.result === 'string' 
-                                            ? truncateToMaxLines(toolCall.result, 10)
-                                            : truncateJsonToMaxLines(toolCall.result, 10)}
-                                    </pre>
-                                </div>
+                        {isSuccess && (
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                                {__("Completed successfully", "suggerence")}
                             </div>
                         )}
                         {isError && toolCall.error && (

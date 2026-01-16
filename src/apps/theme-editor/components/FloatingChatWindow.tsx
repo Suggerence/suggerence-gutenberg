@@ -297,13 +297,13 @@ export const FloatingChatWindow = ({ isOpen, onClose }: FloatingChatWindowProps)
                     onMouseDown={handleMouseDown}
                 >
                     <div className="flex items-center gap-2 flex-1">
-                        <GripVertical className="size-4 text-muted-foreground hover:text-foreground transition-colors" />
+                        {/* <GripVertical className="size-4 text-muted-foreground hover:text-foreground transition-colors" /> */}
                         <div className="relative">
-                            <MessageCircle className="size-4 text-primary" />
+                            <MessageCircle className="size-4 text-white" />
                             <span className="absolute -top-1 -right-1 size-2 bg-green-500 rounded-full border-2 border-card animate-pulse" />
                         </div>
-                        <h3 className="text-sm font-semibold text-primary! m-0">
-                            {__("AI Site Editor Assistant", "suggerence")}
+                        <h3 className="text-sm font-semibold text-white! m-0">
+                            {__("Suggerence", "suggerence")}
                         </h3>
                     </div>
                     <div className="flex items-center gap-1">
